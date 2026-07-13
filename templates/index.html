@@ -3,118 +3,737 @@
 
 {% block title %}发现{% endblock %}
 
+{% block head %}
+<style>
+/* ========================================
+   SNYQT Game Hub — 发现页面
+   Design: GameVault 暗黑游戏美学
+   ======================================== */
+
+/* --- CSS Variables --- */
+:root {
+    --gv-bg-deep: #0a0a0a;
+    --gv-bg-card: #1a1a2e;
+    --gv-bg-card-hover: #222244;
+    --gv-accent: #00e676;
+    --gv-accent-dim: rgba(0, 230, 118, 0.15);
+    --gv-gold: #ffd740;
+    --gv-gold-dim: rgba(255, 215, 64, 0.15);
+    --gv-text-primary: #ffffff;
+    --gv-text-secondary: rgba(255, 255, 255, 0.6);
+    --gv-text-muted: rgba(255, 255, 255, 0.4);
+    --gv-border: rgba(255, 255, 255, 0.06);
+    --gv-border-hover: rgba(255, 255, 255, 0.12);
+    --gv-radius: 16px;
+    --gv-radius-sm: 12px;
+    --gv-radius-xs: 8px;
+    --gv-font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+}
+
+/* --- Discover Hero --- */
+.discover-hero {
+    position: relative;
+    /* 顶部留白 = 固定头部高度 + 30px 呼吸空间 */
+    padding: calc(var(--header-h) + 30px) 0 60px;
+    text-align: center;
+    background: linear-gradient(180deg, #0d0d1a 0%, var(--gv-bg-deep) 100%);
+    overflow: hidden;
+}
+
+.discover-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 230, 118, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.discover-hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.discover-hero-title {
+    font-family: var(--gv-font-display);
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--gv-text-primary);
+    margin-bottom: 12px;
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.discover-hero-sub {
+    font-size: 16px;
+    color: var(--gv-text-secondary);
+    margin-bottom: 36px;
+    animation: fadeInUp 0.6s 0.1s ease forwards;
+    opacity: 0;
+}
+
+.discover-search {
+    display: flex;
+    gap: 12px;
+    max-width: 640px;
+    margin: 0 auto;
+    animation: fadeInUp 0.6s 0.2s ease forwards;
+    opacity: 0;
+}
+
+.discover-search-input {
+    flex: 1;
+    height: 52px;
+    padding: 0 20px;
+    background: rgba(26, 26, 46, 0.8);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    color: var(--gv-text-primary);
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.discover-search-input::placeholder {
+    color: var(--gv-text-muted);
+}
+
+.discover-search-input:focus {
+    border-color: var(--gv-accent);
+    box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.1);
+    background: rgba(26, 26, 46, 1);
+}
+
+.discover-search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 52px;
+    padding: 0 28px;
+    background: var(--gv-accent);
+    color: #0a0a0a;
+    font-weight: 700;
+    font-size: 15px;
+    border: none;
+    border-radius: var(--gv-radius-sm);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.discover-search-btn:hover {
+    background: #00ff83;
+    box-shadow: 0 4px 20px rgba(0, 230, 118, 0.3);
+    transform: translateY(-1px);
+}
+
+.discover-search-clear {
+    display: inline-flex;
+    align-items: center;
+    height: 52px;
+    padding: 0 20px;
+    background: transparent;
+    color: var(--gv-text-secondary);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.discover-search-clear:hover {
+    border-color: var(--gv-border-hover);
+    color: var(--gv-text-primary);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* --- Tag Filters --- */
+.tag-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 32px 24px 0;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.tag-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gv-text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--gv-border);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.tag-filter-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--gv-border-hover);
+    color: var(--gv-text-primary);
+}
+
+.tag-filter-chip.active {
+    background: var(--gv-accent-dim);
+    border-color: rgba(0, 230, 118, 0.3);
+    color: var(--gv-accent);
+    font-weight: 600;
+}
+
+/* --- Section Header --- */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    max-width: 1280px;
+    margin: 0 auto 28px;
+    flex-wrap: wrap;
+}
+
+.section-header-title {
+    font-family: var(--gv-font-display);
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--gv-text-primary);
+}
+
+.section-header-count {
+    font-size: 14px;
+    color: var(--gv-text-muted);
+    font-weight: 400;
+}
+
+/* --- Game Grid --- */
+.game-grid-container {
+    padding: 0 24px 60px;
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.game-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+/* --- Game Card --- */
+.game-card {
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+    display: block;
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+}
+
+.game-card:hover {
+    transform: translateY(-6px);
+    background: var(--gv-bg-card-hover);
+    border-color: var(--gv-border-hover);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.game-card-cover {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #111122;
+}
+
+.game-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.game-card:hover .game-card-cover img {
+    transform: scale(1.06);
+}
+
+.game-card-cover .cover-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--gv-font-display);
+    font-size: 48px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #1a1a2e, #222244);
+}
+
+.game-card-badges {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.game-card-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(8px);
+}
+
+.game-card-badge.html {
+    background: rgba(0, 230, 118, 0.15);
+    color: var(--gv-accent);
+    border: 1px solid rgba(0, 230, 118, 0.2);
+}
+
+.game-card-badge.python {
+    background: rgba(100, 210, 255, 0.15);
+    color: #64d2ff;
+    border: 1px solid rgba(100, 210, 255, 0.2);
+}
+
+.game-card-badge.banned {
+    background: rgba(255, 69, 58, 0.15);
+    color: #ff453a;
+    border: 1px solid rgba(255, 69, 58, 0.2);
+}
+
+.game-card-body {
+    padding: 16px 18px 18px;
+}
+
+.game-card-title {
+    font-family: var(--gv-font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gv-text-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--gv-text-secondary);
+}
+
+.game-card-stars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--gv-gold);
+}
+
+.game-card-stars svg {
+    width: 14px;
+    height: 14px;
+}
+
+.game-card-stars .star-empty {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.game-card-downloads {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--gv-text-muted);
+}
+
+.game-card-downloads svg {
+    width: 12px;
+    height: 12px;
+}
+
+.game-card-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.game-card-tag {
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gv-text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* --- Empty State --- */
+.empty-state {
+    text-align: center;
+    padding: 80px 24px;
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+}
+
+.empty-state svg {
+    width: 64px;
+    height: 64px;
+    color: var(--gv-text-muted);
+    margin-bottom: 20px;
+    opacity: 0.4;
+}
+
+.empty-state h3 {
+    font-family: var(--gv-font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gv-text-primary);
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: var(--gv-text-muted);
+    margin-bottom: 24px;
+}
+
+.empty-state .btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--gv-gold);
+    color: #0a0a0a;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    border-radius: var(--gv-radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.empty-state .btn-action:hover {
+    background: #ffe066;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(255, 215, 64, 0.3);
+}
+
+/* --- Invite Redeem Bar --- */
+.invite-redeem-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    margin-bottom: 24px;
+}
+
+.invite-redeem-input {
+    flex: 1;
+    min-width: 180px;
+    height: 42px;
+    padding: 0 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-xs);
+    color: var(--gv-text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.invite-redeem-input:focus {
+    border-color: var(--gv-gold);
+}
+
+.invite-redeem-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 42px;
+    padding: 0 20px;
+    background: var(--gv-gold);
+    color: #0a0a0a;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    border-radius: var(--gv-radius-xs);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.invite-redeem-btn:hover {
+    background: #ffe066;
+    transform: translateY(-1px);
+}
+
+.invite-redeem-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- Animations --- */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+    .game-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .game-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .discover-hero {
+        padding: calc(var(--header-h) + 30px) 0 40px;
+    }
+
+    .discover-search {
+        flex-direction: column;
+    }
+
+    .discover-search-btn,
+    .discover-search-clear {
+        justify-content: center;
+    }
+
+    .tag-filters {
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tag-filter-chip {
+        flex-shrink: 0;
+    }
+
+    .tag-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="page">
-    <div class="container">
-        {# ==================== 精选轮播 ==================== #}
-        {% set featured = games[:5] if games else [] %}
-        {% if featured|length > 0 %}
-        <div class="hero">
-            <div class="hero-track">
-                {% for g in featured %}
-                <div class="hero-slide">
-                    {% if g.cover_image %}
-                    <img src="{{ url_for('static', filename=g.cover_image) if g.cover_image.startswith('uploads/') else g.cover_image }}" alt="{{ g.title|default('游戏') }}">
-                    {% else %}
-                    <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--card-2),var(--bg-2));"></div>
-                    {% endif %}
-                    <div class="hero-overlay">
-                        <span class="hero-tag">精选 #{{ loop.index }}</span>
-                        <h2>{{ g.title|default('未命名游戏') }}</h2>
-                        <p>{{ (g.description|default('暂无描述'))|truncate(80) }}</p>
-                        <a class="btn btn-primary" href="{{ url_for('games.game_detail', gid=g.id) }}">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            立即查看
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+{# ==================== Hero 区域 ==================== #}
+<section class="discover-hero">
+    <div class="discover-hero-inner">
+        <h1 class="discover-hero-title">发现游戏</h1>
+        <p class="discover-hero-sub">浏览、探索并获取你喜爱的游戏作品</p>
 
-            {% if featured|length > 1 %}
-            <div class="hero-dots">
-                {% for g in featured %}
-                <button class="{{ 'active' if loop.first else '' }}" aria-label="切换到第 {{ loop.index }} 张"></button>
-                {% endfor %}
-            </div>
-            <div class="hero-nav">
-                <button class="prev" aria-label="上一张">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <button class="next" aria-label="下一张">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        {# ==================== 标题栏 + 搜索 ==================== #}
-        <div class="section-title">
-            <span class="accent-bar"></span>
-            <h2>EXPLORE GAMES</h2>
-            <span class="sub">{{ games|length if games else 0 }} games</span>
-        </div>
-
-        {# 搜索条 #}
-        <form class="card card-noise" style="padding:14px 18px;margin-bottom:24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;" method="get" action="{{ url_for('games.index') }}">
-            <div class="field" style="flex:1;min-width:200px;">
-                <input type="text" name="q" value="{{ request.args.get('q', '') }}" placeholder="搜索游戏标题或描述...">
-            </div>
-            <div class="field" style="min-width:160px;">
-                <input type="text" name="tag" value="{{ request.args.get('tag', '') }}" placeholder="标签筛选">
-            </div>
-            <button type="submit" class="btn btn-primary">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        <form class="discover-search" method="get" action="{{ url_for('games.index') }}">
+            <input
+                type="text"
+                name="q"
+                class="discover-search-input"
+                value="{{ request.args.get('q', '') }}"
+                placeholder="搜索游戏标题或描述..."
+            >
+            <input
+                type="text"
+                name="tag"
+                class="discover-search-input"
+                value="{{ request.args.get('tag', '') }}"
+                placeholder="标签筛选"
+                style="max-width:200px;"
+            >
+            <button type="submit" class="discover-search-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+                    <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
                 搜索
             </button>
             {% if request.args.get('q') or request.args.get('tag') %}
-            <a href="{{ url_for('games.index') }}" class="btn btn-ghost">清空</a>
+            <a href="{{ url_for('games.index') }}" class="discover-search-clear">清空</a>
             {% endif %}
         </form>
-
-        {# ==================== 游戏卡片网格 ==================== #}
-        {% if games and games|length > 0 %}
-        <div class="game-grid">
-            {% for g in games %}
-            <a class="game-card" href="{{ url_for('games.game_detail', gid=g.id) }}">
-                <div class="game-cover">
-                    {{ m.cover_img(g) }}
-                    <div class="game-badges">
-                        {{ m.host_badge(g.hosting_type) }}
-                        {{ m.ban_badge(g.is_banned) }}
-                    </div>
-                </div>
-                <div class="game-body">
-                    <h3 class="game-title" title="{{ g.title|default('') }}">{{ g.title|default('未命名游戏') }}</h3>
-                    <div class="game-meta">
-                        {{ m.stars_svg(g.avg_rating, g.rating_count) }}
-                        <span title="下载量">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            {{ m.fmt_num(g.download_count) }}
-                        </span>
-                    </div>
-                    <div class="game-tags">{{ m.tag_list(g.tags) }}</div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state card card-noise" style="padding:80px 20px;">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-            <h3>No games yet</h3>
-            <p>Become a developer to upload your first game.</p>
-            {% if current_user %}
-                {% if current_user.permission_level|default('user') == 'developer' or current_user.permission_level|default('user') == 'super_admin' %}
-                <a class="btn btn-gold mt-16" href="{{ url_for('games.developer_panel') }}">前往开发者面板上传</a>
-                {% else %}
-                <a class="btn btn-gold mt-16" href="{{ url_for('permissions.apply_page') }}">申请成为开发者</a>
-                {% endif %}
-            {% else %}
-            <a class="btn btn-gold mt-16" href="{{ url_for('auth.login', next=request.full_path if request.query_string else request.path) }}">使用 SNYQT 登录</a>
-            {% endif %}
-        </div>
-        {% endif %}
     </div>
 </section>
+
+{# ==================== 标签筛选导航 ==================== #}
+<div class="tag-filters" id="tag-filters">
+    <a href="{{ url_for('games.index') }}" class="tag-filter-chip {{ 'active' if not request.args.get('tag') else '' }}">全部</a>
+    <!-- JS 动态加载标签 -->
+</div>
+
+{# ==================== 标题栏 + 邀请码兑换 ==================== #}
+<div class="game-grid-container" style="padding-top:32px;">
+    {# 标题栏：无游戏时整段隐藏 #}
+    {% if games and games|length > 0 %}
+    <div class="section-header">
+        <div>
+            <span class="section-header-title">全部游戏</span>
+            <span class="section-header-count"> · {{ games|length }} 款游戏</span>
+        </div>
+    </div>
+    {% endif %}
+
+    {# 邀请码兑换入口 #}
+    {% if current_user %}
+    <div class="invite-redeem-bar">
+        <input
+            type="text"
+            id="invite-redeem-input"
+            class="invite-redeem-input"
+            placeholder="输入邀请码兑换"
+        >
+        <button class="invite-redeem-btn" id="invite-redeem-btn">兑换</button>
+    </div>
+    {% endif %}
+
+    {# ==================== 游戏卡片网格 ==================== #}
+    {% if games and games|length > 0 %}
+    <div class="game-grid">
+        {% for g in games %}
+        <a class="game-card" href="{{ url_for('games.game_detail', gid=g.id) }}" style="animation-delay:{{ loop.index0 * 0.05 }}s;">
+            <div class="game-card-cover">
+                {% if g.cover_image %}
+                    {% if g.cover_image.startswith('uploads/') %}
+                    <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}" loading="lazy">
+                    {% else %}
+                    <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}" loading="lazy">
+                    {% endif %}
+                {% else %}
+                <div class="cover-fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
+                {% endif %}
+                <div class="game-card-badges">
+                    {% if g.hosting_type == 'python' %}
+                    <span class="game-card-badge python">PYTHON</span>
+                    {% else %}
+                    <span class="game-card-badge html">HTML</span>
+                    {% endif %}
+                    {% if g.is_banned %}
+                    <span class="game-card-badge banned">已封禁</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="game-card-body">
+                <h3 class="game-card-title" title="{{ g.title|default('未命名游戏') }}">{{ g.title|default('未命名游戏') }}</h3>
+                <div class="game-card-meta">
+                    {% set r = (g.avg_rating|default(0))|float %}
+                    <span class="game-card-stars">
+                        {% for i in range(5) %}
+                            {% if i < r|int %}
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                            {% elif i == r|int and (r - r|int) >= 0.5 %}
+                            <svg viewBox="0 0 24 24"><defs><linearGradient id="hs{{ g.id }}{{ i }}"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="rgba(255,255,255,0.2)"/></linearGradient></defs><path fill="url(#hs{{ g.id }}{{ i }})" d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                            {% else %}
+                            <svg viewBox="0 0 24 24" fill="currentColor" class="star-empty"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                    <span class="game-card-downloads">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+                        {{ m.fmt_num(g.download_count) }}
+                    </span>
+                </div>
+                {% if g.tags %}
+                <div class="game-card-tags">
+                    {% set tag_items = g.tags.split(',') %}
+                    {% for t in tag_items if t.strip() %}
+                    <span class="game-card-tag">{{ t.strip() }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 首页邀请码兑换
+(function () {
+    var btn = document.getElementById('invite-redeem-btn');
+    var input = document.getElementById('invite-redeem-input');
+    if (!btn || !input) return;
+    btn.addEventListener('click', function () {
+        var code = input.value.trim();
+        if (!code) { window.snyqtToast && window.snyqtToast('请输入邀请码', 'warning'); return; }
+        btn.disabled = true;
+        fetch('/api/invite/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                window.snyqtToast && window.snyqtToast(data.message, 'success');
+                setTimeout(function () { window.location.reload(); }, 800);
+            } else {
+                window.snyqtToast && window.snyqtToast(data.message || '兑换失败', 'error');
+                btn.disabled = false;
+            }
+        })
+        .catch(function () {
+            window.snyqtToast && window.snyqtToast('网络错误', 'error');
+            btn.disabled = false;
+        });
+    });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { btn.click(); }
+    });
+})();
+</script>
 {% endblock %}

@@ -34,17 +34,23 @@
                     <div class="game-tags">{{ m.tag_list(g.tags) }}</div>
                     <div class="flex gap-8 mt-16">
                         {% if g.status|default('active') == 'active' and not g.is_banned %}
-                        <a class="btn btn-primary btn-sm btn-block" href="{{ url_for('view.view_game', gid=g.id) }}" target="_blank">
+                        <a class="btn btn-primary btn-sm btn-block" href="{{ url_for('view.view_game', gid=g.game_uid|default(g.id, true)) }}" target="_blank">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                             在线玩
                         </a>
                         {% else %}
                         <button class="btn btn-ghost btn-sm btn-block" disabled title="游戏未激活或已封禁">不可游玩</button>
                         {% endif %}
-                        <a class="btn btn-ghost btn-sm btn-block" href="{{ url_for('points.download_game', gid=g.id) }}">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            下载
-                        </a>
+                        {% if not g.is_banned %}
+                            {% if g.get('source_open', 1) %}
+                            <a class="btn btn-ghost btn-sm btn-block" href="{{ url_for('points.download_game', gid=g.id) }}">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                下载
+                            </a>
+                            {% endif %}
+                        {% else %}
+                        <button class="btn btn-ghost btn-sm btn-block" disabled>已封禁</button>
+                        {% endif %}
                     </div>
                 </div>
             </div>

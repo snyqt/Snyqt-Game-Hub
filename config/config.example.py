@@ -23,7 +23,7 @@ DB_CHARSET = 'utf8mb4'
 # ==================== SNYQT Account OAuth ====================
 SNYQT_APP_ID = os.getenv('SNYQT_APP_ID', 'your_snyqt_app_id')
 SNYQT_APP_SECRET = os.getenv('SNYQT_APP_SECRET', 'your_snyqt_app_secret')
-SNYQT_OAUTH_BASE = os.getenv('SNYQT_OAUTH_BASE', 'https://account.example.com')
+SNYQT_OAUTH_BASE = os.getenv('SNYQT_OAUTH_BASE', 'https://account.snyqt.top')
 
 # OAuth 登录回调地址
 LOGIN_CALLBACK = os.getenv('LOGIN_CALLBACK', 'https://your-domain.example.com/callback')

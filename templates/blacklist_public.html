@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+
+{% block title %}小黑屋 · SNYQT Game Hub{% endblock %}
+
+{% block head %}
+<style>
+/* ==================== 公开小黑屋页面 ==================== */
+.blacklist-hero {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: calc(var(--header-h) + 30px) 24px 24px;
+    text-align: center;
+}
+
+.blacklist-hero-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    color: #ff6b5a;
+    filter: drop-shadow(0 0 16px rgba(255, 107, 90, 0.4));
+}
+
+.blacklist-hero h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 0 8px;
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, #ff6b5a 0%, #ffae42 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.blacklist-hero p {
+    color: var(--muted, rgba(255,255,255,0.6));
+    font-size: .92rem;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* --- 筛选栏 --- */
+.blacklist-toolbar {
+    max-width: 1280px;
+    margin: 0 auto 20px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.blacklist-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bl-filter-chip {
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: .84rem;
+    font-weight: 600;
+    background: var(--card, #1a1a2e);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    color: var(--muted, rgba(255,255,255,0.7));
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.bl-filter-chip:hover {
+    color: var(--text, #fff);
+    border-color: rgba(255,255,255,0.2);
+}
+
+.bl-filter-chip.active {
+    background: linear-gradient(135deg, rgba(255,107,90,0.2), rgba(255,174,66,0.15));
+    border-color: rgba(255,107,90,0.5);
+    color: #ff8a7a;
+}
+
+.bl-count {
+    font-size: .82rem;
+    color: var(--muted, rgba(255,255,255,0.5));
+}
+
+.bl-count strong {
+    color: #ff8a7a;
+    font-weight: 700;
+}
+
+/* --- 处罚卡片列表 --- */
+.blacklist-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 16px;
+}
+
+.bl-card {
+    background: var(--card, #1a1a2e);
+    border: 1px solid var(--border, rgba(255,255,255,0.06));
+    border-radius: 14px;
+    padding: 18px 20px;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.bl-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #ff6b5a, #ffae42);
+    opacity: 0.7;
+}
+
+.bl-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,107,90,0.3);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,107,90,0.1);
+}
+
+.bl-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.bl-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.bl-type-badge.post {
+    background: rgba(100,210,255,0.15);
+    color: #64d2ff;
+    border: 1px solid rgba(100,210,255,0.25);
+}
+
+.bl-type-badge.game {
+    background: rgba(0,230,118,0.15);
+    color: #00e676;
+    border: 1px solid rgba(0,230,118,0.25);
+}
+
+.bl-action-tag {
+    margin-left: auto;
+    font-size: .72rem;
+    color: rgba(255,107,90,0.85);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bl-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text, #fff);
+    margin: 0 0 8px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.bl-card-reason {
+    background: rgba(255,69,58,0.06);
+    border-left: 2px solid rgba(255,69,58,0.4);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: .84rem;
+    color: var(--text, rgba(255,255,255,0.85));
+    line-height: 1.5;
+    margin: 0 0 12px;
+    word-break: break-word;
+}
+
+.bl-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: .76rem;
+    color: var(--muted, rgba(255,255,255,0.5));
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.bl-card-admin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.bl-card-admin strong {
+    color: var(--text, rgba(255,255,255,0.85));
+    font-weight: 600;
+}
+
+/* --- 空状态 --- */
+.bl-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--card, #1a1a2e);
+    border: 1px dashed var(--border, rgba(255,255,255,0.08));
+    border-radius: 14px;
+}
+
+.bl-empty svg {
+    width: 48px;
+    height: 48px;
+    color: var(--muted, rgba(255,255,255,0.3));
+    margin-bottom: 12px;
+}
+
+.bl-empty h3 {
+    font-size: 1.05rem;
+    color: var(--text, rgba(255,255,255,0.85));
+    margin: 0 0 6px;
+}
+
+.bl-empty p {
+    font-size: .84rem;
+    color: var(--muted, rgba(255,255,255,0.5));
+    margin: 0;
+}
+
+/* --- 分页 --- */
+.bl-pagination {
+    max-width: 1280px;
+    margin: 0 auto 40px;
+    padding: 0 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.bl-page-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--card, #1a1a2e);
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    color: var(--muted, rgba(255,255,255,0.7));
+    font-size: .84rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.bl-page-btn:hover:not(.disabled) {
+    color: var(--text, #fff);
+    border-color: rgba(255,255,255,0.2);
+}
+
+.bl-page-btn.active {
+    background: linear-gradient(135deg, #ff6b5a, #ffae42);
+    color: #07122A;
+    border-color: transparent;
+}
+
+.bl-page-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* --- 响应式 --- */
+@media (max-width: 640px) {
+    .blacklist-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .blacklist-hero h1 {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page">
+    {# ======== 顶部标题区 ======== #}
+    <div class="blacklist-hero">
+        <svg class="blacklist-hero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 22h20L12 2z"/>
+            <path d="M12 9v5M12 18h.01"/>
+        </svg>
+        <h1>小黑屋</h1>
+        <p>维护社区秩序，公示违规处罚记录<br>每位用户都可在此查看被处罚的游戏与帖子</p>
+    </div>
+
+    {# ======== 筛选栏 ======== #}
+    <div class="blacklist-toolbar">
+        <div class="blacklist-filters">
+            <a href="{{ url_for('community.blacklist_public') }}" class="bl-filter-chip {{ 'active' if not target_type else '' }}">全部</a>
+            <a href="{{ url_for('community.blacklist_public', type='post') }}" class="bl-filter-chip {{ 'active' if target_type == 'post' else '' }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                帖子
+            </a>
+            <a href="{{ url_for('community.blacklist_public', type='game') }}" class="bl-filter-chip {{ 'active' if target_type == 'game' else '' }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px;"><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01M2 12c0-2.8 0-4.2.9-5.1S5.2 6 8 6h8c2.8 0 4.2 0 5.1.9S22 9.2 22 12s0 4.2-.9 5.1-2.3.9-5.1.9H8c-2.8 0-4.2 0-5.1-.9S2 14.8 2 12z"/></svg>
+                游戏
+            </a>
+        </div>
+        <div class="bl-count">共 <strong>{{ total }}</strong> 条处罚记录</div>
+    </div>
+
+    {# ======== 处罚卡片列表 ======== #}
+    <div class="blacklist-grid">
+        {% if penalties and penalties|length > 0 %}
+            {% for p in penalties %}
+            <article class="bl-card">
+                <div class="bl-card-head">
+                    <span class="bl-type-badge {{ p.target_type }}">
+                        {% if p.target_type == 'post' %}帖子{% elif p.target_type == 'game' %}游戏{% else %}{{ p.target_type }}{% endif %}
+                    </span>
+                    <span class="bl-action-tag">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        {{ p.action|default('ban') }}
+                    </span>
+                </div>
+                <h3 class="bl-card-title">{{ p.target_title|default('未命名目标') }}</h3>
+                <div class="bl-card-reason">{{ p.reason|default('违反社区规范') }}</div>
+                <div class="bl-card-meta">
+                    <span class="bl-card-admin">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        处理人：<strong>{{ p.admin_name|default('管理员') }}</strong>
+                    </span>
+                    <span>{{ p.created_at|default('') }}</span>
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <div class="bl-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block;">
+                    <path d="M9 12l2 2 4-4"/>
+                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                </svg>
+                <h3>暂无处罚记录</h3>
+                <p>社区秩序良好，暂无任何违规处罚</p>
+            </div>
+        {% endif %}
+    </div>
+
+    {# ======== 分页 ======== #}
+    {% if total_pages > 1 %}
+    <nav class="bl-pagination">
+        {% if page > 1 %}
+            <a class="bl-page-btn" href="{{ url_for('community.blacklist_public', type=target_type, page=page-1) }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </a>
+        {% else %}
+            <span class="bl-page-btn disabled">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </span>
+        {% endif %}
+
+        {% for p_num in range(1, total_pages + 1) %}
+            {% if p_num == page %}
+                <span class="bl-page-btn active">{{ p_num }}</span>
+            {% elif p_num == 1 or p_num == total_pages or (p_num >= page - 2 and p_num <= page + 2) %}
+                <a class="bl-page-btn" href="{{ url_for('community.blacklist_public', type=target_type, page=p_num) }}">{{ p_num }}</a>
+            {% elif p_num == page - 3 or p_num == page + 3 %}
+                <span class="bl-page-btn">…</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+            <a class="bl-page-btn" href="{{ url_for('community.blacklist_public', type=target_type, page=page+1) }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
+        {% else %}
+            <span class="bl-page-btn disabled">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}

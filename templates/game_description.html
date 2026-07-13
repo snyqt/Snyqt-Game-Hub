@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ game.title|default('游戏') }} · 完整描述{% endblock %}
+
+{% block head %}
+<style>
+/* 游戏描述详情页 - 固定宽度居中阅读区 */
+.desc-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: calc(var(--header-h) + 30px) 24px 60px;
+}
+
+.desc-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 24px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: .9rem;
+    transition: color .2s ease;
+}
+
+.desc-back:hover {
+    color: var(--primary);
+}
+
+.desc-title {
+    font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 24px;
+    line-height: 1.2;
+}
+
+.desc-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+}
+
+.desc-content {
+    font-size: 15px;
+    line-height: 1.9;
+    color: var(--text);
+    white-space: pre-line;
+    overflow-y: auto;
+    max-height: 70vh;
+}
+
+.desc-empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 48px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="desc-page">
+    <a class="desc-back" href="{{ url_for('games.game_detail', gid=game.id) }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+        返回游戏详情
+    </a>
+    <h1 class="desc-title">{{ game.title|default('未命名游戏') }}</h1>
+    <div class="desc-card">
+        {% if game.description %}
+        <div class="desc-content">{{ game.description }}</div>
+        {% else %}
+        <div class="desc-empty">开发者尚未填写描述。</div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

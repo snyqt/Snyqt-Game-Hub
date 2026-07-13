@@ -48,6 +48,8 @@
             <nav class="main-nav">
                 <a href="{{ url_for('games.index') }}" class="{{ 'active' if request.endpoint == 'games.index' else '' }}">发现</a>
                 <a href="{{ url_for('points.leaderboard') }}" class="{{ 'active' if request.endpoint == 'points.leaderboard' else '' }}">排行榜</a>
+                <a href="{{ url_for('community.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('community') else '' }}">社区</a>
+                <a href="{{ url_for('community.blacklist_public') }}" class="{{ 'active' if request.endpoint == 'community.blacklist_public' else '' }}">小黑屋</a>
                 {% if current_user %}
                 <a href="{{ url_for('points.library') }}" class="{{ 'active' if request.endpoint == 'points.library' else '' }}">游戏库</a>
                 {% endif %}
@@ -103,6 +105,10 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/></svg>
                         管理面板
                     </a>
+                    <a href="{{ url_for('admin.blacklist_page') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        小黑屋管理
+                    </a>
                     {% endif %}
                     <button type="button" onclick="location.href='{{ url_for('auth.logout') }}'" class="danger">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 17l5-5-5-5M3 12h17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
@@ -122,7 +128,7 @@
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="container" style="padding-top:84px">
+                <div class="container" style="padding-top:var(--header-h)">
                     {% for cat, msg in messages %}
                         <div class="toast show {{ cat }}">{{ msg }}</div>
                     {% endfor %}

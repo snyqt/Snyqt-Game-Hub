@@ -15,37 +15,39 @@
         <div class="card card-noise" style="padding:24px;margin-bottom:24px;">
             <div class="flex items-center gap-12" style="flex-wrap:wrap;">
                 <div class="text-muted" style="font-size:.85rem;">当前权限</div>
-                {% if current_level == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
-                {% elif current_level == 'developer' %}<span class="badge badge-info">开发者</span>
-                {% else %}<span class="badge badge-muted">普通用户</span>{% endif %}
+                {% if 'super_admin' in current_perms %}<span class="badge badge-danger">超级管理员</span>{% endif %}
+                {% if 'developer' in current_perms %}<span class="badge badge-info">开发者</span>{% endif %}
+                {% if 'reviewer' in current_perms %}<span class="badge" style="background:#ab47bc;color:#fff;">评荐员</span>{% endif %}
+                {% if 'super_admin' not in current_perms and 'developer' not in current_perms and 'reviewer' not in current_perms %}<span class="badge badge-muted">普通用户</span>{% endif %}
             </div>
 
-            {% if application %}
+            {% if pending_records and pending_records|length > 0 %}
             <div class="flex items-center gap-12 mt-16" style="flex-wrap:wrap;">
-                <div class="text-muted" style="font-size:.85rem;">申请记录</div>
-                {% set al = application.permission_level|default('') %}
-                {% set st = application.status|default('') %}
-                {% if al == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
-                {% elif al == 'developer' %}<span class="badge badge-info">开发者</span>
-                {% else %}<span class="badge badge-muted">{{ al }}</span>{% endif %}
-                {% if st == 'pending' %}<span class="badge badge-warning">待审核</span>
-                {% elif st == 'approved' %}<span class="badge badge-success">已批准</span>
-                {% elif st == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
-                {% else %}<span class="badge badge-muted">{{ st }}</span>{% endif %}
-                {% if application.updated_at %}<span class="text-muted" style="font-size:.78rem;">更新于 {{ application.updated_at }}</span>{% endif %}
+                <div class="text-muted" style="font-size:.85rem;">待审核申请</div>
+                {% for rec in pending_records %}
+                <div class="flex items-center gap-8" style="flex-wrap:wrap;">
+                    {% set al = rec.permission_level|default('') %}
+                    {% if al == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
+                    {% elif al == 'developer' %}<span class="badge badge-info">开发者</span>
+                    {% elif al == 'reviewer' %}<span class="badge" style="background:#ab47bc;color:#fff;">评荐员</span>
+                    {% else %}<span class="badge badge-muted">{{ al }}</span>{% endif %}
+                    <span class="badge badge-warning">待审核</span>
+                    {% if rec.created_at %}<span class="text-muted" style="font-size:.78rem;">提交于 {{ rec.created_at }}</span>{% endif %}
+                </div>
+                {% endfor %}
             </div>
             {% endif %}
         </div>
 
         {# ==================== 申请说明 ==================== #}
         <div class="card card-noise" style="padding:28px;">
-            {% if current_level == 'super_admin' %}
+            {% if 'super_admin' in current_perms %}
             <div class="empty-state" style="padding:30px 10px;">
                 <svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong);width:42px;height:42px;"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/></svg>
                 <h3 class="font-display mt-16">已是最高权限</h3>
                 <p class="text-muted">您当前为超级管理员，无需再申请更高权限。</p>
             </div>
-            {% elif application and application.status == 'pending' %}
+            {% elif pending_records and pending_records|length > 0 %}
             <div class="empty-state" style="padding:30px 10px;">
                 <svg viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong);width:42px;height:42px;"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4v6l4 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
                 <h3 class="font-display mt-16">申请审核中</h3>
@@ -56,15 +58,15 @@
 
             <div class="apply-options">
                 {# ---------- 开发者 ---------- #}
-                <label class="apply-card {{ 'disabled' if current_level == 'developer' }}">
+                <label class="apply-card {{ 'disabled' if 'developer' in current_perms }}">
                     <input type="radio" name="level" value="developer" data-level="developer"
-                           {{ 'disabled' if current_level == 'developer' }}
-                           {{ 'checked' if current_level == 'user' else '' }}>
+                           {{ 'disabled' if 'developer' in current_perms }}
+                           {{ 'checked' if 'developer' not in current_perms else '' }}>
                     <div class="apply-card-body">
                         <div class="flex items-center gap-8">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color:var(--primary)"><path d="M9 4v2h6V4h2v2h3a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4h-.35A5 5 0 0 1 13 16.9V19h3v2H8v-2h3v-2.1A5 5 0 0 1 7.35 14H7a4 4 0 0 1-4-4V7a1 1 0 0 1 1-1h3V4h2zm9 4h-2v4a2 2 0 0 0 2-2V8zM6 8v2a2 2 0 0 0 2 2V8H6z"/></svg>
                             <span class="apply-title">开发者</span>
-                            {% if current_level == 'developer' %}<span class="badge badge-success" style="font-size:.7rem;">已拥有</span>{% endif %}
+                            {% if 'developer' in current_perms %}<span class="badge badge-success" style="font-size:.7rem;">已拥有</span>{% endif %}
                         </div>
                         <p class="apply-desc">可上传 HTML / Python 游戏、管理自己的游戏、参与排行榜。</p>
                         <p class="apply-rule text-muted">
@@ -74,10 +76,25 @@
                     </div>
                 </label>
 
+                {# ---------- 评荐员 ---------- #}
+                <label class="apply-card {{ 'disabled' if 'reviewer' in current_perms }}">
+                    <input type="radio" name="level" value="reviewer" data-level="reviewer"
+                           {{ 'disabled' if 'reviewer' in current_perms }}>
+                    <div class="apply-card-body">
+                        <div class="flex items-center gap-8">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color:#ab47bc"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            <span class="apply-title">评荐员</span>
+                            {% if 'reviewer' in current_perms %}<span class="badge badge-success" style="font-size:.7rem;">已拥有</span>{% endif %}
+                        </div>
+                        <p class="apply-desc">可标记社区星标帖、置顶帖、管理热论榜内容。</p>
+                        <p class="apply-rule text-muted">审核规则：需管理员审核</p>
+                    </div>
+                </label>
+
                 {# ---------- 超级管理员 ---------- #}
-                <label class="apply-card {{ 'disabled' if current_level == 'super_admin' }}">
+                <label class="apply-card {{ 'disabled' if 'super_admin' in current_perms }}">
                     <input type="radio" name="level" value="super_admin" data-level="super_admin"
-                           {{ 'disabled' if current_level == 'super_admin' }}>
+                           {{ 'disabled' if 'super_admin' in current_perms }}>
                     <div class="apply-card-body">
                         <div class="flex items-center gap-8">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong)"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>

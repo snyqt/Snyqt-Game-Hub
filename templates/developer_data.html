@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+
+{% block title %}数据面板 · {{ game.title|default('游戏') }}{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        {# ==================== 顶部标题 ==================== #}
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>DEVELOPER DATA</h2>
+            <span class="sub">{{ game.title|default('未命名游戏') }} · 运营数据</span>
+        </div>
+
+        <div class="flex gap-12 mb-24" style="flex-wrap:wrap">
+            <a class="btn btn-ghost" href="{{ url_for('games.developer_panel') }}">← 返回开发者面板</a>
+            <a class="btn btn-ghost" href="{{ url_for('games.game_detail', gid=game.id) }}">查看游戏页</a>
+        </div>
+
+        {# ==================== 统计卡片 ==================== #}
+        <div class="stats-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;">
+            <div class="card card-noise" style="padding:20px;text-align:center;">
+                <div class="text-muted" style="font-size:.82rem;margin-bottom:8px;">下载量</div>
+                <div class="font-display" style="font-size:1.8rem;color:var(--primary);">{{ m.fmt_num(game.download_count) }}</div>
+            </div>
+            <div class="card card-noise" style="padding:20px;text-align:center;">
+                <div class="text-muted" style="font-size:.82rem;margin-bottom:8px;">玩家数</div>
+                <div class="font-display" style="font-size:1.8rem;color:var(--primary);">{{ m.fmt_num(player_count) }}</div>
+            </div>
+            <div class="card card-noise" style="padding:20px;text-align:center;">
+                <div class="text-muted" style="font-size:.82rem;margin-bottom:8px;">平均评分</div>
+                <div class="font-display" style="font-size:1.8rem;color:var(--gold);">
+                    {% if game.avg_rating %}{{ '%.1f'|format(game.avg_rating|float) }}{% else %}--{% endif %}
+                </div>
+                <div class="text-muted" style="font-size:.78rem;">{{ game.rating_count|default(0) }} 条评价</div>
+            </div>
+            <div class="card card-noise" style="padding:20px;text-align:center;">
+                <div class="text-muted" style="font-size:.82rem;margin-bottom:8px;">建议帖</div>
+                <div class="font-display" style="font-size:1.8rem;color:var(--primary);">{{ suggestions|length if suggestions else 0 }}</div>
+            </div>
+        </div>
+
+        {# ==================== 评分分布 ==================== #}
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>RATING DISTRIBUTION</h2>
+        </div>
+
+        {% set rating_map = {} %}
+        {% for r in ratings %}
+            {% set _ = rating_map.update({r.rating|int: r.cnt}) %}
+        {% endfor %}
+        {% set total_ratings = ratings|sum(attribute='cnt') if ratings else 0 %}
+
+        <div class="card card-noise" style="padding:24px;margin-bottom:32px;">
+            {% if total_ratings > 0 %}
+            {% for star in range(5, 0, -1) %}
+            {% set cnt = rating_map.get(star, 0) %}
+            {% set pct = (cnt / total_ratings * 100)|int %}
+            <div class="flex items-center gap-12 mb-12" style="align-items:center;">
+                <span style="min-width:48px;font-size:.9rem;color:var(--gold);">{{ star }} 星</span>
+                <div style="flex:1;background:var(--card);border-radius:6px;height:18px;overflow:hidden;">
+                    <div style="width:{{ pct }}%;height:100%;background:linear-gradient(90deg,var(--gold),var(--primary));border-radius:6px;transition:width .3s;"></div>
+                </div>
+                <span style="min-width:56px;text-align:right;font-size:.82rem;color:var(--muted);">{{ cnt }} ({{ pct }}%)</span>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center text-muted" style="padding:16px;">暂无评分数据</div>
+            {% endif %}
+        </div>
+
+        {# ==================== 建议帖列表 ==================== #}
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>PLAYER SUGGESTIONS</h2>
+            <span class="sub">{{ suggestions|length if suggestions else 0 }} 条建议</span>
+        </div>
+
+        {# 筛选栏 #}
+        <div class="card card-noise" style="padding:16px 20px;margin-bottom:20px;">
+            <div class="flex gap-12 items-center" style="flex-wrap:wrap;">
+                <div class="flex gap-8 items-center" style="flex-wrap:wrap;">
+                    <button class="btn btn-sm sort-btn active" data-sort="new" style="font-size:.82rem;">最新</button>
+                    <button class="btn btn-sm sort-btn" data-sort="likes" style="font-size:.82rem;">点赞最多</button>
+                </div>
+                <span style="color:var(--border);">|</span>
+                <label class="flex items-center gap-6" style="cursor:pointer;font-size:.82rem;">
+                    <input type="checkbox" id="filter-starred" style="accent-color:var(--gold);">
+                    仅星标
+                </label>
+                <span style="color:var(--border);">|</span>
+                <div class="flex gap-8" style="flex:1;min-width:180px;">
+                    <input type="text" id="filter-search" class="field" placeholder="搜索建议..." style="font-size:.82rem;padding:6px 10px;">
+                    <button class="btn btn-primary btn-sm" id="btn-search" style="font-size:.82rem;">搜索</button>
+                </div>
+            </div>
+        </div>
+
+        {# 建议帖列表容器 #}
+        <div id="suggestions-list">
+            {% if suggestions and suggestions|length > 0 %}
+            <div class="suggestions-list">
+                {% for s in suggestions %}
+                <a class="suggestion-item card card-noise" href="{{ url_for('community.post_detail', pid=s.id) }}" style="display:block;padding:16px 20px;margin-bottom:12px;text-decoration:none;color:var(--text);">
+                    <div class="flex justify-between items-center gap-12" style="flex-wrap:wrap;">
+                        <div style="flex:1;min-width:0;">
+                            <div class="flex items-center gap-8 mb-4">
+                                {% if s.is_starred %}
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--gold)"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                                {% endif %}
+                                <span class="font-display" style="font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ s.title|default('无标题') }}</span>
+                            </div>
+                            <div class="flex items-center gap-8 text-muted" style="font-size:.78rem;">
+                                <span>{{ s.username|default('匿名') }}</span>
+                                <span>·</span>
+                                <span>{{ s.created_at|default('') }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-12" style="flex-shrink:0;">
+                            <span class="text-muted" style="font-size:.82rem;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                                {{ s.likes|default(0) }}
+                            </span>
+                            <span class="text-muted" style="font-size:.82rem;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                                {{ s.comment_count|default(0) }}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state card card-noise">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                <h3>暂无建议帖</h3>
+                <p>玩家提交建议后，会显示在这里</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var gid = {{ game.id }};
+    var container = document.getElementById('suggestions-list');
+
+    // 排序按钮
+    var sortBtns = document.querySelectorAll('.sort-btn');
+    var currentSort = 'new';
+    sortBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            sortBtns.forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            currentSort = btn.getAttribute('data-sort');
+            loadSuggestions();
+        });
+    });
+
+    // 星标筛选
+    var starredCheck = document.getElementById('filter-starred');
+    if (starredCheck) {
+        starredCheck.addEventListener('change', function () {
+            loadSuggestions();
+        });
+    }
+
+    // 搜索按钮
+    var searchBtn = document.getElementById('btn-search');
+    var searchInput = document.getElementById('filter-search');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+            loadSuggestions();
+        });
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                loadSuggestions();
+            }
+        });
+    }
+
+    function loadSuggestions() {
+        var params = new URLSearchParams();
+        params.set('sort', currentSort);
+        if (starredCheck && starredCheck.checked) {
+            params.set('starred', '1');
+        }
+        var q = searchInput ? searchInput.value.trim() : '';
+        if (q) {
+            params.set('q', q);
+        }
+
+        fetch('/api/developer/' + gid + '/suggestions?' + params.toString())
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success || !data.suggestions || !data.suggestions.length) {
+                    container.innerHTML = '<div class="empty-state card card-noise">' +
+                        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>' +
+                        '<h3>暂无符合条件的建议帖</h3>' +
+                        '<p>尝试调整筛选条件</p>' +
+                        '</div>';
+                    return;
+                }
+
+                var html = '<div class="suggestions-list">';
+                data.suggestions.forEach(function (s) {
+                    var starIcon = s.is_starred
+                        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--gold)"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>'
+                        : '';
+                    html += '<a class="suggestion-item card card-noise" href="/community/post/' + s.id + '" style="display:block;padding:16px 20px;margin-bottom:12px;text-decoration:none;color:var(--text);">' +
+                        '<div class="flex justify-between items-center gap-12" style="flex-wrap:wrap;">' +
+                        '<div style="flex:1;min-width:0;">' +
+                        '<div class="flex items-center gap-8 mb-4">' +
+                        starIcon +
+                        '<span class="font-display" style="font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (s.title || '无标题') + '</span>' +
+                        '</div>' +
+                        '<div class="flex items-center gap-8 text-muted" style="font-size:.78rem;">' +
+                        '<span>' + (s.username || '匿名') + '</span>' +
+                        '<span>·</span>' +
+                        '<span>' + (s.created_at || '') + '</span>' +
+                        '</div>' +
+                        '</div>' +
+                        '<div class="flex items-center gap-12" style="flex-shrink:0;">' +
+                        '<span class="text-muted" style="font-size:.82rem;">' +
+                        '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>' +
+                        (s.likes || 0) + '</span>' +
+                        '<span class="text-muted" style="font-size:.82rem;">' +
+                        '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>' +
+                        (s.comment_count || 0) + '</span>' +
+                        '</div>' +
+                        '</div>' +
+                        '</a>';
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            })
+            .catch(function () {
+                container.innerHTML = '<div class="text-center text-muted py-24">加载失败</div>';
+            });
+    }
+})();
+</script>
+{% endblock %}

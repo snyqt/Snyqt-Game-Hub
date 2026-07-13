@@ -3,156 +3,1513 @@
 
 {% block title %}{{ game.title|default('游戏详情') }}{% endblock %}
 
+{% block head %}
+<style>
+/* ========================================
+   SNYQT Game Hub — 游戏详情页
+   Design: GameVault 暗黑游戏美学
+   ======================================== */
+
+/* --- CSS Variables --- */
+:root {
+    --gv-bg-deep: #0a0a0a;
+    --gv-bg-card: #1a1a2e;
+    --gv-bg-card-hover: #222244;
+    --gv-accent: #00e676;
+    --gv-accent-dim: rgba(0, 230, 118, 0.15);
+    --gv-gold: #ffd740;
+    --gv-gold-dim: rgba(255, 215, 64, 0.15);
+    --gv-text-primary: #ffffff;
+    --gv-text-secondary: rgba(255, 255, 255, 0.6);
+    --gv-text-muted: rgba(255, 255, 255, 0.4);
+    --gv-border: rgba(255, 255, 255, 0.06);
+    --gv-border-hover: rgba(255, 255, 255, 0.12);
+    --gv-radius: 16px;
+    --gv-radius-sm: 12px;
+    --gv-radius-xs: 8px;
+    --gv-font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+}
+
+/* --- Detail Hero --- */
+.detail-hero-section {
+    position: relative;
+    min-height: 420px;
+    display: flex;
+    align-items: flex-end;
+    /* 顶部留白 = 固定头部高度 + 30px 呼吸空间 */
+    padding: calc(var(--header-h) + 30px) 0 60px;
+    overflow: hidden;
+    background: #0a0a0a;
+}
+
+.detail-hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.detail-hero-bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    filter: blur(40px) brightness(0.3);
+    transform: scale(1.1);
+}
+
+.detail-hero-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(10, 10, 10, 0.4) 0%,
+        rgba(10, 10, 10, 0.7) 50%,
+        rgba(10, 10, 10, 0.95) 100%
+    );
+}
+
+.detail-hero-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 40px;
+    align-items: end;
+}
+
+.detail-hero-cover {
+    width: 280px;
+    border-radius: var(--gv-radius);
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--gv-border);
+    animation: fadeInUp 0.8s ease forwards;
+    flex-shrink: 0;
+}
+
+.detail-hero-cover img {
+    /* 默认横向封面：填满容器宽度，高度按比例自适应 */
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+}
+
+.detail-hero-cover .cover-fallback {
+    width: 100%;
+    aspect-ratio: 3/4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--gv-font-display);
+    font-size: 72px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #1a1a2e, #222244);
+}
+
+/* --- 竖向封面模式（高/宽 > 0.8）：两栏布局 --- */
+body.vertical-cover .detail-hero-inner {
+    grid-template-columns: 40% 1fr;
+    gap: 32px;
+    align-items: stretch;
+}
+
+body.vertical-cover .detail-hero-cover {
+    width: 100%;
+    max-height: 520px;
+}
+
+body.vertical-cover .detail-hero-cover img {
+    width: 100%;
+    height: 100%;
+    max-height: 520px;
+    object-fit: cover;
+}
+
+.detail-hero-info {
+    animation: fadeInUp 0.8s 0.15s ease forwards;
+    opacity: 0;
+}
+
+.detail-hero-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.detail-hero-badge {
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(8px);
+}
+
+.detail-hero-badge.html {
+    background: rgba(0, 230, 118, 0.15);
+    color: var(--gv-accent);
+    border: 1px solid rgba(0, 230, 118, 0.2);
+}
+
+.detail-hero-badge.python {
+    background: rgba(100, 210, 255, 0.15);
+    color: #64d2ff;
+    border: 1px solid rgba(100, 210, 255, 0.2);
+}
+
+.detail-hero-badge.success {
+    background: rgba(0, 230, 118, 0.15);
+    color: var(--gv-accent);
+    border: 1px solid rgba(0, 230, 118, 0.2);
+}
+
+.detail-hero-badge.warning {
+    background: rgba(255, 159, 10, 0.15);
+    color: #ff9f0a;
+    border: 1px solid rgba(255, 159, 10, 0.2);
+}
+
+.detail-hero-badge.danger {
+    background: rgba(255, 69, 58, 0.15);
+    color: #ff453a;
+    border: 1px solid rgba(255, 69, 58, 0.2);
+}
+
+.detail-hero-badge.muted {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--gv-text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.detail-hero-title {
+    font-family: var(--gv-font-display);
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--gv-text-primary);
+    margin-bottom: 12px;
+    line-height: 1.1;
+}
+
+.detail-hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: var(--gv-text-secondary);
+}
+
+.detail-hero-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.detail-hero-meta-item svg {
+    width: 15px;
+    height: 15px;
+    color: var(--gv-gold);
+}
+
+.detail-hero-meta-divider {
+    width: 1px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.detail-hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.detail-hero-actions .btn-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: var(--gv-radius-sm);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: none;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.detail-hero-actions .btn-detail svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.btn-detail-primary {
+    background: var(--gv-accent);
+    color: #0a0a0a;
+    box-shadow: 0 2px 12px rgba(0, 230, 118, 0.3);
+}
+
+.btn-detail-primary:hover {
+    background: #00ff83;
+    box-shadow: 0 4px 24px rgba(0, 230, 118, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-detail-gold {
+    background: var(--gv-gold);
+    color: #0a0a0a;
+    box-shadow: 0 2px 12px rgba(255, 215, 64, 0.3);
+}
+
+.btn-detail-gold:hover {
+    background: #ffe066;
+    box-shadow: 0 4px 24px rgba(255, 215, 64, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-detail-ghost {
+    background: transparent;
+    color: var(--gv-text-secondary);
+    border: 1px solid var(--gv-border);
+}
+
+.btn-detail-ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--gv-border-hover);
+    color: var(--gv-text-primary);
+    transform: translateY(-2px);
+}
+
+.btn-detail-ghost:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- Sticky Info Bar --- */
+.detail-info-bar {
+    background: rgba(26, 26, 46, 0.85);
+    border-bottom: 1px solid var(--gv-border);
+    padding: 14px 0;
+    position: sticky;
+    /* 吸顶位置 = 固定头部高度，紧贴头部下方 */
+    top: var(--header-h);
+    z-index: 100;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.detail-info-bar-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.detail-info-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.detail-info-tag {
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gv-text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--gv-border);
+    transition: all 0.2s ease;
+}
+
+.detail-info-tag:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--gv-text-primary);
+}
+
+.detail-info-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--gv-text-muted);
+}
+
+/* --- Two-Column Layout --- */
+.detail-content {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 48px;
+    align-items: start;
+}
+
+.detail-main {
+    min-width: 0;
+}
+
+.detail-sidebar {
+    position: sticky;
+    /* 吸顶位置 = 固定头部高度 + 20px 间距 */
+    top: calc(var(--header-h) + 20px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* --- Section Titles --- */
+.detail-section-title {
+    font-family: var(--gv-font-display);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--gv-text-primary);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.detail-section-title::before {
+    content: '';
+    width: 4px;
+    height: 24px;
+    background: var(--gv-accent);
+    border-radius: 2px;
+}
+
+.detail-section {
+    margin-bottom: 56px;
+}
+
+/* --- Description --- */
+.detail-desc {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--gv-text-secondary);
+    white-space: pre-line;
+}
+
+/* --- Screenshots Gallery --- */
+.detail-screenshots-scroll {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 8px;
+}
+
+.detail-screenshots-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.detail-screenshot-item {
+    flex-shrink: 0;
+    width: 360px;
+    aspect-ratio: 16/9;
+    border-radius: var(--gv-radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    scroll-snap-align: start;
+}
+
+.detail-screenshot-item:hover {
+    border-color: var(--gv-accent);
+    transform: scale(1.02);
+}
+
+.detail-screenshot-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* --- Lightbox --- */
+.detail-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.94);
+    backdrop-filter: blur(30px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.detail-lightbox.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.detail-lightbox-img {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: var(--gv-radius-sm);
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+    transform: scale(0.92);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.detail-lightbox.active .detail-lightbox-img {
+    transform: scale(1);
+}
+
+.detail-lightbox-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-height: 85vh;
+}
+
+.detail-lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--gv-text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.detail-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.detail-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    color: var(--gv-text-primary);
+}
+
+.detail-lightbox-nav:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.detail-lightbox-nav svg {
+    width: 20px;
+    height: 20px;
+}
+
+.detail-lightbox-prev { left: 24px; }
+.detail-lightbox-next { right: 24px; }
+
+.detail-lightbox-counter {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gv-text-muted);
+    background: rgba(255, 255, 255, 0.08);
+    padding: 6px 16px;
+    border-radius: 999px;
+}
+
+/* --- Sidebar Cards --- */
+.detail-sidebar-card {
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    padding: 24px;
+}
+
+.detail-sidebar-card-title {
+    font-family: var(--gv-font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gv-text-primary);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+}
+
+.detail-sidebar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+}
+
+.detail-sidebar-row:last-child {
+    border-bottom: none;
+}
+
+.detail-sidebar-label {
+    color: var(--gv-text-muted);
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.detail-sidebar-value {
+    color: var(--gv-text-primary);
+    font-weight: 500;
+    text-align: right;
+}
+
+/* --- Rating Summary --- */
+.detail-rating-summary {
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.detail-rating-header {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.detail-rating-score {
+    text-align: center;
+    min-width: 80px;
+}
+
+.detail-rating-number {
+    display: block;
+    font-family: var(--gv-font-display);
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--gv-text-primary);
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+
+.detail-rating-stars {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+    margin: 6px 0;
+}
+
+.detail-rating-stars svg {
+    width: 16px;
+    height: 16px;
+    color: var(--gv-gold);
+}
+
+.detail-rating-count {
+    font-size: 13px;
+    color: var(--gv-text-muted);
+}
+
+.detail-rating-breakdown {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+}
+
+.detail-breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail-breakdown-label {
+    font-size: 12px;
+    color: var(--gv-text-muted);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.detail-breakdown-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.detail-breakdown-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gv-gold), #ffb340);
+    border-radius: 999px;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.detail-breakdown-pct {
+    font-size: 12px;
+    color: var(--gv-text-muted);
+    width: 32px;
+    flex-shrink: 0;
+}
+
+/* --- Review Form --- */
+.detail-review-form {
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.detail-review-form label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gv-text-secondary);
+    margin-bottom: 8px;
+    font-family: var(--gv-font-display);
+}
+
+.detail-stars-input {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.detail-stars-input button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    color: rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+}
+
+.detail-stars-input button:hover,
+.detail-stars-input button.active {
+    color: var(--gv-gold);
+}
+
+.detail-stars-input button svg {
+    width: 28px;
+    height: 28px;
+}
+
+.detail-review-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-xs);
+    color: var(--gv-text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.3s ease;
+    margin-bottom: 16px;
+}
+
+.detail-review-textarea:focus {
+    border-color: var(--gv-accent);
+}
+
+.detail-review-textarea::placeholder {
+    color: var(--gv-text-muted);
+}
+
+.detail-review-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--gv-accent);
+    color: #0a0a0a;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    border-radius: var(--gv-radius-sm);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.detail-review-submit:hover {
+    background: #00ff83;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 230, 118, 0.3);
+}
+
+/* --- Review Cards --- */
+.detail-review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.detail-review-card {
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    padding: 22px;
+    transition: all 0.3s ease;
+}
+
+.detail-review-card:hover {
+    border-color: var(--gv-border-hover);
+    background: var(--gv-bg-card-hover);
+}
+
+.detail-review-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.detail-review-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.detail-review-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.detail-review-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #00e676, #ffd740);
+    color: #0a0a0a;
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.detail-review-author-info {
+    flex: 1;
+}
+
+.detail-review-author {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gv-text-primary);
+}
+
+.detail-review-date {
+    font-size: 12px;
+    color: var(--gv-text-muted);
+}
+
+.detail-review-rating {
+    display: flex;
+    gap: 2px;
+}
+
+.detail-review-rating svg {
+    width: 13px;
+    height: 13px;
+    color: var(--gv-gold);
+}
+
+.detail-review-rating .star-empty {
+    color: rgba(255, 255, 255, 0.15);
+}
+
+.detail-review-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--gv-text-secondary);
+}
+
+/* --- Version History --- */
+.detail-version-item {
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+}
+
+.detail-version-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.detail-version-number {
+    font-family: var(--gv-font-display);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gv-text-primary);
+}
+
+.detail-version-date {
+    font-size: 13px;
+    color: var(--gv-text-muted);
+}
+
+.detail-version-changelog {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--gv-text-secondary);
+    white-space: pre-line;
+    line-height: 1.6;
+}
+
+/* --- Version List (server-rendered) --- */
+.version-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.version-item {
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.version-item .badge {
+    flex-shrink: 0;
+}
+
+.version-item p {
+    flex-basis: 100%;
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--gv-text-secondary);
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+/* --- Invite Redeem --- */
+.detail-invite-redeem {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+}
+
+.detail-invite-redeem-input {
+    flex: 1;
+    min-width: 180px;
+    height: 42px;
+    padding: 0 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-xs);
+    color: var(--gv-text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.detail-invite-redeem-input:focus {
+    border-color: var(--gv-gold);
+}
+
+.detail-invite-redeem-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 42px;
+    padding: 0 20px;
+    background: var(--gv-gold);
+    color: #0a0a0a;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    border-radius: var(--gv-radius-xs);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.detail-invite-redeem-btn:hover {
+    background: #ffe066;
+    transform: translateY(-1px);
+}
+
+.detail-invite-redeem-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- Empty State --- */
+.detail-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+}
+
+.detail-empty-state svg {
+    width: 48px;
+    height: 48px;
+    color: var(--gv-text-muted);
+    margin-bottom: 16px;
+    opacity: 0.4;
+}
+
+.detail-empty-state h3 {
+    font-family: var(--gv-font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gv-text-primary);
+    margin-bottom: 6px;
+}
+
+.detail-empty-state p {
+    font-size: 14px;
+    color: var(--gv-text-muted);
+}
+
+.detail-login-prompt {
+    text-align: center;
+    padding: 24px;
+    background: var(--gv-bg-card);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    margin-bottom: 24px;
+}
+
+.detail-login-prompt a {
+    color: var(--gv-gold);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.detail-login-prompt a:hover {
+    text-decoration: underline;
+}
+
+/* --- Animations --- */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Hidden --- */
+.hidden {
+    display: none !important;
+}
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+    .detail-hero-inner {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .detail-hero-cover {
+        width: 200px;
+    }
+
+    .detail-content {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .detail-sidebar {
+        position: static;
+    }
+}
+
+@media (max-width: 640px) {
+    .detail-hero-section {
+        padding: calc(var(--header-h) + 30px) 0 40px;
+        min-height: auto;
+    }
+
+    .detail-hero-inner {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .detail-hero-cover {
+        width: 160px;
+        margin: 0 auto;
+    }
+
+    .detail-hero-actions {
+        flex-direction: column;
+    }
+
+    .detail-hero-actions .btn-detail {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .detail-info-bar-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detail-info-tags {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        width: 100%;
+        padding-bottom: 4px;
+    }
+
+    .detail-info-tags::-webkit-scrollbar {
+        display: none;
+    }
+
+    .detail-content {
+        padding: 24px 16px 40px;
+    }
+
+    .detail-screenshot-item {
+        width: 280px;
+    }
+
+    .detail-rating-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="page">
-    <div class="container">
-        {# ==================== 顶部：封面 + 信息 ==================== #}
-        <div class="detail-hero">
-            <div class="detail-cover">
-                {{ m.cover_img(game) }}
+{# ==================== Hero 头部 ==================== #}
+<section class="detail-hero-section">
+    <div class="detail-hero-bg">
+        {% if game.cover_image %}
+            {% if game.cover_image.startswith('uploads/') %}
+            <img class="detail-hero-bg-img" src="/uploads/{{ game.cover_image[8:] }}" alt="">
+            {% else %}
+            <img class="detail-hero-bg-img" src="{{ game.cover_image }}" alt="">
+            {% endif %}
+        {% endif %}
+        <div class="detail-hero-bg-overlay"></div>
+    </div>
+
+    <div class="detail-hero-inner">
+        <div class="detail-hero-cover" id="cover-container" data-cover-url="{{ game.cover_image|default('') }}">
+            {% if game.cover_image %}
+                {% if game.cover_image.startswith('uploads/') %}
+                <img src="/uploads/{{ game.cover_image[8:] }}" alt="{{ game.title|default('游戏') }}封面" onload="checkCoverRatio(this)">
+                {% else %}
+                <img src="{{ game.cover_image }}" alt="{{ game.title|default('游戏') }}封面" onload="checkCoverRatio(this)">
+                {% endif %}
+            {% else %}
+            <div class="cover-fallback">{{ (game.title|default('?'))[:1]|upper }}</div>
+            {% endif %}
+        </div>
+
+        <div class="detail-hero-info">
+            <div class="detail-hero-badges">
+                {% if game.hosting_type == 'python' %}
+                <span class="detail-hero-badge python">PYTHON</span>
+                {% else %}
+                <span class="detail-hero-badge html">HTML</span>
+                {% endif %}
+                {% if game.status == 'active' %}
+                <span class="detail-hero-badge success">已上架</span>
+                {% elif game.status == 'pending_review' %}
+                <span class="detail-hero-badge warning">待审核</span>
+                {% elif game.status == 'rejected' %}
+                <span class="detail-hero-badge danger">已拒绝</span>
+                {% elif game.status == 'disabled' %}
+                <span class="detail-hero-badge muted">已下架</span>
+                {% endif %}
+                {% if game.is_banned %}
+                <span class="detail-hero-badge danger">已封禁</span>
+                {% endif %}
             </div>
 
-            <div class="detail-info">
-                <div class="flex gap-8 items-center mb-8" style="flex-wrap:wrap">
-                    {{ m.host_badge(game.hosting_type) }}
-                    {{ m.status_badge(game.status) }}
-                    {{ m.ban_badge(game.is_banned) }}
-                </div>
+            <h1 class="detail-hero-title">{{ game.title|default('未命名游戏') }}</h1>
+            {% if game.version %}<span class="badge badge-muted" style="font-size:.75rem;">v{{ game.version }}</span>{% endif %}
 
-                <h1 class="detail-title">{{ game.title|default('未命名游戏') }}</h1>
+            <div class="detail-hero-meta">
+                <span class="detail-hero-meta-item">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    {{ '%.1f'|format(game.avg_rating|default(0)|float) }} ({{ game.rating_count|default(0) }})
+                </span>
+                <span class="detail-hero-meta-divider"></span>
+                <span class="detail-hero-meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+                    {{ m.fmt_num(game.download_count) }} 下载
+                </span>
+                <span class="detail-hero-meta-divider"></span>
+                <span class="text-muted">· {{ game.play_count|default(0) }} 游玩</span>
+                {% if game.developer %}
+                <span class="detail-hero-meta-divider"></span>
+                <span class="detail-hero-meta-item">{{ game.developer }}</span>
+                {% endif %}
+            </div>
 
-                <div class="detail-stats">
-                    <span class="stat">{{ m.stars_svg(game.avg_rating, game.rating_count) }}</span>
-                    <span class="stat" title="下载量">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        <strong>{{ m.fmt_num(game.download_count) }}</strong> 下载
-                    </span>
-                    <span class="stat" title="游戏 ID">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-                        #{{ game.id }}
-                    </span>
-                    {% if game.tags %}
-                    <span class="stat">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 12l-8 8-9-9V3h8l9 9z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-                        {{ game.tags }}
-                    </span>
-                    {% endif %}
-                </div>
-
-                <div class="detail-actions">
-                    {% if in_library and game.status|default('active') == 'active' and not game.is_banned %}
-                    <a class="btn btn-primary" href="{{ url_for('view.view_game', gid=game.id) }}" target="_blank" rel="noopener">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <div class="detail-hero-actions">
+                {% if in_library and game.status|default('active') == 'active' and not game.is_banned %}
+                    {% if game.external_url %}
+                    <a class="btn-detail btn-detail-primary" href="{{ url_for('games.safe_redirect', url=game.external_url) }}">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        在线玩
+                    </a>
+                    {% else %}
+                    <a class="btn-detail btn-detail-primary" href="{{ url_for('view.view_game', gid=game.game_uid|default(game.id, true)) }}" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                         在线玩
                     </a>
                     {% endif %}
+                {% endif %}
 
-                    {% if not in_library %}
-                        {% if current_user %}
-                        <button class="btn btn-gold" data-action="purchase" data-game-id="{{ game.id }}">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-                            获取游戏 +5 积分
-                        </button>
-                        {% else %}
-                        <a class="btn btn-gold" href="{{ url_for('auth.login', next=request.path) }}">登录后获取</a>
+                {% if not in_library %}
+                    {% if current_user and not game.is_banned %}
+                    <button class="btn-detail btn-detail-gold" data-action="purchase" data-game-id="{{ game.id }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                        获取游戏 +5 积分
+                    </button>
+                    {% elif current_user and game.is_banned %}
+                    <button class="btn-detail btn-detail-ghost" disabled>游戏已封禁</button>
+                    {% else %}
+                    <a class="btn-detail btn-detail-gold" href="{{ url_for('auth.login', next=request.path) }}">登录后获取</a>
+                    {% endif %}
+                {% else %}
+                    {% if not game.is_banned %}
+                        {% if game.get('source_open', 1) %}
+                        <a class="btn-detail btn-detail-ghost" href="{{ url_for('points.download_game', gid=game.id) }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+                            下载
+                        </a>
                         {% endif %}
                     {% else %}
-                    <a class="btn btn-ghost" href="{{ url_for('points.download_game', gid=game.id) }}">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        下载
-                    </a>
+                    <button class="btn-detail btn-detail-ghost" disabled>已封禁</button>
                     {% endif %}
+                {% endif %}
 
-                    <a class="btn btn-ghost" href="{{ url_for('games.index') }}">返回列表</a>
+                <a class="btn-detail btn-detail-ghost" href="{{ url_for('games.index') }}">返回列表</a>
+
+                {# 提交建议入口 - 跳转社区发帖并预填游戏标签 #}
+                <a class="btn-detail btn-detail-ghost" href="{{ url_for('community.new_post') }}?tag={{ game.title|urlencode }}&game_uid={{ game.game_uid|default(game.id, true) }}&post_type=suggestion">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    提交建议
+                </a>
+            </div>
+
+            {# 邀请码兑换入口 #}
+            {% if game.access_mode == 'invite' and not in_library and current_user %}
+            <div class="detail-invite-redeem">
+                <input type="text" id="invite-code-input" class="detail-invite-redeem-input" placeholder="输入邀请码兑换游戏">
+                <button class="detail-invite-redeem-btn" id="invite-redeem-btn">兑换</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{# ==================== Sticky 信息栏 ==================== #}
+<section class="detail-info-bar">
+    <div class="detail-info-bar-inner">
+        <div class="detail-info-tags">
+            {% if game_tags %}
+                {% for t in game_tags %}
+                <a href="{{ url_for('games.index', tag=t.name) }}" class="detail-info-tag">{{ t.name }}</a>
+                {% endfor %}
+            {% elif game.tags %}
+                {% set tag_items = game.tags.split(',') %}
+                {% for t in tag_items if t.strip() %}
+                <span class="detail-info-tag">{{ t.strip() }}</span>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="detail-info-meta">
+            {% if game.created_at %}
+            <span>发布于 {{ game.created_at }}</span>
+            {% endif %}
+            {% if game.version %}
+            <span>v{{ game.version }}</span>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{# ==================== 两栏内容区 ==================== #}
+<div class="detail-content">
+    {# --- 左栏 --- #}
+    <div class="detail-main">
+        {# 描述 #}
+        <div class="detail-section">
+            <h2 class="detail-section-title">关于本作</h2>
+            <div class="detail-desc">{{ game.description|default('开发者尚未填写描述。') }}</div>
+            {# 完整描述入口 - 跳转独立描述页 #}
+            <div style="margin-top:16px;">
+                <a href="{{ url_for('games.game_description', gid=game.id) }}" style="color:var(--gv-accent);font-size:.9rem;text-decoration:none;font-weight:600;">
+                    查看完整描述 →
+                </a>
+            </div>
+        </div>
+
+        {# 截图画廊 #}
+        <div class="detail-section hidden" id="screenshots-block">
+            <h2 class="detail-section-title">游戏截图</h2>
+            <div class="detail-screenshots-scroll" id="screenshots-grid"></div>
+        </div>
+
+        {# Lightbox #}
+        <div class="detail-lightbox" id="screenshot-lightbox">
+            <div class="detail-lightbox-img">
+                <img id="lightbox-img" src="" alt="截图">
+            </div>
+            <button class="detail-lightbox-close" id="lightbox-close">&times;</button>
+            <button class="detail-lightbox-nav detail-lightbox-prev" id="lightbox-prev">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="detail-lightbox-nav detail-lightbox-next" id="lightbox-next">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="detail-lightbox-counter" id="lightbox-counter">1 / 1</div>
+        </div>
+
+        {# 版本历史 #}
+        {% if versions and versions|length > 0 %}
+        <div class="detail-section">
+            <h2 class="detail-section-title">版本更新记录</h2>
+            <div class="version-list">
+                {% for v in versions %}
+                <div class="version-item">
+                    <span class="badge badge-info">v{{ v.version }}</span>
+                    <span class="text-muted">{{ v.created_at.strftime('%Y-%m-%d') }}</span>
+                    {% if v.changelog %}<p>{{ v.changelog }}</p>{% endif %}
                 </div>
-
-                <h3 class="font-display" style="font-size:1rem;color:var(--muted);margin-top:24px;">DESCRIPTION</h3>
-                <p class="detail-desc" style="white-space:pre-line;">{{ game.description|default('开发者尚未填写描述。') }}</p>
+                {% endfor %}
             </div>
         </div>
+        {% endif %}
 
-        {# ==================== 截图画廊（JS 动态渲染） ==================== #}
-        <div id="screenshots-block" class="hidden">
-            <div class="section-title">
-                <span class="accent-bar"></span>
-                <h2>SCREENSHOTS</h2>
+        {# 评分与评论 #}
+        <div class="detail-section">
+            <h2 class="detail-section-title">玩家评测</h2>
+
+            {# 评分摘要 #}
+            <div class="detail-rating-summary">
+                <div class="detail-rating-header">
+                    <div class="detail-rating-score">
+                        <span class="detail-rating-number">{{ '%.1f'|format(game.avg_rating|default(0)|float) }}</span>
+                        <div class="detail-rating-stars rating-stars" data-gid="{{ game.id }}" style="cursor:pointer;">
+                            {% set r = (game.avg_rating|default(0))|float %}
+                            {% for i in range(5) %}
+                                {% if i < r|int %}
+                                <svg class="star" data-rating="{{ i + 1 }}" data-gid="{{ game.id }}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                                {% elif i == r|int and (r - r|int) >= 0.5 %}
+                                <svg class="star" data-rating="{{ i + 1 }}" data-gid="{{ game.id }}" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.5"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                                {% else %}
+                                <svg class="star" data-rating="{{ i + 1 }}" data-gid="{{ game.id }}" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.2"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <span class="detail-rating-count">{{ game.rating_count|default(0) }} 条评价</span>
+                    </div>
+                    <div class="detail-rating-breakdown">
+                        {% set dist = game.rating_distribution|default({}) %}
+                        {% set total = game.rating_count|default(0)|int %}
+                        {% for star in [5, 4, 3, 2, 1] %}
+                        {% set cnt = dist.get(star|string, 0)|int %}
+                        {% set pct = ((cnt / total * 100)|int) if total > 0 else 0 %}
+                        <div class="detail-breakdown-row">
+                            <span class="detail-breakdown-label">{{ star }} 星</span>
+                            <div class="detail-breakdown-bar">
+                                <div class="detail-breakdown-fill" style="width:{{ pct }}%"></div>
+                            </div>
+                            <span class="detail-breakdown-pct">{{ pct }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
-            <div class="screenshots" id="screenshots-grid"></div>
-        </div>
 
-        {# ==================== 评分与评论 ==================== #}
-        <div class="section-title">
-            <span class="accent-bar"></span>
-            <h2>REVIEWS</h2>
-            <span class="sub">{{ reviews|length if reviews else 0 }} 条评论</span>
-        </div>
-
-        {# 评论提交表单 #}
-        {% if current_user and in_library %}
-        <form id="review-form" class="card card-noise mb-24" style="padding:20px;" data-game-id="{{ game.id }}">
-            <input type="hidden" name="rating-value" value="0">
-            <div class="field mb-16">
+            {# 评论提交表单 #}
+            {% if current_user and in_library %}
+            <form id="review-form" class="detail-review-form" data-game-id="{{ game.id }}">
+                <input type="hidden" name="rating-value" value="0">
                 <label>我的评分</label>
-                <div class="stars-input" role="radiogroup" aria-label="评分">
+                <div class="detail-stars-input" role="radiogroup" aria-label="评分">
                     {% for i in range(1, 6) %}
                     <button type="button" data-val="{{ i }}" aria-label="{{ i }} 星">
                         <svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
                     </button>
                     {% endfor %}
                 </div>
-            </div>
-            <div class="field mb-16">
                 <label for="comment">评论内容</label>
-                <textarea id="comment" name="comment" placeholder="分享你的游玩体验..."></textarea>
+                <textarea id="comment" name="comment" class="detail-review-textarea" placeholder="分享你的游玩体验..."></textarea>
+                <button type="submit" class="detail-review-submit">提交评分（+2 积分）</button>
+            </form>
+            {% elif not current_user %}
+            <div class="detail-login-prompt">
+                <p><a href="{{ url_for('auth.login', next=request.path) }}">登录</a> 后可评分评论</p>
             </div>
-            <button type="submit" class="btn btn-primary">
-                提交评分（+2 积分）
-            </button>
-        </form>
-        {% elif not current_user %}
-        <div class="card card-noise mb-24 text-center" style="padding:24px;">
-            <p class="text-muted"><a href="{{ url_for('auth.login', next=request.path) }}" class="text-gold">登录</a> 后可评分评论</p>
-        </div>
-        {% elif not in_library %}
-        <div class="card card-noise mb-24 text-center" style="padding:24px;">
-            <p class="text-muted">获取游戏后即可评分评论</p>
-        </div>
-        {% endif %}
+            {% elif not in_library %}
+            <div class="detail-login-prompt">
+                <p>获取游戏后即可评分评论</p>
+            </div>
+            {% endif %}
 
-        {# 评论列表 #}
-        {% if reviews and reviews|length > 0 %}
-        <div class="review-list">
-            {% for r in reviews %}
-            <div class="review-item">
-                <div class="r-avatar">
-                    {% if r.avatar %}
-                    <img src="{{ r.avatar }}" alt="{{ r.username|default('用户') }}">
-                    {% else %}
-                    <div style="width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--gold));color:#07122A;font-weight:800;">{{ (r.username|default('U'))[:1]|upper }}</div>
-                    {% endif %}
-                </div>
-                <div class="r-body">
-                    <div class="r-head">
-                        <span class="r-user">{{ r.username|default('匿名用户') }}</span>
-                        {{ m.stars_svg(r.rating, none) }}
-                        <span class="r-time">{{ r.created_at|default('') }}</span>
+            {# 评论列表 #}
+            {% if reviews and reviews|length > 0 %}
+            <div class="detail-review-list">
+                {% for r in reviews %}
+                <div class="detail-review-card">
+                    <div class="detail-review-header">
+                        <div class="detail-review-avatar">
+                            {% if r.avatar %}
+                            <img src="{{ r.avatar }}" alt="{{ r.username|default('用户') }}">
+                            {% else %}
+                            <div class="detail-review-avatar-fallback">{{ (r.username|default('U'))[:1]|upper }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="detail-review-author-info">
+                            <div class="detail-review-author">{{ r.username|default('匿名用户') }}</div>
+                            <div class="detail-review-date">{{ r.created_at|default('') }}</div>
+                        </div>
+                        <div class="detail-review-rating">
+                            {% set rr = (r.rating|default(0))|int %}
+                            {% for i in range(5) %}
+                                {% if i < rr %}
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                                {% else %}
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="star-empty"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
                     </div>
                     {% if r.comment %}
-                    <div class="r-text">{{ r.comment }}</div>
+                    <div class="detail-review-text">{{ r.comment }}</div>
                     {% endif %}
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+            {% else %}
+            <div class="detail-empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>
+                <h3>暂无评论</h3>
+                <p>成为第一个评价这款游戏的人</p>
+            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="empty-state card card-noise">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-            <h3>暂无评论</h3>
-            <p>成为第一个评价这款游戏的人</p>
+    </div>
+
+    {# --- 右栏 --- #}
+    <aside class="detail-sidebar">
+        <div class="detail-sidebar-card">
+            <h3 class="detail-sidebar-card-title">游戏信息</h3>
+            {% if game.developer %}
+            <div class="detail-sidebar-row">
+                <span class="detail-sidebar-label">开发者</span>
+                <span class="detail-sidebar-value">{{ game.developer }}</span>
+            </div>
+            {% endif %}
+            {% if game.created_at %}
+            <div class="detail-sidebar-row">
+                <span class="detail-sidebar-label">发布日期</span>
+                <span class="detail-sidebar-value">{{ game.created_at }}</span>
+            </div>
+            {% endif %}
+            {% if game.version %}
+            <div class="detail-sidebar-row">
+                <span class="detail-sidebar-label">版本</span>
+                <span class="detail-sidebar-value">v{{ game.version }}</span>
+            </div>
+            {% endif %}
+            {% if game_tags %}
+            <div class="detail-sidebar-row">
+                <span class="detail-sidebar-label">标签</span>
+                <span class="detail-sidebar-value">
+                    {% for t in game_tags %}
+                    <a href="{{ url_for('games.index', tag=t.name) }}" style="color:var(--gv-accent);">{{ t.name }}</a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </span>
+            </div>
+            {% elif game.category %}
+            <div class="detail-sidebar-row">
+                <span class="detail-sidebar-label">分类</span>
+                <span class="detail-sidebar-value">{{ game.category }}</span>
+            </div>
+            {% endif %}
+            <div class="detail-sidebar-row">
+                <span class="detail-sidebar-label">托管类型</span>
+                <span class="detail-sidebar-value">{{ 'Python' if game.hosting_type == 'python' else 'HTML' }}</span>
+            </div>
+            <div class="detail-sidebar-row">
+                <span class="detail-sidebar-label">游戏 ID</span>
+                <span class="detail-sidebar-value" style="font-family:monospace;letter-spacing:.05em;">{{ game.game_uid|default(game.id, true) }}</span>
+            </div>
+        </div>
+
+        {% if game.tags %}
+        <div class="detail-sidebar-card">
+            <h3 class="detail-sidebar-card-title">标签</h3>
+            <div class="detail-info-tags" style="margin-top:4px;">
+                {% set tag_items = game.tags.split(',') %}
+                {% for t in tag_items if t.strip() %}
+                <span class="detail-info-tag">{{ t.strip() }}</span>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
-    </div>
-</section>
+    </aside>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -168,20 +1525,241 @@
     }
     if (!shots.length) return;
     var block = document.getElementById('screenshots-block');
+    if (block) block.classList.remove('hidden');
+
     var grid = document.getElementById('screenshots-grid');
-    if (!block || !grid) return;
-    block.classList.remove('hidden');
+    var lightbox = document.getElementById('screenshot-lightbox');
+    var lightboxImg = document.getElementById('lightbox-img');
+    var lightboxClose = document.getElementById('lightbox-close');
+    var lightboxPrev = document.getElementById('lightbox-prev');
+    var lightboxNext = document.getElementById('lightbox-next');
+    var lightboxCounter = document.getElementById('lightbox-counter');
+    var currentIndex = 0;
+    var shotUrls = [];
+
     shots.forEach(function (s) {
-        var img = document.createElement('img');
-        // uploads/ 开头的路径走 static，否则原样使用
+        var url;
         if (typeof s === 'string' && s.indexOf('uploads/') === 0) {
-            img.src = '{{ url_for('static', filename='') }}' + s;
+            url = '/uploads/' + s.substring('uploads/'.length);
         } else {
-            img.src = s;
+            url = s;
         }
+        shotUrls.push(url);
+
+        var item = document.createElement('div');
+        item.className = 'detail-screenshot-item';
+        var img = document.createElement('img');
+        img.src = url;
         img.alt = '截图';
-        img.addEventListener('click', function () { window.open(img.src, '_blank'); });
-        grid.appendChild(img);
+        img.loading = 'lazy';
+        item.appendChild(img);
+        item.addEventListener('click', function (idx) {
+            return function () { openLightbox(idx); };
+        }(shotUrls.length - 1));
+        grid.appendChild(item);
+    });
+
+    function openLightbox(idx) {
+        currentIndex = idx;
+        updateLightbox();
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function updateLightbox() {
+        lightboxImg.src = shotUrls[currentIndex];
+        lightboxCounter.textContent = (currentIndex + 1) + ' / ' + shotUrls.length;
+    }
+
+    function prevImage() {
+        currentIndex = (currentIndex - 1 + shotUrls.length) % shotUrls.length;
+        updateLightbox();
+    }
+
+    function nextImage() {
+        currentIndex = (currentIndex + 1) % shotUrls.length;
+        updateLightbox();
+    }
+
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', function (e) {
+        if (e.target === lightbox) closeLightbox();
+    });
+    lightboxPrev.addEventListener('click', function (e) { e.stopPropagation(); prevImage(); });
+    lightboxNext.addEventListener('click', function (e) { e.stopPropagation(); nextImage(); });
+
+    document.addEventListener('keydown', function (e) {
+        if (!lightbox.classList.contains('active')) return;
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') prevImage();
+        if (e.key === 'ArrowRight') nextImage();
+    });
+})();
+
+// 加载版本历史
+(function () {
+    var container = document.getElementById('version-list');
+    if (!container) return;
+    var gid = container.getAttribute('data-game-id');
+    if (!gid) return;
+
+    fetch('/api/games/' + gid + '/versions')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!data.success || !data.versions || !data.versions.length) {
+                container.innerHTML = '<div class="detail-empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/></svg><h3>暂无版本记录</h3></div>';
+                return;
+            }
+            var html = '';
+            data.versions.forEach(function (v) {
+                html += '<div class="detail-version-item">' +
+                    '<div class="detail-version-header">' +
+                    '<strong class="detail-version-number">' + v.version + '</strong>' +
+                    '<span class="detail-version-date">' + (v.created_at || '') + '</span>' +
+                    '</div>';
+                if (v.changelog && v.changelog.trim()) {
+                    html += '<div class="detail-version-changelog">' + v.changelog + '</div>';
+                }
+                html += '</div>';
+            });
+            container.innerHTML = html;
+        })
+        .catch(function () {
+            container.innerHTML = '<div class="detail-empty-state"><p>加载失败</p></div>';
+        });
+})();
+
+// 外链游玩已改为 safe-redirect 中间页，无需 JS 弹窗确认
+
+// 邀请码兑换
+(function () {
+    var btn = document.getElementById('invite-redeem-btn');
+    var input = document.getElementById('invite-code-input');
+    if (!btn || !input) return;
+    btn.addEventListener('click', function () {
+        var code = input.value.trim();
+        if (!code) { window.snyqtToast && window.snyqtToast('请输入邀请码', 'warning'); return; }
+        btn.disabled = true;
+        fetch('/api/invite/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                window.snyqtToast && window.snyqtToast(data.message, 'success');
+                setTimeout(function () { window.location.reload(); }, 800);
+            } else {
+                window.snyqtToast && window.snyqtToast(data.message || '兑换失败', 'error');
+                btn.disabled = false;
+            }
+        })
+        .catch(function () {
+            window.snyqtToast && window.snyqtToast('网络错误', 'error');
+            btn.disabled = false;
+        });
+    });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { btn.click(); }
+    });
+})();
+
+// 评分星交互
+(function () {
+    var form = document.getElementById('review-form');
+    if (!form) return;
+    var stars = form.querySelectorAll('.detail-stars-input button');
+    var ratingInput = form.querySelector('input[name="rating-value"]');
+    var currentRating = 0;
+
+    stars.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            currentRating = parseInt(btn.getAttribute('data-val'));
+            ratingInput.value = currentRating;
+            stars.forEach(function (s, i) {
+                s.classList.toggle('active', i < currentRating);
+            });
+        });
+        btn.addEventListener('mouseenter', function () {
+            var val = parseInt(btn.getAttribute('data-val'));
+            stars.forEach(function (s, i) {
+                s.classList.toggle('active', i < val);
+            });
+        });
+    });
+    var starsContainer = form.querySelector('.detail-stars-input');
+    starsContainer.addEventListener('mouseleave', function () {
+        stars.forEach(function (s, i) {
+            s.classList.toggle('active', i < currentRating);
+        });
+    });
+})();
+
+// 封面长宽比检测：竖向封面切换两栏布局
+function checkCoverRatio(img) {
+    if (!img.naturalWidth) return;
+    var ratio = img.naturalHeight / img.naturalWidth;
+    if (ratio > 0.8) {
+        document.body.classList.add('vertical-cover');
+    }
+}
+
+// 评分摘要区星星：点击立即评分
+(function () {
+    var stars = document.querySelectorAll('.rating-stars .star');
+    if (!stars.length) return;
+    stars.forEach(function (star) {
+        star.addEventListener('click', async function () {
+            var rating = parseInt(star.getAttribute('data-rating'));
+            var gid = star.getAttribute('data-gid');
+            if (!rating || !gid) return;
+
+            // 立即更新视觉效果
+            stars.forEach(function (s, i) {
+                if (i < rating) {
+                    s.classList.add('active');
+                    s.style.color = 'var(--gold-strong)';
+                    s.style.opacity = '1';
+                } else {
+                    s.classList.remove('active');
+                    s.style.color = 'var(--muted)';
+                    s.style.opacity = '0.4';
+                }
+            });
+
+            // 提交评分
+            try {
+                var resp = await fetch('/api/games/' + gid + '/rate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rating: rating })
+                });
+                var data = await resp.json();
+                if (data.success) {
+                    if (window.showToast) {
+                        window.showToast('评分成功', 'success');
+                    } else if (window.snyqtToast) {
+                        window.snyqtToast('评分成功', 'success');
+                    }
+                } else {
+                    if (window.showToast) {
+                        window.showToast(data.message || '评分失败', 'error');
+                    } else if (window.snyqtToast) {
+                        window.snyqtToast(data.message || '评分失败', 'error');
+                    }
+                }
+            } catch (e) {
+                if (window.snyqtToast) {
+                    window.snyqtToast('网络错误', 'error');
+                }
+            }
+        });
     });
 })();
 </script>

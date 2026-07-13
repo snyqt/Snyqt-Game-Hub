@@ -51,7 +51,11 @@
 {# 游戏封面图：有图显示图片，否则 fallback #}
 {% macro cover_img(game) %}
     {% if game.cover_image %}
-        <img src="{{ url_for('static', filename=game.cover_image) if game.cover_image.startswith('uploads/') else game.cover_image }}" alt="{{ game.title|default('游戏') }}封面" loading="lazy">
+        {% if game.cover_image.startswith('uploads/') %}
+            <img src="/uploads/{{ game.cover_image[8:] }}" alt="{{ game.title|default('游戏') }}封面" loading="lazy">
+        {% else %}
+            <img src="{{ game.cover_image }}" alt="{{ game.title|default('游戏') }}封面" loading="lazy">
+        {% endif %}
     {% else %}
         <div class="cover-fallback">{{ (game.title|default('?'))[:1]|upper }}</div>
     {% endif %}

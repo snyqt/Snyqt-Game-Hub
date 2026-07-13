@@ -4,6 +4,8 @@
 {% block title %}开发者面板{% endblock %}
 
 {% block content %}
+{# 当前路由要求 developer 权限，默认即为开发者；若后端传入 is_developer 则使用后端值 #}
+{% set is_developer = is_developer|default(true) %}
 <section class="page">
     <div class="container">
         {# ==================== 顶部欢迎 ==================== #}
@@ -16,16 +18,23 @@
         {# ==================== 上传新游戏 ==================== #}
         <div class="dev-section">
             <form id="upload-form" class="card card-noise" style="padding:24px;" action="{{ url_for('games.upload_game') }}" method="post" enctype="multipart/form-data">
-                <h3 class="font-display mb-24" style="font-size:1.1rem;">UPLOAD NEW GAME</h3>
+                <h3 class="font-display mb-24" style="font-size:1.1rem;" id="form-title">UPLOAD NEW GAME</h3>
 
                 <div class="form-grid">
-                    <div class="field">
+                    <div class="field" style="flex:0 0 120px;">
+                        <label>游戏ID</label>
+                        <input type="text" id="game-uid" name="game_uid" readonly style="background:var(--bg-2);color:var(--muted);font-family:monospace;">
+                        <span class="hint">系统自动生成，不可修改</span>
+                    </div>
+
+                    <div class="field" style="flex:1;min-width:200px;">
                         <label>游戏标题 *</label>
                         <input type="text" name="title" required maxlength="120" placeholder="例如：星辰回响">
                     </div>
-                    <div class="field">
-                        <label>标签（逗号分隔）</label>
-                        <input type="text" name="tags" placeholder="动作, 解谜, 像素">
+
+                    <div class="field" style="flex:0 0 150px;">
+                        <label>版本号 *</label>
+                        <input type="text" name="version" value="1.0.0" required placeholder="1.0.0">
                     </div>
 
                     <div class="field full">
@@ -35,10 +44,31 @@
 
                     <div class="field">
                         <label>托管类型 *</label>
-                        <select name="hosting_type">
-                            <option value="html">HTML 静态托管（无需审核）</option>
+                        <select name="hosting_type" id="hosting-type">
+                            {% if is_developer %}
+                            <option value="single_html">单HTML模式（无需审核，适合简单游戏）</option>
+                            <option value="html">HTML 静态托管（ZIP上传，无需审核）</option>
                             <option value="python">Python 进程托管（需审核）</option>
+                            {% else %}
+                            <option value="single_html" selected>单HTML模式</option>
+                            {% endif %}
                         </select>
+                        {% if not is_developer %}
+                        <span class="hint">普通用户仅支持单HTML模式</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="field">
+                        <label>游戏标签 *</label>
+                        <div class="tag-selector" id="tag-selector">
+                            <div class="tag-list" id="selected-tags"></div>
+                            <div class="tag-input-row">
+                                <input type="text" id="tag-search" placeholder="搜索或输入新标签..." autocomplete="off">
+                                <div class="tag-dropdown" id="tag-dropdown" style="display:none;"></div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="tags" id="tags-hidden">
+                        <span class="hint">点击预设标签选择，或输入新标签名后按回车创建</span>
                     </div>
 
                     {# HTML 模式字段 #}
@@ -46,6 +76,18 @@
                         <label>入口 HTML 文件</label>
                         <input type="text" name="entry_file" value="index.html" placeholder="index.html">
                         <span class="hint">ZIP 解压后相对于游戏目录的入口路径</span>
+                    </div>
+
+                    {# 单HTML模式：上传文件或在线编辑 #}
+                    <div class="field html-file-field">
+                        <label>HTML 文件</label>
+                        <div class="flex gap-8">
+                            <button type="button" class="btn btn-ghost btn-sm" id="btn-html-upload">上传文件</button>
+                            <button type="button" class="btn btn-ghost btn-sm" id="btn-html-edit">在线编辑</button>
+                        </div>
+                        <input type="file" name="html_file" accept=".html,.htm" style="display:none;" id="html-file-input">
+                        <span class="hint" id="html-file-name">未选择文件</span>
+                        <input type="hidden" name="html_content" id="html-content-hidden">
                     </div>
 
                     {# Python 模式字段 #}
@@ -60,21 +102,61 @@
                     </div>
 
                     <div class="field">
+                        <label>源代码</label>
+                        <select name="source_open">
+                            <option value="1">开放源代码（可下载）</option>
+                            <option value="0">不开放源代码（禁止下载）</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>访问模式 *</label>
+                        <select name="access_mode">
+                            <option value="public">公开模式（所有人可在线游玩）</option>
+                            <option value="invite">邀请码准入（需输入邀请码方可游玩）</option>
+                            <option value="private">私密模式（仅开发者本人可访问）</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>外链游玩 URL（可选）</label>
+                        <input type="url" name="external_url" placeholder="https://...">
+                        <span class="hint">填写后将替代内置托管，跳转前会展示安全提示</span>
+                    </div>
+
+                    <div class="field">
+                        <label>价格（元，0为免费）</label>
+                        <input type="number" name="price" value="0" min="0" step="0.01">
+                    </div>
+                    <div class="field">
+                        <label>平台抽成比例</label>
+                        <input type="number" name="platform_share" value="1" readonly style="opacity:0.7;cursor:not-allowed;">
+                        <span class="hint">平台统一抽成 1%</span>
+                    </div>
+
+                    <div class="field">
                         <label>封面图片</label>
                         <input type="file" name="cover" accept="image/*">
                         <div class="preview-thumbs cover-preview hidden"></div>
                     </div>
 
-                    <div class="field">
-                        <label>游戏文件 ZIP *</label>
-                        <input type="file" name="game_files" accept=".zip" required>
-                        <span class="hint">打包整个游戏项目为 zip 上传</span>
+                    <div class="field zip-field">
+                        <label>游戏文件 ZIP</label>
+                        <input type="file" name="game_files" accept=".zip">
+                        <span class="hint">打包整个游戏项目为 ZIP 上传（单HTML模式可不传）</span>
                     </div>
 
+                    {% if is_developer %}
                     <div class="field full">
                         <label>截图（可多选）</label>
                         <input type="file" name="screenshots" accept="image/*" multiple>
                         <div class="preview-thumbs shots-preview hidden"></div>
+                    </div>
+                    {% endif %}
+
+                    <div class="field full">
+                        <label>更新日志</label>
+                        <textarea name="changelog" rows="3" placeholder="描述此版本更新了什么..."></textarea>
                     </div>
                 </div>
 
@@ -104,7 +186,7 @@
                 <div class="dev-game-row">
                     <div class="thumb">
                         {% if g.cover_image %}
-                        <img src="{{ url_for('static', filename=g.cover_image) if g.cover_image.startswith('uploads/') else g.cover_image }}" alt="封面">
+                        <img src="{% if g.cover_image.startswith('uploads/') %}/uploads/{{ g.cover_image[8:] }}{% else %}{{ g.cover_image }}{% endif %}" alt="封面">
                         {% else %}
                         <div class="fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
                         {% endif %}
@@ -127,9 +209,22 @@
                         </div>
                     </div>
                     <div class="actions">
+                        <button class="btn btn-primary btn-sm" data-push-update="{{ g.id }}" data-game-uid="{{ g.game_uid|default('') }}">推送更新</button>
+                        <a class="btn btn-ghost btn-sm" href="{{ url_for('games.developer_data', gid=g.id) }}">数据</a>
+                        <button class="btn btn-ghost btn-sm" data-co-dev="{{ g.id }}">协作</button>
+                        {% if g.access_mode == 'invite' %}
+                        <button class="btn btn-ghost btn-sm" data-invite-codes="{{ g.id }}">邀请码</button>
+                        {% endif %}
                         <a class="btn btn-ghost btn-sm" href="{{ url_for('games.game_detail', gid=g.id) }}">查看</a>
+                        <button class="btn btn-danger btn-sm" data-delete="{{ g.id }}">删除</button>
+                        {% if g.hosting_type == 'html' %}
+                        <input type="text" class="field entry-input" style="min-width:120px;"
+                               data-game-id="{{ g.id }}" value="{{ g.entry_file or 'index.html' }}"
+                               placeholder="入口文件">
+                        <button class="btn btn-primary btn-sm" data-save-entry="{{ g.id }}">保存</button>
+                        {% endif %}
                         {% if g.hosting_type == 'python' and g.status|default('') == 'active' and g.python_port %}
-                        <a class="btn btn-primary btn-sm" href="{{ url_for('view.view_game', gid=g.id) }}" target="_blank">试玩</a>
+                        <a class="btn btn-primary btn-sm" href="{{ url_for('view.view_game', gid=g.game_uid|default(g.id, true)) }}" target="_blank">试玩</a>
                         {% endif %}
                     </div>
                 </div>
@@ -145,4 +240,325 @@
         </div>
     </div>
 </section>
+
+<!-- 合作开发者管理弹窗 -->
+<div id="codev-modal" class="modal hidden" style="position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:grid;place-items:center;">
+    <div class="card card-noise" style="width:min(600px,92vw);max-height:90vh;overflow:auto;padding:28px;">
+        <h3 class="font-display mb-20" style="font-size:1.2rem;">合作开发者管理</h3>
+        <div id="codev-content">
+            <h4 style="font-size:.95rem;margin-bottom:12px;color:var(--muted);">当前协作</h4>
+            <div id="codev-list" class="mb-20"></div>
+
+            <h4 style="font-size:.95rem;margin-bottom:12px;color:var(--muted);">邀请新合作者</h4>
+            <div class="flex gap-12" style="flex-wrap:wrap;">
+                <div class="field" style="flex:1;min-width:200px;">
+                    <input type="text" id="codev-username" placeholder="输入用户名">
+                </div>
+                <button class="btn btn-primary" id="codev-invite-btn">邀请</button>
+            </div>
+        </div>
+        <div class="flex gap-12 justify-end mt-24" style="flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost" id="codev-cancel">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 邀请码管理弹窗 -->
+<div id="invite-modal" class="modal hidden" style="position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:grid;place-items:center;">
+    <div class="card card-noise" style="width:min(650px,92vw);max-height:90vh;overflow:auto;padding:28px;">
+        <h3 class="font-display mb-20" style="font-size:1.2rem;">邀请码管理</h3>
+        <div id="invite-content">
+            <div class="flex gap-12 items-center mb-20" style="flex-wrap:wrap;">
+                <div class="field" style="width:120px;">
+                    <input type="number" id="invite-count" value="5" min="1" max="100">
+                </div>
+                <button class="btn btn-primary" id="invite-generate-btn">生成邀请码</button>
+            </div>
+            <h4 style="font-size:.95rem;margin-bottom:12px;color:var(--muted);">已生成邀请码</h4>
+            <div id="invite-list" class="invite-codes-list"></div>
+        </div>
+        <div class="flex gap-12 justify-end mt-24" style="flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost" id="invite-cancel">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 封面裁剪弹窗 -->
+<div id="crop-modal" class="modal hidden" style="position:fixed;z-index:1100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:grid;place-items:center;">
+    <div class="card card-noise" style="width:min(600px,92vw);padding:28px;">
+        <h3 class="font-display mb-16">裁剪封面图片</h3>
+        <p class="text-muted mb-16" style="font-size:.85rem;">图片长宽比不在允许范围内（0.2~3.5），请裁剪后上传</p>
+        <div id="crop-container" style="position:relative;overflow:hidden;max-height:400px;margin-bottom:16px;background:#000;border-radius:8px;">
+            <img id="crop-img" src="" style="max-width:100%;display:block;">
+            <div id="crop-box" style="position:absolute;border:2px solid var(--primary);background:rgba(0,230,118,0.2);cursor:move;display:none;"></div>
+        </div>
+        <div class="flex gap-12 justify-end">
+            <button type="button" class="btn btn-ghost" id="crop-cancel">取消</button>
+            <button type="button" class="btn btn-primary" id="crop-confirm">确认裁剪</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ====== 游戏唯一ID生成 ======
+function genGameUid() {
+    return Array.from({length: 8}, () =>
+        Math.floor(Math.random() * 16).toString(16).toUpperCase()
+    ).join('');
+}
+document.getElementById('game-uid').value = genGameUid();
+
+// ====== HTML 文件上传/在线编辑 ======
+document.getElementById('btn-html-upload').addEventListener('click', () => {
+    document.getElementById('html-file-input').click();
+});
+document.getElementById('html-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        document.getElementById('html-file-name').textContent = file.name;
+        document.getElementById('html-content-hidden').value = '';
+    }
+});
+
+// 在线编辑HTML
+document.getElementById('btn-html-edit').addEventListener('click', () => {
+    const uid = document.getElementById('game-uid').value;
+    window.open('/html-editor?uid=' + uid, '_blank');
+});
+
+// 监听来自编辑器的消息
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'html-content') {
+        document.getElementById('html-content-hidden').value = e.data.content;
+        document.getElementById('html-file-name').textContent = '在线编辑内容 (' + e.data.content.length + ' 字符)';
+        document.getElementById('html-file-input').value = '';
+    }
+});
+
+// ====== 托管类型联动 ======
+const hostingSelect = document.getElementById('hosting-type');
+if (hostingSelect) {
+    hostingSelect.addEventListener('change', () => {
+        const val = hostingSelect.value;
+        const htmlFields = document.querySelectorAll('.html-fields');
+        const pythonFields = document.querySelectorAll('.python-fields');
+        const htmlFileField = document.querySelector('.html-file-field');
+        const zipField = document.querySelector('.zip-field');
+
+        htmlFields.forEach(f => f.classList.toggle('hidden', val === 'python'));
+        pythonFields.forEach(f => f.classList.toggle('hidden', val !== 'python'));
+
+        if (htmlFileField) htmlFileField.style.display = (val === 'single_html') ? '' : 'none';
+        if (zipField) {
+            const zipInput = zipField.querySelector('input');
+            const zipHint = zipField.querySelector('.hint');
+            if (val === 'single_html') {
+                zipInput.required = false;
+                if (zipHint) zipHint.textContent = '单HTML模式可不传';
+            } else {
+                zipInput.required = true;
+                if (zipHint) zipHint.textContent = '打包整个游戏项目为 ZIP 上传';
+            }
+        }
+    });
+    // 初始触发
+    hostingSelect.dispatchEvent(new Event('change'));
+}
+
+// ====== 推送更新 - 自动填充表单 ======
+function suggestVersion(v) {
+    // 自动递增补丁版本号 1.0.0 -> 1.0.1
+    const parts = v.split('.');
+    if (parts.length >= 3) {
+        parts[2] = String(parseInt(parts[2]) + 1);
+        return parts.join('.');
+    }
+    return v + '.1';
+}
+
+document.querySelectorAll('[data-push-update]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const gid = btn.dataset.pushUpdate;
+        const uid = btn.dataset.gameUid;
+
+        // 获取游戏信息
+        const resp = await fetch('/api/games/' + gid + '/info');
+        if (!resp.ok) return;
+        const info = await resp.json();
+
+        // 填充表单
+        document.getElementById('game-uid').value = info.game_uid || uid;
+        document.getElementById('game-uid').readOnly = true; // 不可改
+        document.querySelector('[name="title"]').value = info.title || '';
+        document.querySelector('[name="description"]').value = info.description || '';
+        document.querySelector('[name="version"]').value = suggestVersion(info.version || '1.0.0');
+        document.querySelector('[name="hosting_type"]').value = info.hosting_type || 'single_html';
+        document.querySelector('[name="entry_file"]').value = info.entry_file || 'index.html';
+        document.querySelector('[name="source_open"]').value = String(info.source_open || 1);
+        document.querySelector('[name="access_mode"]').value = info.access_mode || 'public';
+        document.querySelector('[name="external_url"]').value = info.external_url || '';
+        document.querySelector('[name="price"]').value = info.price || 0;
+
+        // 填充标签 - 使用全局 selectedTags 和 renderSelectedTags
+        if (typeof selectedTags !== 'undefined' && typeof renderSelectedTags === 'function') {
+            selectedTags.clear();
+            if (info.tags) {
+                info.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
+                    selectedTags.add(t);
+                });
+            }
+            renderSelectedTags();
+        }
+
+        // 滚动到表单
+        document.getElementById('upload-form').scrollIntoView({behavior: 'smooth'});
+        document.getElementById('form-title').textContent = 'PUSH UPDATE';
+
+        // 提示
+        if (typeof showToast === 'function') {
+            showToast('已填充游戏信息，修改后点击上传即可推送更新');
+        }
+
+        // ZIP和截图区域提示
+        const zipHint = document.querySelector('.zip-field .hint');
+        if (zipHint) zipHint.textContent = '不上传视为不更改，上传则为全部替代';
+    });
+});
+
+// ====== 封面图片裁剪 ======
+// 全局变量：待裁剪的原始文件与图片对象
+var cropOriginalFile = null;
+var cropOriginalImg = null;
+
+// 显示裁剪弹窗（由 main.js 封面 change 事件调用）
+window.showCropModal = function (img, file) {
+    cropOriginalImg = img;
+    cropOriginalFile = file;
+    var modal = document.getElementById('crop-modal');
+    var cropImg = document.getElementById('crop-img');
+    var cropBox = document.getElementById('crop-box');
+    if (!modal || !cropImg) return;
+
+    // 将图片绘制到 canvas 后转 dataURL 显示（避免跨域问题）
+    cropImg.src = img.src;
+    cropImg.onload = function () {
+        // 初始化裁剪框为图片中央 80% 区域
+        var rect = cropImg.getBoundingClientRect();
+        var boxW = rect.width * 0.8;
+        var boxH = rect.height * 0.8;
+        cropBox.style.width = boxW + 'px';
+        cropBox.style.height = boxH + 'px';
+        cropBox.style.left = (rect.width * 0.1) + 'px';
+        cropBox.style.top = (rect.height * 0.1) + 'px';
+        cropBox.style.display = 'block';
+        bindCropDrag(cropBox, cropImg);
+    };
+    modal.classList.remove('hidden');
+};
+
+// 绑定裁剪框拖拽
+function bindCropDrag(box, img) {
+    var isDragging = false;
+    var startX = 0, startY = 0;
+    var startLeft = 0, startTop = 0;
+
+    function onDown(e) {
+        isDragging = true;
+        var pt = getPoint(e);
+        startX = pt.x;
+        startY = pt.y;
+        startLeft = parseInt(box.style.left) || 0;
+        startTop = parseInt(box.style.top) || 0;
+        e.preventDefault();
+    }
+    function onMove(e) {
+        if (!isDragging) return;
+        var pt = getPoint(e);
+        var dx = pt.x - startX;
+        var dy = pt.y - startY;
+        var container = img.parentElement;
+        var maxX = container.clientWidth - box.offsetWidth;
+        var maxY = container.clientHeight - box.offsetHeight;
+        var newLeft = Math.max(0, Math.min(maxX, startLeft + dx));
+        var newTop = Math.max(0, Math.min(maxY, startTop + dy));
+        box.style.left = newLeft + 'px';
+        box.style.top = newTop + 'px';
+    }
+    function onUp() { isDragging = false; }
+    function getPoint(e) {
+        if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
+    }
+    // 移除旧监听避免重复绑定
+    box.onmousedown = onDown;
+    box.ontouchstart = onDown;
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove);
+    document.addEventListener('touchend', onUp);
+}
+
+// 取消裁剪
+document.getElementById('crop-cancel').addEventListener('click', function () {
+    document.getElementById('crop-modal').classList.add('hidden');
+    // 清空封面输入，避免上传未裁剪的图片
+    var coverInput = document.querySelector('input[name="cover"]');
+    if (coverInput) coverInput.value = '';
+    if (window.showToast) window.showToast('已取消封面上传', 'info');
+});
+
+// 确认裁剪
+document.getElementById('crop-confirm').addEventListener('click', function () {
+    var cropImg = document.getElementById('crop-img');
+    var cropBox = document.getElementById('crop-box');
+    if (!cropOriginalImg || !cropImg) return;
+
+    // 计算裁剪区域在原始图片像素中的位置
+    var scaleX = cropOriginalImg.naturalWidth / cropImg.clientWidth;
+    var scaleY = cropOriginalImg.naturalHeight / cropImg.clientHeight;
+    var sx = parseFloat(cropBox.style.left) * scaleX;
+    var sy = parseFloat(cropBox.style.top) * scaleY;
+    var sw = cropBox.offsetWidth * scaleX;
+    var sh = cropBox.offsetHeight * scaleY;
+
+    // 用 canvas 裁剪
+    var canvas = document.createElement('canvas');
+    canvas.width = sw;
+    canvas.height = sh;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(cropOriginalImg, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    // 转为 Blob 并替换 input[name="cover"] 的文件
+    canvas.toBlob(function (blob) {
+        if (!blob) return;
+        var ext = (cropOriginalFile.name.split('.').pop() || 'png').toLowerCase();
+        var mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
+        var mime = mimeMap[ext] || 'image/png';
+        var newFile = new File([blob], 'cover_cropped.' + (ext === 'jpeg' ? 'jpg' : ext), { type: mime });
+
+        // 用 DataTransfer 替换 input 文件
+        var coverInput = document.querySelector('input[name="cover"]');
+        if (coverInput && coverInput.files) {
+            var dt = new DataTransfer();
+            dt.items.add(newFile);
+            coverInput.files = dt.files;
+        }
+
+        // 显示预览
+        var preview = document.querySelector('.cover-preview');
+        if (preview) {
+            preview.innerHTML = '';
+            var prevImg = document.createElement('img');
+            prevImg.src = URL.createObjectURL(newFile);
+            preview.appendChild(prevImg);
+            preview.classList.remove('hidden');
+        }
+
+        document.getElementById('crop-modal').classList.add('hidden');
+        if (window.showToast) window.showToast('裁剪完成', 'success');
+    }, 'image/png');
+});
+</script>
 {% endblock %}

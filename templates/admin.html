@@ -12,6 +12,14 @@
             <span class="sub">超级管理员控制台</span>
         </div>
 
+        {# ==================== 管理导航 ==================== #}
+        <div class="flex gap-8 mb-24" style="flex-wrap:wrap;">
+            <a href="{{ url_for('admin.blacklist_page') }}" class="btn btn-ghost btn-sm" style="border-color:rgba(255,69,58,0.3);color:#ff453a;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 22h20L12 2z"/><path d="M12 9v5M12 18h.01"/></svg>
+                小黑屋管理
+            </a>
+        </div>
+
         {# ==================== 用户权限管理 ==================== #}
         <div class="admin-block" data-admin-block>
             <div class="admin-block-header" data-toggle>
@@ -56,24 +64,26 @@
                                 </div>
                             </td>
                             <td>
-                                {% set lvl = u.permission_level|default('user') %}
-                                {% if lvl == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
-                                {% elif lvl == 'developer' %}<span class="badge badge-info">开发者</span>
-                                {% else %}<span class="badge badge-muted">普通用户</span>{% endif %}
+                                {% set lvl = u.permission_level|default('', true) %}
+                                {% if 'super_admin' in lvl %}<span class="badge badge-danger">超级管理员</span>{% endif %}
+                                {% if 'developer' in lvl %}<span class="badge badge-info">开发者</span>{% endif %}
+                                {% if 'reviewer' in lvl %}<span class="badge" style="background:#ab47bc;color:#fff;">评荐员</span>{% endif %}
+                                {% if not lvl %}<span class="badge badge-muted">普通用户</span>{% endif %}
                             </td>
                             <td>
-                                {% set st = u.status|default('approved') %}
-                                {% if st == 'approved' %}<span class="badge badge-success">已批准</span>
-                                {% elif st == 'pending' %}<span class="badge badge-warning">待审核</span>
-                                {% elif st == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
-                                {% else %}<span class="badge badge-muted">{{ st }}</span>{% endif %}
+                                {% set st = u.status|default('', true) %}
+                                {% if 'approved' in st %}<span class="badge badge-success">已批准</span>{% endif %}
+                                {% if 'pending' in st %}<span class="badge badge-warning">待审核</span>{% endif %}
+                                {% if 'rejected' in st %}<span class="badge badge-danger">已拒绝</span>{% endif %}
+                                {% if not st %}<span class="badge badge-muted">无</span>{% endif %}
                             </td>
                             <td class="text-gold" style="font-weight:700;">{{ u.points|default(0) }}</td>
                             <td>
                                 <select data-perm-select data-user-id="{{ u.id }}" class="field" style="padding:6px 10px;width:auto;min-width:130px;">
-                                    <option value="user" {{ 'selected' if lvl == 'user' or not lvl }}>普通用户</option>
-                                    <option value="developer" {{ 'selected' if lvl == 'developer' }}>开发者</option>
-                                    <option value="super_admin" {{ 'selected' if lvl == 'super_admin' }}>超级管理员</option>
+                                    <option value="user">普通用户</option>
+                                    <option value="developer">开发者</option>
+                                    <option value="reviewer">评荐员</option>
+                                    <option value="super_admin">超级管理员</option>
                                 </select>
                             </td>
                         </tr>
@@ -92,8 +102,8 @@
         <div class="admin-block" data-admin-block>
             <div class="admin-block-header" data-toggle>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong)"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-                <h3 class="font-display" style="font-size:1.1rem;">权限申请队列</h3>
-                <span class="admin-block-count">{{ applications|length if applications else 0 }} pending</span>
+                <h3 class="font-display" style="font-size:1.1rem;">权限记录管理</h3>
+                <span class="admin-block-count">{{ applications|length if applications else 0 }} 条记录</span>
                 <span class="admin-block-toggle">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </span>
@@ -102,21 +112,22 @@
             {% if applications and applications|length > 0 %}
                 <div class="admin-search-wrap" style="max-width:360px;margin-bottom:14px;">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-                    <input type="text" data-search-input placeholder="搜索申请人 / ID / 申请级别..." style="width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.85rem;">
+                    <input type="text" data-search-input placeholder="搜索申请人 / ID / 级别 / 状态..." style="width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.85rem;">
                 </div>
                 <div style="overflow-x:auto;">
                 <table class="admin-table">
                     <thead>
                         <tr>
                             <th>申请人</th>
-                            <th>申请级别</th>
+                            <th>权限级别</th>
+                            <th>状态</th>
                             <th>提交时间</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for a in applications %}
-                        <tr data-search-row data-search-text="{{ (a.username|default(''))|lower }} #{{ a.user_id }} {{ a.permission_level|default('') }}">
+                        <tr data-search-row data-search-text="{{ (a.username|default(''))|lower }} #{{ a.user_id }} #{{ a.id }} {{ a.permission_level|default('') }} {{ a.status|default('') }}">
                             <td>
                                 <div class="u-cell">
                                     {% if a.avatar %}
@@ -126,33 +137,46 @@
                                     {% endif %}
                                     <div>
                                         <div style="font-weight:600;">{{ a.username|default('匿名') }}</div>
-                                        <div class="text-muted" style="font-size:.76rem;">ID #{{ a.user_id }} · 积分 {{ a.points|default(0) }}</div>
+                                        <div class="text-muted" style="font-size:.76rem;">用户 #{{ a.user_id }} · 积分 {{ a.points|default(0) }}</div>
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                {% if a.permission_level == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
-                                {% elif a.permission_level == 'developer' %}<span class="badge badge-info">开发者</span>
-                                {% else %}<span class="badge badge-muted">{{ a.permission_level }}</span>{% endif %}
-                                <span class="badge badge-warning" style="margin-left:6px;">待审核</span>
+                                {% set apl = a.permission_level|default('') %}
+                                {% if apl == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
+                                {% elif apl == 'developer' %}<span class="badge badge-info">开发者</span>
+                                {% elif apl == 'reviewer' %}<span class="badge" style="background:#ab47bc;color:#fff;">评荐员</span>
+                                {% else %}<span class="badge badge-muted">{{ apl }}</span>{% endif %}
+                                {% if a.reason %}<div class="text-muted" style="font-size:.74rem;margin-top:2px;">理由: {{ a.reason }}</div>{% endif %}
                             </td>
-                            <td class="text-muted" style="font-size:.8rem;">{{ a.updated_at|default('') }}</td>
                             <td>
+                                {% set st = a.status|default('') %}
+                                {% if st == 'pending' %}<span class="badge badge-warning">待审核</span>
+                                {% elif st == 'approved' %}<span class="badge badge-success">已批准</span>
+                                {% elif st == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
+                                {% else %}<span class="badge badge-muted">{{ st }}</span>{% endif %}
+                            </td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ a.created_at|default('') }}</td>
+                            <td>
+                                {% if a.status == 'pending' %}
                                 <div class="flex gap-8">
-                                    <button class="btn btn-success btn-sm" data-app-review="{{ a.user_id }}" data-action="approve" style="background:linear-gradient(135deg,var(--primary),var(--primary-strong));color:#07122A;">
+                                    <button class="btn btn-success btn-sm" data-app-review="{{ a.id }}" data-action="approve" style="background:linear-gradient(135deg,var(--primary),var(--primary-strong));color:#07122A;">
                                         批准
                                     </button>
-                                    <button class="btn btn-danger btn-sm" data-app-review="{{ a.user_id }}" data-action="reject">
+                                    <button class="btn btn-danger btn-sm" data-app-review="{{ a.id }}" data-action="reject">
                                         拒绝
                                     </button>
                                 </div>
+                                {% else %}
+                                <span class="text-muted" style="font-size:.8rem;">已处理</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 </div>
-                <div class="admin-no-match">未找到匹配的申请</div>
+                <div class="admin-no-match">未找到匹配的记录</div>
             {% else %}
                 <div class="empty-state card card-noise">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
@@ -239,6 +263,26 @@
             </div>
         </div>
 
+        {# ==================== 配置变更审核 ==================== #}
+        <div class="admin-block" data-admin-block id="config-review-block">
+            <div class="admin-block-header" data-toggle>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong)"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+                <h3 class="font-display" style="font-size:1.1rem;">配置变更审核</h3>
+                <span class="admin-block-count" id="config-review-count">...</span>
+                <span class="admin-block-toggle">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+            </div>
+            <div class="admin-block-body">
+                <div id="config-review-list">
+                    <div class="empty-state card card-noise">
+                        <h3>加载中...</h3>
+                        <p>正在获取配置变更审核列表</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {# ==================== 游戏管理 ==================== #}
         <div class="admin-block" data-admin-block>
             <div class="admin-block-header" data-toggle>
@@ -272,7 +316,7 @@
                             <td>
                                 <div class="u-cell">
                                     {% if g.cover_image %}
-                                    <img src="{{ url_for('static', filename=g.cover_image) if g.cover_image.startswith('uploads/') else g.cover_image }}" alt="" style="object-fit:cover;">
+                                    <img src="{% if g.cover_image.startswith('uploads/') %}/uploads/{{ g.cover_image[8:] }}{% else %}{{ g.cover_image }}{% endif %}" alt="" style="object-fit:cover;">
                                     {% else %}
                                     <div style="width:32px;height:32px;border-radius:6px;display:grid;place-items:center;background:var(--card-2);color:var(--muted);font-weight:700;">{{ (g.title|default('?'))[:1]|upper }}</div>
                                     {% endif %}
@@ -294,6 +338,7 @@
                             <td>
                                 <div class="flex gap-8" style="flex-wrap:wrap">
                                     <a class="btn btn-ghost btn-sm" href="{{ url_for('games.game_detail', gid=g.id) }}">查看</a>
+                                    <button class="btn btn-danger btn-sm" data-delete="{{ g.id }}" title="删除游戏（级联删除所有数据）">删除</button>
                                     {% if g.is_banned %}
                                     <button class="btn btn-primary btn-sm" data-ban="{{ g.id }}" data-action="unban">解禁</button>
                                     {% else %}

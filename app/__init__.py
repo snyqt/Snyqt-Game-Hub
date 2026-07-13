@@ -80,6 +80,7 @@ def create_app():
     from app.view import view_bp
     from app.points import points_bp
     from app.admin import admin_bp
+    from app.community import community_bp
 
     app.register_blueprint(turnstile_bp)
     app.register_blueprint(auth_bp)
@@ -88,6 +89,7 @@ def create_app():
     app.register_blueprint(view_bp)
     app.register_blueprint(points_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(community_bp)
 
     # ---------- 请求生命周期日志中间件 ----------
     @app.before_request
@@ -95,6 +97,8 @@ def create_app():
         """请求开始：记录方法、路径、Content-Length、请求 ID。"""
         g.req_id = uuid.uuid4().hex[:8]
         g.req_start_time = time.time()
+        g.client_type = request.headers.get('X-Client', 'web')
+        g.api_version = request.headers.get('X-API-Version', '1')
         content_length = request.headers.get('Content-Length', '0')
         content_type = request.headers.get('Content-Type', '')
         # 上传请求重点记录
@@ -124,6 +128,10 @@ def create_app():
                 response.status_code, elapsed,
                 response.headers.get('Content-Length', '?')
             )
+        # PC 客户端 API 适配：统一响应头
+        response.headers['X-API-Version'] = '1'
+        response.headers['X-Client-Supported'] = 'web,desktop'
+        response.headers['Access-Control-Expose-Headers'] = 'X-API-Version, X-Client-Supported'
         return response
 
     @app.teardown_request

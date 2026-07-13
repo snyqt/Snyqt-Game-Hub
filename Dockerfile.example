@@ -89,6 +89,10 @@ COPY . /app
 # ==================== 运行时目录 ====================
 RUN mkdir -p /app/uploads/games /app/logs
 
+# 声明持久化卷（Docker 重载后游戏文件不丢失）
+# 部署时务必映射：docker run -v host_uploads:/app/uploads ...
+VOLUME ["/app/uploads"]
+
 # ==================== 端口暴露 ====================
 EXPOSE 5000
 

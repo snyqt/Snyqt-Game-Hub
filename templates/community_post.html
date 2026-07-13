@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ post.title|default('帖子详情') }}{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        {# ==================== 面包屑导航 ==================== #}
+        <div class="mb-16" style="font-size:.82rem;color:var(--muted);">
+            <a href="{{ url_for('community.index') }}" style="color:var(--muted);text-decoration:none;">社区</a>
+            <span style="margin:0 6px;">/</span>
+            <span>{{ post.title|default('帖子详情') }}</span>
+        </div>
+
+        {# ==================== 帖子主体 ==================== #}
+        <div class="card card-noise" style="padding:24px;margin-bottom:24px;">
+            {# 管理按钮（仅 reviewer 可见） #}
+            {% if is_reviewer %}
+            <div class="flex gap-8 mb-16" style="flex-wrap:wrap;">
+                <button class="btn btn-ghost btn-sm" onclick="toggleStar({{ post.id }})" id="star-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    {% if post.is_starred %}取消星标{% else %}星标{% endif %}
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="togglePin({{ post.id }})" id="pin-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                    {% if post.is_pinned %}取消置顶{% else %}置顶{% endif %}
+                </button>
+            </div>
+            {% endif %}
+
+            {# 标题和元信息 #}
+            <div class="flex items-center gap-12 mb-12" style="flex-wrap:wrap;">
+                {% if post.is_starred %}
+                <span class="badge" style="background:rgba(245,179,1,0.18);color:var(--gold-strong);border-color:rgba(245,179,1,0.5);">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    星标
+                </span>
+                {% endif %}
+                {% if post.is_pinned %}
+                <span class="badge badge-warning">置顶</span>
+                {% endif %}
+                {% if post.post_type %}
+                <span class="badge badge-info">{{ {'discussion': '讨论', 'question': '提问', 'suggestion': '建议'}.get(post.post_type, post.post_type) }}</span>
+                {% endif %}
+                {% if post.game_tag %}
+                <span class="tag">{{ post.game_tag }}</span>
+                {% endif %}
+                {% if is_banned %}
+                <span class="badge badge-danger">已封禁</span>
+                {% endif %}
+            </div>
+
+            <h1 style="font-size:1.5rem;margin:0 0 16px;">{{ post.title }}</h1>
+
+            <div class="flex items-center gap-12 mb-20" style="flex-wrap:wrap;font-size:.84rem;color:var(--muted);">
+                <div class="flex items-center gap-8">
+                    {% if post.avatar %}
+                    <img src="{{ post.avatar }}" alt="{{ post.username }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+                    {% else %}
+                    <div style="width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--gold));color:#07122A;font-size:.7rem;font-weight:800;">{{ (post.username|default('U'))[:1]|upper }}</div>
+                    {% endif %}
+                    <span style="font-weight:600;color:var(--text);">{{ post.username|default('匿名用户') }}</span>
+                </div>
+                <span>{{ post.created_at|default('') }}</span>
+                <span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                    {{ post.comment_count|default(0) }} 评论
+                </span>
+            </div>
+
+            {# 帖子内容：若已封禁且非管理员，显示封禁提示 #}
+            {% if is_banned and not is_admin %}
+            <div class="post-content" style="line-height:1.7;font-size:.95rem;margin-bottom:20px;padding:24px;text-align:center;background:rgba(255,69,58,0.06);border:1px solid rgba(255,69,58,0.2);border-radius:12px;color:var(--muted);">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="margin-bottom:8px;opacity:.6;"><path d="M12 2L2 22h20L12 2z"/><path d="M12 9v5M12 18h.01" stroke-linecap="round"/></svg>
+                <div style="font-size:1.05rem;font-weight:600;color:var(--text);margin-bottom:4px;">该帖子已被封禁</div>
+                <div style="font-size:.84rem;">因违反社区规范，该帖子内容已被管理员隐藏</div>
+            </div>
+            {% else %}
+            <div class="post-content" style="white-space:pre-line;line-height:1.7;font-size:.95rem;margin-bottom:20px;">
+                {{ post.content|default('') }}
+            </div>
+            {% endif %}
+
+            {# 点赞按钮 + 举报/封禁按钮 #}
+            <div class="flex items-center gap-12" style="flex-wrap:wrap;">
+                {% if current_user %}
+                <button class="btn btn-ghost btn-sm {{ 'active' if user_liked else '' }}"
+                        onclick="toggleLike({{ post.id }})" id="like-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="{{ 'currentColor' if user_liked else 'none' }}" style="vertical-align:-1px;">
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" stroke="currentColor" stroke-width="1.4"/>
+                    </svg>
+                    <span id="like-count">{{ post.likes|default(0) }}</span>
+                </button>
+                {% else %}
+                <span class="text-muted" style="font-size:.82rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" stroke="currentColor" stroke-width="1.4"/></svg>
+                    {{ post.likes|default(0) }}
+                </span>
+                {% endif %}
+                <a href="{{ url_for('community.index') }}" class="btn btn-ghost btn-sm">返回列表</a>
+
+                {# 举报按钮：登录且非管理员的用户可见 #}
+                {% if current_user and not is_admin %}
+                <button class="btn btn-ghost btn-sm" onclick="reportPost({{ post.id }})" style="margin-left:auto;color:#ff453a;border-color:rgba(255,69,58,0.3);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M12 2L2 22h20L12 2z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M12 9v5M12 18h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    举报
+                </button>
+                {% endif %}
+
+                {# 封禁按钮：仅超级管理员可见 #}
+                {% if is_admin and not is_banned %}
+                <button class="btn btn-danger btn-sm" onclick="banPost({{ post.id }})" style="margin-left:auto;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    封禁帖子
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ==================== 评论列表 ==================== #}
+        {% if not is_banned or is_admin %}
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>COMMENTS</h2>
+            <span class="sub">{{ comments|length if comments else 0 }} 条评论</span>
+        </div>
+
+        {% if comments and comments|length > 0 %}
+        <div class="review-list mb-24">
+            {% for c in comments %}
+            <div class="review-item {{ 'best-answer' if c.is_best_answer else '' }}"
+                 style="{% if c.is_best_answer %}border:2px solid var(--gold-strong);border-radius:12px;padding:16px;background:rgba(245,179,1,0.05);{% endif %}">
+                {% if c.is_best_answer %}
+                <div class="mb-8">
+                    <span class="badge" style="background:rgba(245,179,1,0.18);color:var(--gold-strong);border-color:rgba(245,179,1,0.5);">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                        最佳答案
+                    </span>
+                </div>
+                {% endif %}
+                <div class="r-avatar">
+                    {% if c.avatar %}
+                    <img src="{{ c.avatar }}" alt="{{ c.username|default('用户') }}">
+                    {% else %}
+                    <div style="width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--gold));color:#07122A;font-weight:800;">{{ (c.username|default('U'))[:1]|upper }}</div>
+                    {% endif %}
+                </div>
+                <div class="r-body">
+                    <div class="r-head">
+                        <span class="r-user">{{ c.username|default('匿名用户') }}</span>
+                        <span class="r-time">{{ c.created_at|default('') }}</span>
+                    </div>
+                    <div class="r-text">{{ c.content }}</div>
+                    {# 标记最佳答案按钮（仅提问者可见） #}
+                    {% if current_user and current_user.id == post.user_id and post.post_type == 'question' and not c.is_best_answer %}
+                    <div class="mt-8">
+                        <button class="btn btn-ghost btn-sm" onclick="markBest({{ c.id }})">
+                            标记为最佳答案
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state card card-noise mb-24">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+            <h3>暂无评论</h3>
+            <p>成为第一个评论的人</p>
+        </div>
+        {% endif %}
+
+        {# ==================== 评论表单 ==================== #}
+        {% if current_user %}
+        <div class="card card-noise" style="padding:20px;margin-bottom:24px;">
+            <h3 style="font-size:1rem;margin:0 0 12px;">发表评论</h3>
+            <form id="comment-form">
+                <div class="field mb-16">
+                    <textarea id="comment-content" name="content" rows="3" placeholder="写下你的评论..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                    发表评论
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div class="card card-noise mb-24 text-center" style="padding:24px;">
+            <p class="text-muted"><a href="{{ url_for('auth.login', next=request.path) }}" class="text-gold">登录</a> 后可发表评论</p>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var postId = {{ post.id }};
+
+// 点赞/取消点赞
+function toggleLike(pid) {
+    fetch('/community/api/community/posts/' + pid + '/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.success) {
+            var btn = document.getElementById('like-btn');
+            var svg = btn.querySelector('svg');
+            var count = document.getElementById('like-count');
+            count.textContent = data.likes;
+            if (data.liked) {
+                svg.setAttribute('fill', 'currentColor');
+                btn.classList.add('active');
+            } else {
+                svg.setAttribute('fill', 'none');
+                btn.classList.remove('active');
+            }
+        } else {
+            alert(data.message || '操作失败');
+        }
+    });
+}
+
+// 星标切换
+function toggleStar(pid) {
+    fetch('/community/api/community/posts/' + pid + '/star', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '操作失败');
+        }
+    });
+}
+
+// 置顶切换
+function togglePin(pid) {
+    fetch('/community/api/community/posts/' + pid + '/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '操作失败');
+        }
+    });
+}
+
+// 标记最佳答案
+function markBest(cid) {
+    if (!confirm('确认标记为最佳答案？')) return;
+    fetch('/community/api/community/comments/' + cid + '/best', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '操作失败');
+        }
+    });
+}
+
+// 举报帖子
+function reportPost(pid) {
+    var reason = prompt('请输入举报理由：');
+    if (reason === null) return;  // 用户取消
+    reason = (reason || '').trim();
+    if (!reason) {
+        window.snyqtToast ? window.snyqtToast('请填写举报理由', 'warning') : alert('请填写举报理由');
+        return;
+    }
+    fetch('/community/api/community/post/' + pid + '/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok || data.success) {
+            window.snyqtToast ? window.snyqtToast('举报已提交，等待管理员处理', 'success') : alert('举报已提交');
+        } else {
+            window.snyqtToast ? window.snyqtToast(data.error || data.message || '操作失败', 'error') : alert(data.error || data.message || '操作失败');
+        }
+    })
+    .catch(function () {
+        window.snyqtToast ? window.snyqtToast('网络错误，请稍后重试', 'error') : alert('网络错误');
+    });
+}
+
+// 封禁帖子（仅超级管理员）
+function banPost(pid) {
+    var reason = prompt('请输入封禁理由：', '违反社区规范');
+    if (reason === null) return;  // 用户取消
+    reason = (reason || '违反社区规范').trim();
+    if (!reason) reason = '违反社区规范';
+    if (!confirm('确认封禁该帖子？此操作将隐藏帖子内容并记入小黑屋。')) return;
+    fetch('/community/api/community/post/' + pid + '/ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok || data.success) {
+            window.snyqtToast ? window.snyqtToast('帖子已封禁', 'success') : alert('帖子已封禁');
+            setTimeout(function () { location.reload(); }, 800);
+        } else {
+            window.snyqtToast ? window.snyqtToast(data.error || data.message || '操作失败', 'error') : alert(data.error || data.message || '操作失败');
+        }
+    })
+    .catch(function () {
+        window.snyqtToast ? window.snyqtToast('网络错误，请稍后重试', 'error') : alert('网络错误');
+    });
+}
+
+// 评论提交
+(function () {
+    var form = document.getElementById('comment-form');
+    if (!form) return;
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var submitBtn = form.querySelector('button[type="submit"]');
+        var content = document.getElementById('comment-content').value.trim();
+
+        if (!content) {
+            alert('评论内容不能为空');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = '提交中...';
+
+        fetch('/community/api/community/posts/' + postId + '/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || '评论失败');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '发表评论';
+            }
+        })
+        .catch(function () {
+            alert('网络错误，请稍后重试');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '发表评论';
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,395 @@
+{% extends 'base.html' %}
+
+{% block title %}小黑屋管理{% endblock %}
+
+{% block head %}
+<style>
+/* 小黑屋管理页面样式 */
+.blacklist-section {
+    margin-bottom: 32px;
+}
+
+.blacklist-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card, #1a1a2e);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: .88rem;
+}
+
+.blacklist-table th,
+.blacklist-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
+}
+
+.blacklist-table th {
+    background: rgba(255,255,255,0.04);
+    color: var(--muted, rgba(255,255,255,0.6));
+    font-weight: 600;
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.blacklist-table tr:last-child td {
+    border-bottom: none;
+}
+
+.blacklist-table tr:hover td {
+    background: rgba(255,255,255,0.02);
+}
+
+.report-card {
+    background: var(--card, #1a1a2e);
+    border: 1px solid var(--border, rgba(255,255,255,0.06));
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+}
+
+.report-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    font-size: .84rem;
+    color: var(--muted, rgba(255,255,255,0.6));
+}
+
+.report-card-title {
+    font-weight: 600;
+    color: var(--text, #fff);
+    font-size: .95rem;
+}
+
+.report-card-reason {
+    color: var(--text, #fff);
+    font-size: .88rem;
+    line-height: 1.6;
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(255,69,58,0.06);
+    border-left: 3px solid rgba(255,69,58,0.5);
+    border-radius: 6px;
+}
+
+.report-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.target-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.target-type-badge.game {
+    background: rgba(0,230,118,0.15);
+    color: #00e676;
+    border: 1px solid rgba(0,230,118,0.2);
+}
+
+.target-type-badge.post {
+    background: rgba(100,210,255,0.15);
+    color: #64d2ff;
+    border: 1px solid rgba(100,210,255,0.2);
+}
+
+.btn-valid {
+    background: linear-gradient(135deg, #00e676, #00b248);
+    color: #07122A;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-valid:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,230,118,0.3);
+}
+
+.btn-invalid {
+    background: rgba(255,69,58,0.15);
+    color: #ff453a;
+    border: 1px solid rgba(255,69,58,0.3);
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-invalid:hover {
+    background: rgba(255,69,58,0.25);
+}
+
+.empty-state-card {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--card, #1a1a2e);
+    border: 1px solid var(--border, rgba(255,255,255,0.06));
+    border-radius: 12px;
+    color: var(--muted, rgba(255,255,255,0.4));
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted, rgba(255,255,255,0.6));
+    text-decoration: none;
+    font-size: .84rem;
+    margin-bottom: 16px;
+    transition: color 0.2s ease;
+}
+
+.back-link:hover {
+    color: var(--text, #fff);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        {# 面包屑导航 #}
+        <div class="mb-16">
+            <a href="{{ url_for('admin.admin_panel') }}" class="back-link">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                返回管理面板
+            </a>
+        </div>
+
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>BLACKLIST</h2>
+            <span class="sub">小黑屋管理</span>
+        </div>
+
+        {# ==================== 处罚记录 ==================== #}
+        <div class="blacklist-section">
+            <div class="section-title" style="margin-bottom:16px;">
+                <span class="accent-bar"></span>
+                <h2 style="font-size:1.1rem;">处罚记录</h2>
+                <span class="sub">{{ penalties|length if penalties else 0 }} 条记录</span>
+            </div>
+
+            {% if penalties and penalties|length > 0 %}
+            <div style="overflow-x:auto;">
+                <table class="blacklist-table">
+                    <thead>
+                        <tr>
+                            <th>类型</th>
+                            <th>目标</th>
+                            <th>原因</th>
+                            <th>操作管理员</th>
+                            <th>时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in penalties %}
+                        <tr>
+                            <td>
+                                <span class="target-type-badge {{ p.target_type }}">
+                                    {{ {'game': '游戏', 'post': '帖子'}.get(p.target_type, p.target_type) }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="font-weight:600;">{{ p.target_title|default('—') }}</div>
+                                <div class="text-muted" style="font-size:.74rem;">ID #{{ p.target_id }}</div>
+                            </td>
+                            <td style="max-width:300px;">{{ p.reason|default('—') }}</td>
+                            <td>{{ p.admin_name|default('—') }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ p.created_at|default('') }}</td>
+                            <td>
+                                <button class="btn-invalid" onclick="unbanTarget('{{ p.target_type }}', {{ p.target_id }}, this)" title="解除封禁">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                                    解封
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state-card">
+                <h3 style="margin:0 0 6px;font-size:1rem;">暂无处罚记录</h3>
+                <p style="margin:0;font-size:.84rem;">还没有任何封禁记录</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ==================== 举报管理 ==================== #}
+        <div class="blacklist-section">
+            <div class="section-title" style="margin-bottom:16px;">
+                <span class="accent-bar"></span>
+                <h2 style="font-size:1.1rem;">举报管理</h2>
+                <span class="sub">{{ reports|length if reports else 0 }} 条待处理</span>
+            </div>
+
+            {% if reports and reports|length > 0 %}
+            <div>
+                {% for r in reports %}
+                <div class="report-card" id="report-{{ r.id }}">
+                    <div class="report-card-head">
+                        <span class="target-type-badge {{ r.target_type }}">
+                            {{ {'post': '帖子举报'}.get(r.target_type, r.target_type) }}
+                        </span>
+                        <span>举报人: <strong style="color:var(--text,#fff);">{{ r.reporter_name|default('匿名') }}</strong></span>
+                        <span>·</span>
+                        <span>{{ r.created_at|default('') }}</span>
+                    </div>
+                    <div class="report-card-title">
+                        目标帖子: {{ r.post_title|default('（帖子已删除）') }}
+                        <span class="text-muted" style="font-size:.76rem;font-weight:normal;">#{{ r.target_id }}</span>
+                    </div>
+                    <div class="report-card-reason">{{ r.reason|default('（未填写理由）') }}</div>
+                    <div class="report-card-actions">
+                        <button class="btn-valid" onclick="handleReport({{ r.id }}, 'valid')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M20 6L9 17l-5-5"/></svg>
+                            属实
+                        </button>
+                        <button class="btn-invalid" onclick="handleReport({{ r.id }}, 'invalid')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            不属实
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state-card">
+                <h3 style="margin:0 0 6px;font-size:1rem;">暂无待处理举报</h3>
+                <p style="margin:0;font-size:.84rem;">所有举报已处理完毕</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 解除封禁：target_type 为 'post' 或 'game'
+function unbanTarget(targetType, targetId, btn) {
+    var label = targetType === 'post' ? '帖子' : (targetType === 'game' ? '游戏' : '目标');
+    if (!confirm('确认解除对该' + label + '的封禁？\n解除后该' + label + '将重新对所有用户可见。')) return;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+    }
+
+    fetch('/api/admin/unban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: targetType, target_id: targetId })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok || data.success) {
+            // 移除该处罚记录行
+            if (btn) {
+                var tr = btn.closest('tr');
+                if (tr) {
+                    tr.style.transition = 'opacity 0.3s ease';
+                    tr.style.opacity = '0';
+                    setTimeout(function () {
+                        tr.remove();
+                        // 如处罚列表清空，刷新页面以显示空状态
+                        var tbody = document.querySelector('.blacklist-table tbody');
+                        if (tbody && !tbody.querySelector('tr')) {
+                            location.reload();
+                        }
+                    }, 300);
+                }
+            }
+            if (window.snyqtToast) {
+                window.snyqtToast('已解除封禁', 'success');
+            }
+        } else {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+            if (window.snyqtToast) {
+                window.snyqtToast(data.error || data.message || '操作失败', 'error');
+            } else {
+                alert(data.error || data.message || '操作失败');
+            }
+        }
+    })
+    .catch(function () {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+        if (window.snyqtToast) {
+            window.snyqtToast('网络错误，请稍后重试', 'error');
+        } else {
+            alert('网络错误，请稍后重试');
+        }
+    });
+}
+
+// 处理举报：action 为 'valid' 或 'invalid'
+function handleReport(rid, action) {
+    var msg = action === 'valid' ? '确认举报属实并封禁该帖子？' : '确认举报不属实并删除该举报？';
+    if (!confirm(msg)) return;
+
+    fetch('/api/admin/reports/' + rid, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok || data.success) {
+            var card = document.getElementById('report-' + rid);
+            if (card) {
+                card.style.transition = 'opacity 0.3s ease';
+                card.style.opacity = '0';
+                setTimeout(function () {
+                    card.remove();
+                    // 如举报列表清空，刷新页面以显示空状态
+                    if (!document.querySelector('.report-card')) {
+                        location.reload();
+                    }
+                }, 300);
+            }
+            if (window.snyqtToast) {
+                window.snyqtToast(action === 'valid' ? '已标记属实并封禁帖子' : '已标记不属实', 'success');
+            }
+        } else {
+            if (window.snyqtToast) {
+                window.snyqtToast(data.error || data.message || '操作失败', 'error');
+            } else {
+                alert(data.error || data.message || '操作失败');
+            }
+        }
+    })
+    .catch(function () {
+        if (window.snyqtToast) {
+            window.snyqtToast('网络错误，请稍后重试', 'error');
+        } else {
+            alert('网络错误，请稍后重试');
+        }
+    });
+}
+</script>
+{% endblock %}

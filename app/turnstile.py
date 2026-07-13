@@ -29,6 +29,7 @@ _TURNSTILE_SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/site
 # 不需要人机验证的路由前缀（OAuth 回调由 Snyqt 服务端发起，需放行）
 EXCLUDED_ROUTES = [
     '/static/',
+    '/uploads/',
     '/favicon.ico',
     '/turnstile-verify',
     '/api/turnstile/',

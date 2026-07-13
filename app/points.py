@@ -111,6 +111,72 @@ def review_game(gid):
     })
 
 
+@points_bp.route('/api/games/<int:gid>/rate', methods=['POST'])
+def rate_game(gid):
+    """快速评分接口（仅记录评分，无需评论）。
+
+    复用 review 逻辑：同用户同游戏覆盖更新，重算均分。
+    """
+    user = current_user()
+    if not user:
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+
+    game = query_one('SELECT id, is_banned FROM games WHERE id = %s', [gid])
+    if not game:
+        return jsonify({'success': False, 'message': '游戏不存在'}), 404
+
+    # 校验已入库
+    lib = query_one(
+        'SELECT id FROM game_library WHERE user_id = %s AND game_id = %s',
+        [user['id'], gid]
+    )
+    if not lib:
+        return jsonify({'success': False, 'message': '请先获取游戏后再评分'}), 403
+
+    # 解析评分（支持 JSON 与 form）
+    rating = request.form.get('rating', type=int)
+    if request.is_json:
+        rating = (request.get_json(silent=True) or {}).get('rating', rating)
+    if not rating or rating < 1 or rating > 5:
+        return jsonify({'success': False, 'message': '评分需在 1-5 之间'}), 400
+
+    # 同一用户对同一游戏仅保留一条评分（覆盖更新，保留原评论）
+    existing = query_one(
+        'SELECT id, comment FROM reviews WHERE game_id = %s AND user_id = %s',
+        [gid, user['id']]
+    )
+    if existing:
+        execute(
+            'UPDATE reviews SET rating = %s WHERE id = %s',
+            (rating, existing['id'])
+        )
+    else:
+        execute(
+            'INSERT INTO reviews (game_id, user_id, rating) VALUES (%s, %s, %s)',
+            (gid, user['id'], rating)
+        )
+
+    # 重算平均分与评分数
+    stats = query_one(
+        'SELECT AVG(rating) AS avg_rating, COUNT(*) AS cnt '
+        'FROM reviews WHERE game_id = %s',
+        [gid]
+    )
+    avg_rating = float(stats['avg_rating']) if stats['avg_rating'] else 0.0
+    rating_count = stats['cnt']
+    execute(
+        'UPDATE games SET avg_rating = %s, rating_count = %s WHERE id = %s',
+        (round(avg_rating, 2), rating_count, gid)
+    )
+
+    return jsonify({
+        'success': True,
+        'avg_rating': round(avg_rating, 2),
+        'rating_count': rating_count,
+        'message': '评分成功'
+    })
+
+
 @points_bp.route('/api/games/<int:gid>/purchase', methods=['POST'])
 def purchase_game(gid):
     """购买/获取游戏（需登录）。
@@ -167,6 +233,13 @@ def download_game(gid):
     game = query_one('SELECT * FROM games WHERE id = %s', [gid])
     if not game:
         abort(404)
+    # 封禁游戏不允许下载
+    if game.get('is_banned'):
+        return jsonify({'success': False, 'message': '游戏已封禁，无法下载'}), 403
+
+    # 不开放源代码的游戏不允许下载
+    if not game.get('source_open', 1):
+        return jsonify({'success': False, 'message': '该游戏不开放源代码下载'}), 403
 
     # 打包并下载
     buffer = pack_game(gid)
@@ -187,7 +260,7 @@ def download_game(gid):
     return send_file(
         buffer,
         as_attachment=True,
-        download_name=f'game_{gid}.zip',
+        download_name=f'{game.get("title", "game")}_{gid}.zip',
         mimetype='application/zip'
     )
 
