@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SNYQT Game Hub{% endblock %} · SNYQT Game Hub</title>
+    <meta name="description" content="SNYQT Game Hub — 浏览、上传、在线游玩 HTML 与 Python 游戏。">
+
+    <!-- 浏览器标签页 favicon（使用小尺寸图标，避免加载大图） -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+    <!-- Google Fonts: Orbitron + ZCOOL QingKe HuangYou + Outfit + Noto Sans SC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Outfit:wght@300;400;500;600;700;900&family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <!-- 主样式（带版本号强制刷新缓存） -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20260703d">
+
+    {# 主题提前应用：避免刷新时的深色闪烁（FOUC） #}
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('snyqt-theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (_) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- ==================== Header ==================== -->
+    <header class="site-header">
+        <div class="container header-inner">
+            <!-- Logo -->
+            <a class="logo" href="/" aria-label="SNYQT Game Hub">
+                <img class="logo-img" src="{{ url_for('static', filename='images/logo.png') }}" alt="SNYQT Game Hub">
+                <span class="logo-text">
+                    <span class="top">SNYQT GAME HUB</span>
+                </span>
+            </a>
+
+            <!-- 主导航 -->
+            <nav class="main-nav">
+                <a href="{{ url_for('games.index') }}" class="{{ 'active' if request.endpoint == 'games.index' else '' }}">发现</a>
+                <a href="{{ url_for('points.leaderboard') }}" class="{{ 'active' if request.endpoint == 'points.leaderboard' else '' }}">排行榜</a>
+                {% if current_user %}
+                <a href="{{ url_for('points.library') }}" class="{{ 'active' if request.endpoint == 'points.library' else '' }}">游戏库</a>
+                {% endif %}
+            </nav>
+
+            <div class="header-spacer"></div>
+
+            <!-- 积分显示 -->
+            {% if current_user %}
+            <span class="points-chip" title="我的积分">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                {{ current_user.points|default(0) }}
+            </span>
+            {% endif %}
+
+            <!-- 主题切换 -->
+            <button class="theme-toggle" type="button" aria-label="切换深浅主题">
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7l1.4-1.4M5 19l1.4-1.4m12.3 0L19 19M5 5l1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+            </button>
+
+            <!-- 用户区 -->
+            {% if current_user %}
+            <div class="user-menu">
+                <button class="avatar-btn" type="button" aria-label="用户菜单">
+                    {% if current_user.avatar %}
+                        <img src="{{ current_user.avatar }}" alt="{{ current_user.username|default('用户') }}的头像">
+                    {% else %}
+                        <span class="avatar-fallback">{{ (current_user.username|default('U'))[:1]|upper }}</span>
+                    {% endif %}
+                </button>
+                <div class="user-dropdown">
+                    <div class="u-info">
+                        <div class="uname">{{ current_user.username|default('未命名用户') }}</div>
+                        <div class="upts">积分 {{ current_user.points|default(0) }}</div>
+                    </div>
+                    <a href="{{ url_for('games.developer_panel') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                        开发者面板
+                    </a>
+                    <a href="{{ url_for('points.library') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v4H4zm0 6h16v10H4z"/></svg>
+                        我的游戏库
+                    </a>
+                    {% if current_user.permission_level|default('user') != 'super_admin' %}
+                    <a href="{{ url_for('permissions.apply_page') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                        申请权限
+                    </a>
+                    {% endif %}
+                    {% if current_user.permission_level|default('user') == 'super_admin' %}
+                    <a href="{{ url_for('admin.admin_panel') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/></svg>
+                        管理面板
+                    </a>
+                    {% endif %}
+                    <button type="button" onclick="location.href='{{ url_for('auth.logout') }}'" class="danger">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 17l5-5-5-5M3 12h17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                        退出登录
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <a class="btn-snyqt-login" href="{{ url_for('auth.login', next=request.full_path if request.query_string else request.path) }}">
+                使用 SNYQT 登录
+            </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- ==================== 主内容 ==================== -->
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container" style="padding-top:84px">
+                    {% for cat, msg in messages %}
+                        <div class="toast show {{ cat }}">{{ msg }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ==================== 页脚 ==================== -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="brand-line">SNYQT · GAME · HUB</div>
+            <div>© {{ now_year|default(2026) }} SNYQT Game Hub · game-hub.snyqt.top</div>
+        </div>
+    </footer>
+
+    <!-- ==================== 脚本 ==================== -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,100 @@
+# SNYQT Game Hub Dockerfile 示例文件（开源可见，仅含占位值）
+#
+# 使用方法：
+#   1. 复制为 Dockerfile：cp Dockerfile.example Dockerfile
+#   2. 将下方 ENV 全部替换为你自己的真实凭证
+#   3. 或保持 Dockerfile 不变，运行时通过 -e / --env-file 注入环境变量：
+#      docker run -d -p 5000:5000 \
+#        -e DB_HOST=your_db_host \
+#        -e DB_PASSWORD=your_db_password \
+#        ...
+#        snyqt-game-hub
+#
+# 注意：真实 Dockerfile 已被 .gitignore 屏蔽；本文件作为开源示例保留。
+#
+# 网络加速方案（沿用 SNYQT Account 项目）：
+#   1. 基础镜像走 DaoCloud 镜像加速（docker.m.daocloud.io）
+#   2. apt 源切换为阿里云 mirrors.aliyun.com
+#   3. pip 源切换为阿里云 https://mirrors.aliyun.com/pypi/simple/
+
+# 基础镜像通过 DaoCloud 加速拉取（国内构建必备，避免 Docker Hub 慢/超时）
+# 固定 bookworm（Debian 12 stable），避免 trixie(testing) 镜像源不全导致 apt exit 100
+FROM docker.m.daocloud.io/python:3.11-slim-bookworm
+
+# ==================== 系统依赖 ====================
+# 直接覆盖 sources.list 为阿里云镜像，避免 sed 替换遗漏 security.debian.org 等条目
+RUN echo "deb https://mirrors.aliyun.com/debian/ bookworm main contrib non-free non-free-firmware\n" \
+        "deb https://mirrors.aliyun.com/debian/ bookworm-updates main contrib non-free non-free-firmware\n" \
+        "deb https://mirrors.aliyun.com/debian/ bookworm-backports main contrib non-free non-free-firmware\n" \
+        "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main contrib non-free non-free-firmware\n" \
+        > /etc/apt/sources.list \
+    && rm -f /etc/apt/sources.list.d/debian.sources
+
+# uWSGI 编译需要 gcc + python3-dev；slim 镜像默认不含
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+        libpcre3 \
+        libpcre3-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# ==================== 工作目录 ====================
+WORKDIR /app
+
+# ==================== 环境变量（示例占位值，请替换为真实凭证） ====================
+# 数据库
+ENV DB_HOST=127.0.0.1
+ENV DB_USER=your_db_user
+ENV DB_PASSWORD=your_db_password
+ENV DB_NAME=your_db_name
+ENV DB_PORT=3306
+
+# SNYQT Account OAuth
+ENV SNYQT_APP_ID=your_snyqt_app_id
+ENV SNYQT_APP_SECRET=your_snyqt_app_secret
+ENV SNYQT_OAUTH_BASE=https://account.example.com
+ENV LOGIN_CALLBACK=https://your-domain.example.com/callback
+ENV VERIFY_CALLBACK=https://your-domain.example.com/verify-callback
+
+# Cloudflare Turnstile
+ENV TURNSTILE_SITEKEY=your_turnstile_sitekey
+ENV TURNSTILE_SECRET=your_turnstile_secret
+ENV TURNSTILE_VERIFY_DURATION_HOURS=2
+ENV TURNSTILE_BYPASS_LOCALHOST=false
+
+# 文件上传与端口
+ENV UPLOAD_FOLDER=uploads/games
+ENV PORT_RANGE_START=8100
+ENV PORT_RANGE_END=8200
+
+# 权限审核规则
+ENV DEVELOPER_REVIEW=manual
+
+# Flask 安全（务必改为随机字符串）
+ENV SECRET_KEY=please-change-this-to-a-random-secret
+
+# Session Cookie
+ENV SESSION_COOKIE_SECURE=true
+
+# ==================== 依赖安装（利用 Docker 层缓存） ====================
+COPY requirements.txt .
+# pip 走阿里云 PyPI 镜像，避免官方源国内拉不动
+RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ --upgrade pip && \
+    pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
+
+# ==================== 应用代码 ====================
+COPY . /app
+
+# ==================== 运行时目录 ====================
+RUN mkdir -p /app/uploads/games /app/logs
+
+# ==================== 端口暴露 ====================
+EXPOSE 5000
+
+# ==================== 健康检查 ====================
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:5000/',timeout=5).status==200 else sys.exit(1)" || exit 1
+
+# ==================== 启动命令 ====================
+CMD ["uwsgi", "--ini", "uwsgi.ini"]

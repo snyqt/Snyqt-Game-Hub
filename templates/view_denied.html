@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}访问受限 · 403{% endblock %}
+
+{% block content %}
+<div class="center-page">
+    <div class="center-card card-noise">
+        <div class="icon" style="background:linear-gradient(135deg,var(--danger),#C74058);">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 9v4m0 4h.01M10.3 3.86l-8.4 14.55A2 2 0 0 0 3.6 21h16.8a2 2 0 0 0 1.7-2.59L13.7 3.86a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
+        </div>
+        <h1 style="background:linear-gradient(90deg,var(--danger),var(--gold-strong));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">403 · 访问受限</h1>
+        <p class="subtitle" style="white-space:pre-line;">{{ message|default('您当前无法访问该内容。') }}</p>
+
+        {% if game_id %}
+        <div class="flex gap-12 mt-16" style="justify-content:center;flex-wrap:wrap;">
+            <a class="btn btn-primary" href="{{ url_for('games.game_detail', gid=game_id) }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 12H5m7-7l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                前往游戏详情
+            </a>
+            <a class="btn btn-ghost" href="{{ url_for('games.index') }}">返回发现</a>
+        </div>
+        {% else %}
+        <a class="btn btn-primary mt-16" href="{{ url_for('games.index') }}">返回首页</a>
+        {% endif %}
+
+        <p class="text-muted mt-16" style="font-size:.78rem;">
+            {% if not current_user %}提示：请先 <a href="{{ url_for('auth.login') }}" class="text-gold">登录</a>{% else %}获取游戏后即可在线游玩{% endif %}
+        </p>
+    </div>
+</div>
+{% endblock %}

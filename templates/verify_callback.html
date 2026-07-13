@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}验证码确认{% endblock %}
+
+{% block content %}
+<div class="center-page">
+    <div class="center-card card-noise">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h1>身份验证</h1>
+        <p class="subtitle">
+            请输入您通过
+            {% if verify_type|default('email') == 'sms' %}短信{% else %}邮箱{% endif %}
+            收到的验证码以完成确认
+        </p>
+
+        {% if error %}
+        <p class="error-text">{{ error }}</p>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('auth.verify_callback') }}">
+            <input type="hidden" name="type" value="{{ verify_type|default('email') }}">
+            <div class="field mb-16">
+                <input class="otp-input" type="text" name="code" maxlength="8" required
+                       placeholder="••••" autocomplete="one-time-code"
+                       inputmode="numeric" pattern="[0-9]*">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                确认验证
+            </button>
+        </form>
+
+        <p class="text-muted mt-16" style="font-size:.78rem;">
+            验证完成后将自动跳转回首页
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// OTP 输入框：自动聚焦 + 仅数字
+(function () {
+    var input = document.querySelector('.otp-input');
+    if (!input) return;
+    input.focus();
+    input.addEventListener('input', function () {
+        input.value = input.value.replace(/\D/g, '');
+    });
+})();
+</script>
+{% endblock %}

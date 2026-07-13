@@ -1,0 +1,76 @@
+{# ==================== SNYQT Game Hub 公共宏 ====================
+   各模板使用 {% import '_macros.html' as m %} 引入，
+   通过 m.stars_svg(...) 等方式调用。
+   ==================================================== #}
+
+{# 评分星显示：rating 0-5 浮点，count 评分数 #}
+{% macro stars_svg(rating, count) %}
+    {% set r = (rating|default(0))|float %}
+    {% set full = r|int %}
+    {% set half = 1 if (r - full) >= 0.5 else 0 %}
+    <span class="stars" title="{{ '%.1f'|format(r) }} / 5">
+        {% for i in range(5) %}
+            {% if i < full %}
+                <svg class="filled" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+            {% elif i == full and half %}
+                <svg class="filled" viewBox="0 0 24 24">
+                    <defs><linearGradient id="half{{ i }}{{ r|string }}"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="rgba(138,154,200,0.4)"/></linearGradient></defs>
+                    <path fill="url(#half{{ i }}{{ r|string }})" d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/>
+                </svg>
+            {% else %}
+                <svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+            {% endif %}
+        {% endfor %}
+        {% if count is not none %}<span class="text-muted" style="margin-left:6px;font-size:.78rem">({{ count }})</span>{% endif %}
+    </span>
+{% endmacro %}
+
+{# 游戏状态徽章 #}
+{% macro status_badge(status) %}
+    {% set s = status|default('active') %}
+    {% if s == 'active' %}<span class="badge badge-success">已上架</span>
+    {% elif s == 'pending_review' %}<span class="badge badge-warning">待审核</span>
+    {% elif s == 'approved' %}<span class="badge badge-success">已通过</span>
+    {% elif s == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
+    {% elif s == 'disabled' %}<span class="badge badge-muted">已下架</span>
+    {% else %}<span class="badge badge-muted">{{ s }}</span>{% endif %}
+{% endmacro %}
+
+{# 托管类型徽章 #}
+{% macro host_badge(hosting_type) %}
+    {% set h = hosting_type|default('html') %}
+    {% if h == 'python' %}<span class="badge badge-host-python">PYTHON</span>
+    {% else %}<span class="badge badge-host-html">HTML</span>{% endif %}
+{% endmacro %}
+
+{# 封禁徽章 #}
+{% macro ban_badge(is_banned) %}
+    {% if is_banned %}<span class="badge badge-danger">已封禁</span>{% endif %}
+{% endmacro %}
+
+{# 游戏封面图：有图显示图片，否则 fallback #}
+{% macro cover_img(game) %}
+    {% if game.cover_image %}
+        <img src="{{ url_for('static', filename=game.cover_image) if game.cover_image.startswith('uploads/') else game.cover_image }}" alt="{{ game.title|default('游戏') }}封面" loading="lazy">
+    {% else %}
+        <div class="cover-fallback">{{ (game.title|default('?'))[:1]|upper }}</div>
+    {% endif %}
+{% endmacro %}
+
+{# 数字简写：>=1w 用 w，>=1k 用 k #}
+{% macro fmt_num(n) %}
+    {% set num = n|default(0)|int %}
+    {% if num >= 10000 %}{{ '%.1f'|format(num/10000) }}w
+    {% elif num >= 1000 %}{{ '%.1f'|format(num/1000) }}k
+    {% else %}{{ num }}{% endif %}
+{% endmacro %}
+
+{# 标签列表（按逗号拆分） #}
+{% macro tag_list(tags) %}
+    {% if tags %}
+        {% set items = tags.split(',') %}
+        {% for t in items if t.strip() %}
+            <span class="tag">{{ t.strip() }}</span>
+        {% endfor %}
+    {% endif %}
+{% endmacro %}

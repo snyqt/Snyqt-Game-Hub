@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+
+{% block title %}发现{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        {# ==================== 精选轮播 ==================== #}
+        {% set featured = games[:5] if games else [] %}
+        {% if featured|length > 0 %}
+        <div class="hero">
+            <div class="hero-track">
+                {% for g in featured %}
+                <div class="hero-slide">
+                    {% if g.cover_image %}
+                    <img src="{{ url_for('static', filename=g.cover_image) if g.cover_image.startswith('uploads/') else g.cover_image }}" alt="{{ g.title|default('游戏') }}">
+                    {% else %}
+                    <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--card-2),var(--bg-2));"></div>
+                    {% endif %}
+                    <div class="hero-overlay">
+                        <span class="hero-tag">精选 #{{ loop.index }}</span>
+                        <h2>{{ g.title|default('未命名游戏') }}</h2>
+                        <p>{{ (g.description|default('暂无描述'))|truncate(80) }}</p>
+                        <a class="btn btn-primary" href="{{ url_for('games.game_detail', gid=g.id) }}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            立即查看
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if featured|length > 1 %}
+            <div class="hero-dots">
+                {% for g in featured %}
+                <button class="{{ 'active' if loop.first else '' }}" aria-label="切换到第 {{ loop.index }} 张"></button>
+                {% endfor %}
+            </div>
+            <div class="hero-nav">
+                <button class="prev" aria-label="上一张">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="next" aria-label="下一张">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# ==================== 标题栏 + 搜索 ==================== #}
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>EXPLORE GAMES</h2>
+            <span class="sub">{{ games|length if games else 0 }} games</span>
+        </div>
+
+        {# 搜索条 #}
+        <form class="card card-noise" style="padding:14px 18px;margin-bottom:24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;" method="get" action="{{ url_for('games.index') }}">
+            <div class="field" style="flex:1;min-width:200px;">
+                <input type="text" name="q" value="{{ request.args.get('q', '') }}" placeholder="搜索游戏标题或描述...">
+            </div>
+            <div class="field" style="min-width:160px;">
+                <input type="text" name="tag" value="{{ request.args.get('tag', '') }}" placeholder="标签筛选">
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                搜索
+            </button>
+            {% if request.args.get('q') or request.args.get('tag') %}
+            <a href="{{ url_for('games.index') }}" class="btn btn-ghost">清空</a>
+            {% endif %}
+        </form>
+
+        {# ==================== 游戏卡片网格 ==================== #}
+        {% if games and games|length > 0 %}
+        <div class="game-grid">
+            {% for g in games %}
+            <a class="game-card" href="{{ url_for('games.game_detail', gid=g.id) }}">
+                <div class="game-cover">
+                    {{ m.cover_img(g) }}
+                    <div class="game-badges">
+                        {{ m.host_badge(g.hosting_type) }}
+                        {{ m.ban_badge(g.is_banned) }}
+                    </div>
+                </div>
+                <div class="game-body">
+                    <h3 class="game-title" title="{{ g.title|default('') }}">{{ g.title|default('未命名游戏') }}</h3>
+                    <div class="game-meta">
+                        {{ m.stars_svg(g.avg_rating, g.rating_count) }}
+                        <span title="下载量">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            {{ m.fmt_num(g.download_count) }}
+                        </span>
+                    </div>
+                    <div class="game-tags">{{ m.tag_list(g.tags) }}</div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state card card-noise" style="padding:80px 20px;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+            <h3>No games yet</h3>
+            <p>Become a developer to upload your first game.</p>
+            {% if current_user %}
+                {% if current_user.permission_level|default('user') == 'developer' or current_user.permission_level|default('user') == 'super_admin' %}
+                <a class="btn btn-gold mt-16" href="{{ url_for('games.developer_panel') }}">前往开发者面板上传</a>
+                {% else %}
+                <a class="btn btn-gold mt-16" href="{{ url_for('permissions.apply_page') }}">申请成为开发者</a>
+                {% endif %}
+            {% else %}
+            <a class="btn btn-gold mt-16" href="{{ url_for('auth.login', next=request.full_path if request.query_string else request.path) }}">使用 SNYQT 登录</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

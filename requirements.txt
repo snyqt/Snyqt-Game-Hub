@@ -1,0 +1,9 @@
+# SNYQT Game Hub Python 依赖
+# 本地开发：pip install -r requirements.txt
+# Docker 构建：Dockerfile 中会执行同一命令
+
+Flask==3.0.3
+Werkzeug==3.0.3
+PyMySQL==1.1.1
+requests==2.32.3
+uWSGI==2.0.26

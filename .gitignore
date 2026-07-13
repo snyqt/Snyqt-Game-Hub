@@ -1,0 +1,60 @@
+# SNYQT Game Hub .gitignore
+# 真实密钥文件、运行时产物、缓存等均不上传 Git
+
+# ==================== 敏感文件（含真实密码，禁止上传） ====================
+# 真实 Dockerfile（含真实 ENV 密钥），仅保留 Dockerfile.example 开源
+Dockerfile
+
+# 真实配置文件（含真实凭证），仅保留 config.example.py 开源
+config/config.py
+
+# 本地环境变量文件
+.env
+.env.local
+.env.*.local
+
+# ==================== Python 缓存 ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 分布构建
+build/
+dist/
+*.egg-info/
+*.egg
+
+# 虚拟环境
+venv/
+.venv/
+env/
+ENV/
+
+# ==================== 运行时产物 ====================
+# 日志
+game_hub.log
+logs/
+*.log
+
+# 上传的游戏文件（运行时数据，不入库）
+uploads/
+
+# uWSGI 运行时文件
+uwsgi.pid
+uwsgi.log
+
+# ==================== IDE / 编辑器 ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==================== 操作系统 ====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==================== Trae 工具产物 ====================
+.trae/

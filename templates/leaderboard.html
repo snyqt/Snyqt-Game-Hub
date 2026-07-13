@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+
+{% block title %}排行榜{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>LEADERBOARD</h2>
+            <span class="sub">游戏与开发者的荣耀之巅</span>
+        </div>
+
+        <div class="lb-grid">
+            {# ==================== 游戏榜 ==================== #}
+            <div>
+                <div class="flex items-center gap-12 mb-16">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong)"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    <h3 class="font-display" style="font-size:1.1rem;margin:0;">游戏榜 · TOP {{ games|length if games else 0 }}</h3>
+                </div>
+                <div class="lb-list">
+                    {% if games and games|length > 0 %}
+                        {% for g in games %}
+                        <a class="lb-row" href="{{ url_for('games.game_detail', gid=g.id) }}" style="text-decoration:none;">
+                            <div class="lb-rank {{ 'gold' if loop.index == 1 else 'silver' if loop.index == 2 else 'bronze' if loop.index == 3 else '' }}">{{ loop.index }}</div>
+                            <div>
+                                <div class="name">{{ g.title|default('未命名游戏') }}</div>
+                                <div class="sub">{{ m.host_badge(g.hosting_type) }} {{ m.fmt_num(g.download_count) }} 下载</div>
+                            </div>
+                            <div class="val">
+                                {{ '%.1f'|format(g.avg_rating|default(0)|float) }} ★
+                            </div>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                            <h3>暂无上榜游戏</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ==================== 用户积分榜 ==================== #}
+            <div>
+                <div class="flex items-center gap-12 mb-16">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color:var(--primary)"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    <h3 class="font-display" style="font-size:1.1rem;margin:0;">积分榜 · TOP {{ users|length if users else 0 }}</h3>
+                </div>
+                <div class="lb-list">
+                    {% if users and users|length > 0 %}
+                        {% for u in users %}
+                        <div class="lb-row">
+                            <div class="lb-rank {{ 'gold' if loop.index == 1 else 'silver' if loop.index == 2 else 'bronze' if loop.index == 3 else '' }}">{{ loop.index }}</div>
+                            <div class="flex items-center gap-12">
+                                {% if u.avatar %}
+                                <img src="{{ u.avatar }}" alt="{{ u.username|default('用户') }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border);">
+                                {% else %}
+                                <div style="width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--gold));color:#07122A;font-weight:800;">{{ (u.username|default('U'))[:1]|upper }}</div>
+                                {% endif %}
+                                <div>
+                                    <div class="name">{{ u.username|default('匿名用户') }}</div>
+                                    <div class="sub">ID #{{ u.id }}</div>
+                                </div>
+                            </div>
+                            <div class="val">{{ u.points|default(0) }} pts</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                            <h3>暂无上榜用户</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

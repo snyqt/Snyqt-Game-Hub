@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+
+{% block title %}我的游戏库{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>MY LIBRARY</h2>
+            <span class="sub">{{ games|length if games else 0 }} 款已入库游戏</span>
+        </div>
+
+        {% if games and games|length > 0 %}
+        <div class="game-grid">
+            {% for g in games %}
+            <div class="game-card" style="animation-delay: {{ (loop.index0 * 0.04)|round(2) }}s;">
+                <div class="game-cover">
+                    {{ m.cover_img(g) }}
+                    <div class="game-badges">
+                        {{ m.host_badge(g.hosting_type) }}
+                        {{ m.ban_badge(g.is_banned) }}
+                    </div>
+                </div>
+                <div class="game-body">
+                    <h3 class="game-title" title="{{ g.title|default('') }}">{{ g.title|default('未命名游戏') }}</h3>
+                    <div class="game-meta">
+                        {{ m.stars_svg(g.avg_rating, none) }}
+                        <span title="入库时间" style="font-size:.74rem;">
+                            {% if g.added_at %}{{ g.added_at }}{% endif %}
+                        </span>
+                    </div>
+                    <div class="game-tags">{{ m.tag_list(g.tags) }}</div>
+                    <div class="flex gap-8 mt-16">
+                        {% if g.status|default('active') == 'active' and not g.is_banned %}
+                        <a class="btn btn-primary btn-sm btn-block" href="{{ url_for('view.view_game', gid=g.id) }}" target="_blank">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            在线玩
+                        </a>
+                        {% else %}
+                        <button class="btn btn-ghost btn-sm btn-block" disabled title="游戏未激活或已封禁">不可游玩</button>
+                        {% endif %}
+                        <a class="btn btn-ghost btn-sm btn-block" href="{{ url_for('points.download_game', gid=g.id) }}">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            下载
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state card card-noise">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v4H4zm0 6h16v10H4z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+            <h3>游戏库空空如也</h3>
+            <p>去 <a href="{{ url_for('games.index') }}" class="text-gold">发现页</a> 找些感兴趣的游戏吧</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

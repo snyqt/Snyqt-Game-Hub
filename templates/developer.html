@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+
+{% block title %}开发者面板{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        {# ==================== 顶部欢迎 ==================== #}
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>DEVELOPER CONSOLE</h2>
+            <span class="sub">上传你的游戏 · 追踪审核状态</span>
+        </div>
+
+        {# ==================== 上传新游戏 ==================== #}
+        <div class="dev-section">
+            <form id="upload-form" class="card card-noise" style="padding:24px;" action="{{ url_for('games.upload_game') }}" method="post" enctype="multipart/form-data">
+                <h3 class="font-display mb-24" style="font-size:1.1rem;">UPLOAD NEW GAME</h3>
+
+                <div class="form-grid">
+                    <div class="field">
+                        <label>游戏标题 *</label>
+                        <input type="text" name="title" required maxlength="120" placeholder="例如：星辰回响">
+                    </div>
+                    <div class="field">
+                        <label>标签（逗号分隔）</label>
+                        <input type="text" name="tags" placeholder="动作, 解谜, 像素">
+                    </div>
+
+                    <div class="field full">
+                        <label>描述</label>
+                        <textarea name="description" placeholder="介绍你的游戏玩法、特色与操作..."></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label>托管类型 *</label>
+                        <select name="hosting_type">
+                            <option value="html">HTML 静态托管（无需审核）</option>
+                            <option value="python">Python 进程托管（需审核）</option>
+                        </select>
+                    </div>
+
+                    {# HTML 模式字段 #}
+                    <div class="field html-fields">
+                        <label>入口 HTML 文件</label>
+                        <input type="text" name="entry_file" value="index.html" placeholder="index.html">
+                        <span class="hint">ZIP 解压后相对于游戏目录的入口路径</span>
+                    </div>
+
+                    {# Python 模式字段 #}
+                    <div class="field python-fields hidden">
+                        <label>Python 主文件</label>
+                        <input type="text" name="python_main" placeholder="main.py">
+                    </div>
+                    <div class="field python-fields hidden">
+                        <label>启动命令 *</label>
+                        <input type="text" name="python_command" placeholder="python main.py --port {port}">
+                        <span class="hint">可用 {port} 占位符，系统将分配端口</span>
+                    </div>
+
+                    <div class="field">
+                        <label>封面图片</label>
+                        <input type="file" name="cover" accept="image/*">
+                        <div class="preview-thumbs cover-preview hidden"></div>
+                    </div>
+
+                    <div class="field">
+                        <label>游戏文件 ZIP *</label>
+                        <input type="file" name="game_files" accept=".zip" required>
+                        <span class="hint">打包整个游戏项目为 zip 上传</span>
+                    </div>
+
+                    <div class="field full">
+                        <label>截图（可多选）</label>
+                        <input type="file" name="screenshots" accept="image/*" multiple>
+                        <div class="preview-thumbs shots-preview hidden"></div>
+                    </div>
+                </div>
+
+                <div class="flex gap-12 items-center mt-24" style="flex-wrap:wrap">
+                    <button type="submit" class="btn btn-primary">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        上传游戏
+                    </button>
+                    <span class="text-muted" style="font-size:.82rem;">HTML 模式上传后立即可玩；Python 模式需管理员审核</span>
+                </div>
+
+                <div class="upload-progress"><div class="bar"></div></div>
+            </form>
+        </div>
+
+        {# ==================== 我的游戏列表 ==================== #}
+        <div class="dev-section">
+            <div class="section-title">
+                <span class="accent-bar"></span>
+                <h2>MY GAMES</h2>
+                <span class="sub">{{ games|length if games else 0 }} 款已上传</span>
+            </div>
+
+            {% if games and games|length > 0 %}
+            <div class="dev-games-list">
+                {% for g in games %}
+                <div class="dev-game-row">
+                    <div class="thumb">
+                        {% if g.cover_image %}
+                        <img src="{{ url_for('static', filename=g.cover_image) if g.cover_image.startswith('uploads/') else g.cover_image }}" alt="封面">
+                        {% else %}
+                        <div class="fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="info">
+                        <div class="t">{{ g.title|default('未命名') }}</div>
+                        <div class="m flex gap-8 items-center" style="flex-wrap:wrap">
+                            {{ m.host_badge(g.hosting_type) }}
+                            {{ m.status_badge(g.status) }}
+                            {{ m.ban_badge(g.is_banned) }}
+                            {# Python 审核状态 #}
+                            {% if g.hosting_type == 'python' and review_map and review_map.get(g.id) %}
+                                {% set rv = review_map.get(g.id) %}
+                                {% if rv.status == 'pending' %}<span class="badge badge-warning">审核中</span>
+                                {% elif rv.status == 'approved' %}<span class="badge badge-success">审核通过</span>
+                                {% elif rv.status == 'rejected' %}<span class="badge badge-danger">审核拒绝</span>{% endif %}
+                                {% if rv.reason %}<span class="text-muted" style="font-size:.78rem;">理由：{{ rv.reason }}</span>{% endif %}
+                            {% endif %}
+                            <span class="text-muted">· {{ m.fmt_num(g.download_count) }} 下载 · {{ m.stars_svg(g.avg_rating, g.rating_count) }}</span>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <a class="btn btn-ghost btn-sm" href="{{ url_for('games.game_detail', gid=g.id) }}">查看</a>
+                        {% if g.hosting_type == 'python' and g.status|default('') == 'active' and g.python_port %}
+                        <a class="btn btn-primary btn-sm" href="{{ url_for('view.view_game', gid=g.id) }}" target="_blank">试玩</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state card card-noise">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                <h3>尚未上传任何游戏</h3>
+                <p>使用上方表单上传你的第一作</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

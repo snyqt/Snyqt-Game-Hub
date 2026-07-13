@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+
+{% block title %}管理面板{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container">
+        <div class="section-title">
+            <span class="accent-bar"></span>
+            <h2>ADMIN CONSOLE</h2>
+            <span class="sub">超级管理员控制台</span>
+        </div>
+
+        {# ==================== 用户权限管理 ==================== #}
+        <div class="admin-block" data-admin-block>
+            <div class="admin-block-header" data-toggle>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--primary)"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 5v3h18v-3c0-2.5-4-5-9-5z"/></svg>
+                <h3 class="font-display" style="font-size:1.1rem;">用户权限管理</h3>
+                <span class="admin-block-count">{{ users_perms|length if users_perms else 0 }} users</span>
+                <span class="admin-block-toggle">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+            </div>
+            <div class="admin-block-body">
+            {% if users_perms and users_perms|length > 0 %}
+                <div class="admin-search-wrap" style="max-width:360px;margin-bottom:14px;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    <input type="text" data-search-input placeholder="搜索用户名 / ID / 权限级别..." style="width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.85rem;">
+                </div>
+                <div style="overflow-x:auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>当前级别</th>
+                            <th>状态</th>
+                            <th>积分</th>
+                            <th>修改权限</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users_perms %}
+                        <tr data-search-row data-search-text="{{ (u.username|default(''))|lower }} #{{ u.id }} {{ u.permission_level|default('user') }} {{ u.status|default('approved') }}">
+                            <td>
+                                <div class="u-cell">
+                                    {% if u.avatar %}
+                                    <img src="{{ u.avatar }}" alt="">
+                                    {% else %}
+                                    <div style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--gold));color:#07122A;font-weight:800;font-size:.8rem;">{{ (u.username|default('U'))[:1]|upper }}</div>
+                                    {% endif %}
+                                    <div>
+                                        <div style="font-weight:600;">{{ u.username|default('匿名') }}</div>
+                                        <div class="text-muted" style="font-size:.76rem;">ID #{{ u.id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% set lvl = u.permission_level|default('user') %}
+                                {% if lvl == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
+                                {% elif lvl == 'developer' %}<span class="badge badge-info">开发者</span>
+                                {% else %}<span class="badge badge-muted">普通用户</span>{% endif %}
+                            </td>
+                            <td>
+                                {% set st = u.status|default('approved') %}
+                                {% if st == 'approved' %}<span class="badge badge-success">已批准</span>
+                                {% elif st == 'pending' %}<span class="badge badge-warning">待审核</span>
+                                {% elif st == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
+                                {% else %}<span class="badge badge-muted">{{ st }}</span>{% endif %}
+                            </td>
+                            <td class="text-gold" style="font-weight:700;">{{ u.points|default(0) }}</td>
+                            <td>
+                                <select data-perm-select data-user-id="{{ u.id }}" class="field" style="padding:6px 10px;width:auto;min-width:130px;">
+                                    <option value="user" {{ 'selected' if lvl == 'user' or not lvl }}>普通用户</option>
+                                    <option value="developer" {{ 'selected' if lvl == 'developer' }}>开发者</option>
+                                    <option value="super_admin" {{ 'selected' if lvl == 'super_admin' }}>超级管理员</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <div class="admin-no-match">未找到匹配的用户</div>
+            {% else %}
+                <div class="empty-state card card-noise"><h3>暂无用户</h3></div>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ==================== 权限申请队列 ==================== #}
+        <div class="admin-block" data-admin-block>
+            <div class="admin-block-header" data-toggle>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong)"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                <h3 class="font-display" style="font-size:1.1rem;">权限申请队列</h3>
+                <span class="admin-block-count">{{ applications|length if applications else 0 }} pending</span>
+                <span class="admin-block-toggle">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+            </div>
+            <div class="admin-block-body">
+            {% if applications and applications|length > 0 %}
+                <div class="admin-search-wrap" style="max-width:360px;margin-bottom:14px;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    <input type="text" data-search-input placeholder="搜索申请人 / ID / 申请级别..." style="width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.85rem;">
+                </div>
+                <div style="overflow-x:auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>申请人</th>
+                            <th>申请级别</th>
+                            <th>提交时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in applications %}
+                        <tr data-search-row data-search-text="{{ (a.username|default(''))|lower }} #{{ a.user_id }} {{ a.permission_level|default('') }}">
+                            <td>
+                                <div class="u-cell">
+                                    {% if a.avatar %}
+                                    <img src="{{ a.avatar }}" alt="">
+                                    {% else %}
+                                    <div style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--gold));color:#07122A;font-weight:800;font-size:.8rem;">{{ (a.username|default('U'))[:1]|upper }}</div>
+                                    {% endif %}
+                                    <div>
+                                        <div style="font-weight:600;">{{ a.username|default('匿名') }}</div>
+                                        <div class="text-muted" style="font-size:.76rem;">ID #{{ a.user_id }} · 积分 {{ a.points|default(0) }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if a.permission_level == 'super_admin' %}<span class="badge badge-danger">超级管理员</span>
+                                {% elif a.permission_level == 'developer' %}<span class="badge badge-info">开发者</span>
+                                {% else %}<span class="badge badge-muted">{{ a.permission_level }}</span>{% endif %}
+                                <span class="badge badge-warning" style="margin-left:6px;">待审核</span>
+                            </td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ a.updated_at|default('') }}</td>
+                            <td>
+                                <div class="flex gap-8">
+                                    <button class="btn btn-success btn-sm" data-app-review="{{ a.user_id }}" data-action="approve" style="background:linear-gradient(135deg,var(--primary),var(--primary-strong));color:#07122A;">
+                                        批准
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" data-app-review="{{ a.user_id }}" data-action="reject">
+                                        拒绝
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <div class="admin-no-match">未找到匹配的申请</div>
+            {% else %}
+                <div class="empty-state card card-noise">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                    <h3>暂无权限申请</h3>
+                    <p>没有等待审核的权限申请</p>
+                </div>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ==================== Python 审核队列 ==================== #}
+        <div class="admin-block" data-admin-block>
+            <div class="admin-block-header" data-toggle>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold-strong)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+                <h3 class="font-display" style="font-size:1.1rem;">Python 托管审核队列</h3>
+                <span class="admin-block-count">{{ review_queue|length if review_queue else 0 }} items</span>
+                <span class="admin-block-toggle">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+            </div>
+            <div class="admin-block-body">
+            {% if review_queue and review_queue|length > 0 %}
+                <div class="admin-search-wrap" style="max-width:360px;margin-bottom:14px;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    <input type="text" data-search-input placeholder="搜索游戏名 / ID / 状态..." style="width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.85rem;">
+                </div>
+                <div style="overflow-x:auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>游戏</th>
+                            <th>主文件 / 启动命令</th>
+                            <th>状态</th>
+                            <th>提交时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in review_queue %}
+                        <tr data-search-row data-search-text="{{ (r.title|default(''))|lower }} #{{ r.game_id }} #{{ r.developer_id }} {{ r.status|default('') }} {{ r.python_main|default('') }}">
+                            <td>
+                                <div style="font-weight:600;">{{ r.title|default('未命名') }}</div>
+                                <div class="text-muted" style="font-size:.76rem;">游戏 #{{ r.game_id }} · 开发者 #{{ r.developer_id }}</div>
+                            </td>
+                            <td style="font-family:'Outfit',monospace;font-size:.8rem;">
+                                <div>{{ r.python_main|default('-') }}</div>
+                                <div class="text-muted">{{ r.python_command|default('-') }}</div>
+                            </td>
+                            <td>
+                                {% if r.status == 'pending' %}<span class="badge badge-warning">待审核</span>
+                                {% elif r.status == 'approved' %}<span class="badge badge-success">已批准</span>
+                                {% elif r.status == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
+                                {% else %}<span class="badge badge-muted">{{ r.status }}</span>{% endif %}
+                                {% if r.reason %}<div class="text-muted" style="font-size:.74rem;margin-top:2px;">{{ r.reason }}</div>{% endif %}
+                            </td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ r.created_at|default('') }}</td>
+                            <td>
+                                {% if r.status == 'pending' %}
+                                <div class="flex gap-8">
+                                    <button class="btn btn-success btn-sm" data-py-review="{{ r.id }}" data-action="approve" style="background:linear-gradient(135deg,var(--primary),var(--primary-strong));color:#07122A;">
+                                        批准
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" data-py-review="{{ r.id }}" data-action="reject">
+                                        拒绝
+                                    </button>
+                                </div>
+                                {% else %}
+                                <span class="text-muted" style="font-size:.8rem;">已处理</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <div class="admin-no-match">未找到匹配的审核项</div>
+            {% else %}
+                <div class="empty-state card card-noise">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                    <h3>审核队列为空</h3>
+                    <p>没有等待审核的 Python 托管游戏</p>
+                </div>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ==================== 游戏管理 ==================== #}
+        <div class="admin-block" data-admin-block>
+            <div class="admin-block-header" data-toggle>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--danger)"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+                <h3 class="font-display" style="font-size:1.1rem;">游戏管理</h3>
+                <span class="admin-block-count">{{ games|length if games else 0 }} games</span>
+                <span class="admin-block-toggle">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+            </div>
+            <div class="admin-block-body">
+            {% if games and games|length > 0 %}
+                <div class="admin-search-wrap" style="max-width:360px;margin-bottom:14px;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                    <input type="text" data-search-input placeholder="搜索游戏名 / ID / 类型 / 状态..." style="width:100%;padding:8px 12px 8px 32px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-size:.85rem;">
+                </div>
+                <div style="overflow-x:auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>游戏</th>
+                            <th>类型</th>
+                            <th>状态</th>
+                            <th>统计</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in games %}
+                        <tr data-search-row data-search-text="{{ (g.title|default(''))|lower }} #{{ g.id }} {{ g.hosting_type|default('') }} {{ g.status|default('') }} {% if g.is_banned %}banned{% endif %}">
+                            <td>
+                                <div class="u-cell">
+                                    {% if g.cover_image %}
+                                    <img src="{{ url_for('static', filename=g.cover_image) if g.cover_image.startswith('uploads/') else g.cover_image }}" alt="" style="object-fit:cover;">
+                                    {% else %}
+                                    <div style="width:32px;height:32px;border-radius:6px;display:grid;place-items:center;background:var(--card-2);color:var(--muted);font-weight:700;">{{ (g.title|default('?'))[:1]|upper }}</div>
+                                    {% endif %}
+                                    <div>
+                                        <div style="font-weight:600;">
+                                            {{ g.title|default('未命名') }}
+                                            {{ m.ban_badge(g.is_banned) }}
+                                        </div>
+                                        <div class="text-muted" style="font-size:.76rem;">ID #{{ g.id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ m.host_badge(g.hosting_type) }}</td>
+                            <td>{{ m.status_badge(g.status) }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">
+                                <div>{{ m.fmt_num(g.download_count) }} 下载</div>
+                                <div>{{ '%.1f'|format(g.avg_rating|default(0)|float) }} ★ ({{ g.rating_count|default(0) }})</div>
+                            </td>
+                            <td>
+                                <div class="flex gap-8" style="flex-wrap:wrap">
+                                    <a class="btn btn-ghost btn-sm" href="{{ url_for('games.game_detail', gid=g.id) }}">查看</a>
+                                    {% if g.is_banned %}
+                                    <button class="btn btn-primary btn-sm" data-ban="{{ g.id }}" data-action="unban">解禁</button>
+                                    {% else %}
+                                    <button class="btn btn-danger btn-sm" data-ban="{{ g.id }}" data-action="ban">封禁</button>
+                                    {% endif %}
+
+                                    {% if g.status|default('active') == 'active' %}
+                                    <button class="btn btn-ghost btn-sm" data-view-elig="{{ g.id }}" data-action="revoke" title="取消 /view 资格">取消 View</button>
+                                    {% else %}
+                                    <button class="btn btn-gold btn-sm" data-view-elig="{{ g.id }}" data-action="grant" title="授予 /view 资格">授予 View</button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <div class="admin-no-match">未找到匹配的游戏</div>
+            {% else %}
+                <div class="empty-state card card-noise"><h3>暂无游戏</h3></div>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
