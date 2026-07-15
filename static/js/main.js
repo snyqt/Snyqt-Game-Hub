@@ -314,14 +314,37 @@
             btn.addEventListener('click', function () {
                 var gid = btn.getAttribute('data-ban');
                 var action = btn.getAttribute('data-action'); // ban / unban
-                if (!confirm(action === 'ban' ? '确认封禁该游戏？' : '确认解禁该游戏？')) return;
-                fetch('/api/admin/games/' + gid + '/' + action, { method: 'POST' })
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        toast(data.message || '操作完成', data.success ? 'success' : 'error');
-                        if (data.success) setTimeout(function () { window.location.reload(); }, 700);
+                if (action === 'ban') {
+                    // 封禁时强制要求管理员填写封禁理由
+                    var reason = prompt('请填写封禁理由（必填）：', '');
+                    if (reason === null) return;
+                    reason = (reason || '').trim();
+                    if (!reason) {
+                        toast('封禁理由为必填项', 'warning');
+                        return;
+                    }
+                    if (!confirm('确认封禁该游戏？\n理由：' + reason)) return;
+                    fetch('/api/admin/games/' + gid + '/' + action, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason: reason })
                     })
-                    .catch(function () { toast('网络错误', 'error'); });
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            toast(data.message || data.error || '操作完成', data.success ? 'success' : 'error');
+                            if (data.success) setTimeout(function () { window.location.reload(); }, 700);
+                        })
+                        .catch(function () { toast('网络错误', 'error'); });
+                } else {
+                    if (!confirm('确认解禁该游戏？')) return;
+                    fetch('/api/admin/games/' + gid + '/' + action, { method: 'POST' })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            toast(data.message || '操作完成', data.success ? 'success' : 'error');
+                            if (data.success) setTimeout(function () { window.location.reload(); }, 700);
+                        })
+                        .catch(function () { toast('网络错误', 'error'); });
+                }
             });
         });
 

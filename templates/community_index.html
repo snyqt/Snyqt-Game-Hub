@@ -25,12 +25,75 @@
 
             {# 排序切换 #}
             <div class="flex gap-8" style="margin-left:auto;">
-                <a href="{{ url_for('community.index', sort='new') }}"
+                <a href="{{ url_for('community.index', sort='new', tag=tag) }}"
                    class="btn btn-ghost btn-sm {{ 'active' if sort == 'new' else '' }}">最新</a>
-                <a href="{{ url_for('community.index', sort='hot') }}"
+                <a href="{{ url_for('community.index', sort='hot', tag=tag) }}"
                    class="btn btn-ghost btn-sm {{ 'active' if sort == 'hot' else '' }}">最热</a>
             </div>
         </div>
+
+        {# 标签筛选栏 #}
+        {% if hot_tags and hot_tags|length > 0 %}
+        <div class="flex gap-8 items-center mb-20" style="flex-wrap:wrap;">
+            <span class="text-muted" style="font-size:.84rem;display:inline-flex;align-items:center;gap:4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><path d="M7 7h.01"/></svg>
+                标签：
+            </span>
+            <a href="{{ url_for('community.index', sort=sort) }}"
+               class="tag-filter-chip {{ 'active' if not tag else '' }}">全部</a>
+            {% for t in hot_tags %}
+            <a href="{{ url_for('community.index', sort=sort, tag=t.tag_name) }}"
+               class="tag-filter-chip {{ 'active' if tag == t.tag_name else '' }}">
+                {{ t.tag_name }}<span class="tag-cnt">{{ t.cnt }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        <style>
+        .tag-filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border-radius: 999px;
+            font-size: .82rem;
+            font-weight: 600;
+            background: var(--card, #1a1a2e);
+            border: 1px solid var(--border, rgba(255,255,255,0.08));
+            color: var(--muted, rgba(255,255,255,0.7));
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .tag-filter-chip:hover {
+            color: var(--text, #fff);
+            border-color: rgba(255,255,255,0.25);
+        }
+        .tag-filter-chip.active {
+            background: linear-gradient(135deg, rgba(100,210,255,0.18), rgba(0,230,118,0.12));
+            border-color: rgba(100,210,255,0.5);
+            color: #64d2ff;
+        }
+        .tag-filter-chip .tag-cnt {
+            font-size: .7rem;
+            color: var(--muted, rgba(255,255,255,0.4));
+            background: rgba(255,255,255,0.06);
+            padding: 0 6px;
+            border-radius: 999px;
+        }
+        .tag-filter-chip.active .tag-cnt {
+            color: #64d2ff;
+            background: rgba(100,210,255,0.18);
+        }
+        </style>
+        {% endif %}
+
+        {# 当前筛选状态提示 #}
+        {% if tag %}
+        <div class="mb-16" style="font-size:.84rem;color:var(--muted);">
+            当前筛选标签：<strong style="color:var(--text);">{{ tag }}</strong>
+            {% if posts|length == 0 %}，暂无该标签下的帖子{% endif %}
+            <a href="{{ url_for('community.index', sort=sort) }}" style="margin-left:8px;color:#64d2ff;text-decoration:none;">× 清除筛选</a>
+        </div>
+        {% endif %}
 
         {# ==================== 帖子列表 ==================== #}
         {% if posts and posts|length > 0 %}
@@ -139,7 +202,7 @@
             {% if total_pages > 1 %}
             <div class="flex gap-8 items-center justify-center mt-24">
                 {% if page > 1 %}
-                <a class="btn btn-ghost btn-sm" href="{{ url_for('community.index', sort=sort, page=page-1) }}">上一页</a>
+                <a class="btn btn-ghost btn-sm" href="{{ url_for('community.index', sort=sort, page=page-1, tag=tag) }}">上一页</a>
                 {% else %}
                 <span class="btn btn-ghost btn-sm" style="opacity:.4;cursor:default;">上一页</span>
                 {% endif %}
@@ -148,14 +211,14 @@
                     {% if pn == page %}
                     <span class="btn btn-primary btn-sm">{{ pn }}</span>
                     {% elif pn <= 3 or pn > total_pages - 3 or (pn >= page - 1 and pn <= page + 1) %}
-                    <a class="btn btn-ghost btn-sm" href="{{ url_for('community.index', sort=sort, page=pn) }}">{{ pn }}</a>
+                    <a class="btn btn-ghost btn-sm" href="{{ url_for('community.index', sort=sort, page=pn, tag=tag) }}">{{ pn }}</a>
                     {% elif pn == 4 or pn == total_pages - 3 %}
                     <span style="color:var(--muted);">...</span>
                     {% endif %}
                 {% endfor %}
 
                 {% if page < total_pages %}
-                <a class="btn btn-ghost btn-sm" href="{{ url_for('community.index', sort=sort, page=page+1) }}">下一页</a>
+                <a class="btn btn-ghost btn-sm" href="{{ url_for('community.index', sort=sort, page=page+1, tag=tag) }}">下一页</a>
                 {% else %}
                 <span class="btn btn-ghost btn-sm" style="opacity:.4;cursor:default;">下一页</span>
                 {% endif %}

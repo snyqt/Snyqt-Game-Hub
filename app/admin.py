@@ -250,8 +250,22 @@ def review_config(rid):
 @admin_bp.route('/api/admin/games/<int:gid>/ban', methods=['POST'])
 @require_level('super_admin')
 def ban_game(gid):
-    """封禁游戏。"""
+    """封禁游戏（必须填写封禁理由）。"""
+    reason = ((request.get_json(silent=True) or {}).get('reason') or '').strip()
+    # 强制要求管理员填写封禁理由
+    if not reason:
+        return jsonify({'success': False, 'error': '请填写封禁理由'}), 400
+    game = query_one('SELECT title FROM games WHERE id = %s', [gid])
+    if not game:
+        return jsonify({'success': False, 'error': '游戏不存在'}), 404
     execute('UPDATE games SET is_banned = 1 WHERE id = %s', [gid])
+    # 创建处罚记录
+    execute(
+        'INSERT INTO penalty_records (target_type, target_id, target_title, reason, action, admin_id) '
+        'VALUES (%s, %s, %s, %s, %s, %s)',
+        ('game', gid, game['title'], reason, 'ban', session.get('user_id'))
+    )
+    logger.info("游戏封禁: game_id=%s reason=%s admin_id=%s", gid, reason, session.get('user_id'))
     return jsonify({'success': True, 'message': '游戏已封禁'})
 
 
@@ -328,11 +342,19 @@ def blacklist_page():
 
 @admin_bp.route('/api/admin/reports/<int:rid>', methods=['POST'])
 def handle_report(rid):
-    """处理举报：action=valid 标记属实并封禁目标，action=invalid 标记不属实并删除。"""
+    """处理举报：action=valid 标记属实并封禁目标，action=invalid 标记不属实并删除。
+
+    标记属实时强制要求管理员填写封禁理由（可基于举报理由补充）。
+    """
     if not is_super_admin(session.get('user_id')):
         return jsonify({'error': '权限不足'}), 403
-    action = (request.get_json(silent=True) or {}).get('action')
+    data = request.get_json(silent=True) or {}
+    action = data.get('action')
     if action == 'valid':
+        # 强制要求管理员填写封禁理由
+        ban_reason = (data.get('reason') or '').strip()
+        if not ban_reason:
+            return jsonify({'error': '请填写封禁理由'}), 400
         # 标记举报属实，封禁目标帖子
         report = query_one('SELECT * FROM reports WHERE id=%s', (rid,))
         if report:
@@ -345,16 +367,16 @@ def handle_report(rid):
                 'UPDATE community_posts SET status=%s WHERE id=%s',
                 ('banned', report['target_id'])
             )
-            # 创建处罚记录
+            # 创建处罚记录（使用管理员填写的理由）
             post = query_one('SELECT title FROM community_posts WHERE id=%s', (report['target_id'],))
             target_title = post['title'] if post else ''
             execute(
                 'INSERT INTO penalty_records (target_type, target_id, target_title, reason, action, admin_id) '
                 'VALUES (%s,%s,%s,%s,%s,%s)',
-                ('post', report['target_id'], target_title, report['reason'], 'ban', session.get('user_id'))
+                ('post', report['target_id'], target_title, ban_reason, 'ban', session.get('user_id'))
             )
-            logger.info("举报处理-属实: report_id=%s target_id=%s admin_id=%s",
-                        rid, report['target_id'], session.get('user_id'))
+            logger.info("举报处理-属实: report_id=%s target_id=%s reason=%s admin_id=%s",
+                        rid, report['target_id'], ban_reason, session.get('user_id'))
     elif action == 'invalid':
         # 标记不属实，删除举报记录
         execute('DELETE FROM reports WHERE id=%s', (rid,))

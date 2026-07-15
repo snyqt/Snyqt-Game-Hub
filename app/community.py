@@ -33,9 +33,10 @@ def _get_json_or_form(key, default=None):
 
 @community_bp.route('/')
 def index():
-    """社区首页 - 支持分页、排序，置顶帖子优先展示。"""
+    """社区首页 - 支持分页、排序、标签筛选，置顶帖子优先展示。"""
     page = request.args.get('page', '1')
     sort = request.args.get('sort', 'new')
+    tag = request.args.get('tag', '').strip()
 
     try:
         page = int(page)
@@ -61,10 +62,17 @@ def index():
         ban_filter = "AND (cp.status IS NULL OR cp.status != 'banned')"
         ban_args = []
 
+    # 标签筛选：通过 post_tags 关联表
+    tag_filter = ""
+    tag_args = []
+    if tag:
+        tag_filter = "AND cp.id IN (SELECT post_id FROM post_tags WHERE tag_name = %s)"
+        tag_args = [tag]
+
     # 查询总数（用于分页）
     total = query_one(
-        f'SELECT COUNT(*) as total FROM community_posts cp WHERE 1=1 {ban_filter}',
-        ban_args
+        f'SELECT COUNT(*) as total FROM community_posts cp WHERE 1=1 {ban_filter} {tag_filter}',
+        ban_args + tag_args
     )
     total_pages = (total['total'] + per_page - 1) // per_page if total else 1
 
@@ -74,23 +82,36 @@ def index():
         SELECT cp.*, u.username, u.avatar
         FROM community_posts cp
         JOIN users u ON cp.user_id = u.id
-        WHERE 1=1 {ban_filter}
+        WHERE 1=1 {ban_filter} {tag_filter}
         {order_sql}
         LIMIT %s OFFSET %s
         ''',
-        ban_args + [per_page, offset]
+        ban_args + tag_args + [per_page, offset]
     )
 
     # 计算每条帖子的热度值（用于显示）
     for p in posts:
         p['hot_score'] = p['comment_count'] * 2 + p['likes'] * 1 + (p['is_starred'] * 5)
 
+    # 热门标签（按使用频次降序，最多 20 个）
+    hot_tags = query(
+        '''
+        SELECT tag_name, COUNT(*) AS cnt
+        FROM post_tags
+        GROUP BY tag_name
+        ORDER BY cnt DESC, tag_name ASC
+        LIMIT 20
+        '''
+    )
+
     return render_template(
         'community_index.html',
         posts=posts,
         page=page,
         total_pages=total_pages,
-        sort=sort
+        sort=sort,
+        tag=tag,
+        hot_tags=hot_tags
     )
 
 
@@ -184,6 +205,7 @@ def post_detail(pid):
             'community_post.html',
             post=post,
             comments=[],
+            post_tags=[],
             user_liked=False,
             is_reviewer=False,
             is_banned=True,
@@ -199,6 +221,12 @@ def post_detail(pid):
         WHERE cc.post_id = %s
         ORDER BY cc.created_at ASC
         ''',
+        [pid]
+    )
+
+    # 查询帖子标签
+    post_tags = query(
+        'SELECT tag_name FROM post_tags WHERE post_id = %s ORDER BY tag_name',
         [pid]
     )
 
@@ -221,6 +249,7 @@ def post_detail(pid):
         'community_post.html',
         post=post,
         comments=comments,
+        post_tags=post_tags,
         user_liked=user_liked,
         is_reviewer=is_reviewer,
         is_banned=is_banned,
@@ -510,10 +539,13 @@ def hot():
 # ==================== 帖子封禁与举报 ====================
 @community_bp.route('/api/community/post/<int:pid>/ban', methods=['POST'])
 def ban_post(pid):
-    """管理员封禁帖子。"""
+    """管理员封禁帖子（必须填写封禁理由）。"""
     if not is_super_admin(session.get('user_id')):
         return jsonify({'error': '权限不足'}), 403
-    reason = (request.get_json(silent=True) or {}).get('reason', '违反社区规范')
+    reason = ((request.get_json(silent=True) or {}).get('reason') or '').strip()
+    # 强制要求管理员填写封禁理由
+    if not reason:
+        return jsonify({'error': '请填写封禁理由'}), 400
     # 更新帖子状态为封禁
     execute('UPDATE community_posts SET status=%s WHERE id=%s', ('banned', pid))
     # 获取帖子标题

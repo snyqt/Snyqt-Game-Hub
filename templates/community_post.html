@@ -45,6 +45,9 @@
                 {% if post.game_tag %}
                 <span class="tag">{{ post.game_tag }}</span>
                 {% endif %}
+                {% for t in post_tags %}
+                <span class="tag">{{ t.tag_name }}</span>
+                {% endfor %}
                 {% if is_banned %}
                 <span class="badge badge-danger">已封禁</span>
                 {% endif %}
@@ -301,13 +304,16 @@ function reportPost(pid) {
     });
 }
 
-// 封禁帖子（仅超级管理员）
+// 封禁帖子（仅超级管理员）：强制要求填写封禁理由
 function banPost(pid) {
-    var reason = prompt('请输入封禁理由：', '违反社区规范');
+    var reason = prompt('请填写封禁理由（必填）：', '');
     if (reason === null) return;  // 用户取消
-    reason = (reason || '违反社区规范').trim();
-    if (!reason) reason = '违反社区规范';
-    if (!confirm('确认封禁该帖子？此操作将隐藏帖子内容并记入小黑屋。')) return;
+    reason = (reason || '').trim();
+    if (!reason) {
+        window.snyqtToast ? window.snyqtToast('封禁理由为必填项，请重新填写', 'warning') : alert('封禁理由为必填项，请重新填写');
+        return;
+    }
+    if (!confirm('确认封禁该帖子？\n理由：' + reason + '\n\n此操作将隐藏帖子内容并记入小黑屋。')) return;
     fetch('/community/api/community/post/' + pid + '/ban', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

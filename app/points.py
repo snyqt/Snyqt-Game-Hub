@@ -188,11 +188,25 @@ def purchase_game(gid):
     if not user:
         return jsonify({'success': False, 'message': '请先登录'}), 401
 
-    game = query_one('SELECT id, is_banned, developer_id FROM games WHERE id = %s', [gid])
+    game = query_one(
+        'SELECT id, is_banned, developer_id, access_mode FROM games WHERE id = %s',
+        [gid]
+    )
     if not game:
         return jsonify({'success': False, 'message': '游戏不存在'}), 404
     if game['is_banned'] and game['developer_id'] != user['id']:
         return jsonify({'success': False, 'message': '游戏不存在'}), 404
+
+    # 访问控制：
+    # - private 模式：仅开发者可获取
+    # - invite 模式：必须先通过邀请码兑换（/api/invite/redeem）方可获取
+    if game.get('access_mode') == 'private' and game['developer_id'] != user['id']:
+        return jsonify({'success': False, 'message': '此游戏为私密模式，仅开发者可获取'}), 403
+    if game.get('access_mode') == 'invite':
+        return jsonify({
+            'success': False,
+            'message': '此游戏需要邀请码才能获取，请在游戏详情页输入邀请码兑换'
+        }), 403
 
     # 已入库则直接返回
     existing = query_one(

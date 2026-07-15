@@ -348,14 +348,30 @@ function unbanTarget(targetType, targetId, btn) {
 }
 
 // 处理举报：action 为 'valid' 或 'invalid'
+// 标记属实时强制要求管理员填写封禁理由
 function handleReport(rid, action) {
-    var msg = action === 'valid' ? '确认举报属实并封禁该帖子？' : '确认举报不属实并删除该举报？';
-    if (!confirm(msg)) return;
+    if (action === 'valid') {
+        var reason = prompt('请填写封禁理由（必填）：', '');
+        if (reason === null) return;  // 用户取消
+        reason = (reason || '').trim();
+        if (!reason) {
+            window.snyqtToast ? window.snyqtToast('封禁理由为必填项，请重新填写', 'warning') : alert('封禁理由为必填项，请重新填写');
+            return;
+        }
+        if (!confirm('确认标记此举报为属实并封禁对应帖子？\n理由：' + reason)) return;
+        handleReportSubmit(rid, action, reason);
+    } else {
+        // 不属实直接处理，无需理由
+        if (!confirm('确认此举报不属实并驳回？')) return;
+        handleReportSubmit(rid, action, '');
+    }
+}
 
+function handleReportSubmit(rid, action, reason) {
     fetch('/api/admin/reports/' + rid, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action })
+        body: JSON.stringify({ action: action, reason: reason })
     })
     .then(function (r) { return r.json(); })
     .then(function (data) {
