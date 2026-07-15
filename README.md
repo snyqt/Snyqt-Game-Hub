@@ -1,6 +1,31 @@
+<div align="center">
+  <img src="static/images/logo.png" alt="SNYQT Logo" width="120" height="120" style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+
 # SNYQT Game Hub
 
-> 基于 Flask 的游戏托管与社区平台，集成 SNYQT Account 单点登录、Cloudflare Turnstile 人机验证，支持 HTML/Python 游戏在线托管、开发者面板、社区互动与社区治理。
+  <p>
+    <strong> 基于 Flask 的游戏托管与社区平台，集成 SNYQT Account 单点登录、Cloudflare Turnstile 人机验证，支持 HTML/Python 游戏在线托管、开发者面板、社区互动与社区治理。</strong>
+  </p>
+
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python">
+    <img src="https://img.shields.io/badge/Flask-2.3.3-green.svg" alt="Flask">
+    <img src="https://img.shields.io/badge/MySQL-5.7+-orange.svg" alt="MySQL">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+    <a href="https://account.snyqt.top"><img src="https://img.shields.io/badge/SNYQT-Account-green.svg" alt="SNYQT Account"></a>
+
+
+  </p>
+
+  <p>
+    <a href="https://account.snyqt.top">在线演示</a> •
+    <a href="#-快速开始">快速开始</a> •
+    <a href="#-开发者平台oauth-20">开发者平台OAuth</a> •
+    <a href="#-联系方式">联系方式</a>
+  </p>
+</div>
+
+
 
 ## 目录
 
