@@ -12,7 +12,7 @@
     <img src="https://img.shields.io/badge/Flask-2.3.3-green.svg" alt="Flask">
     <img src="https://img.shields.io/badge/MySQL-5.7+-orange.svg" alt="MySQL">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
-    <a href="https://account.snyqt.top"><img src="https://img.shields.io/badge/SNYQT-Account-green.svg" alt="SNYQT Account"></a>
+    <a href="https://github.com/snyqt/Snyqt-account"><img src="https://img.shields.io/badge/SNYQT-Account-green.svg" alt="SNYQT Account"></a>
 
 
   </p>
