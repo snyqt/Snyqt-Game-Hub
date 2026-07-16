@@ -7,6 +7,7 @@
 """
 import os
 import io
+import logging
 import socket
 import zipfile
 import shlex
@@ -14,6 +15,30 @@ import subprocess
 
 from app.database import execute, query
 from config.config import UPLOAD_FOLDER, PORT_RANGE_START, PORT_RANGE_END
+
+_log = logging.getLogger('helpers')
+
+
+def get_public_ipv6():
+    """获取本机公网 IPv6 地址。
+
+    通过向 Google DNS (2001:4860:4860::8888) 发起连接并读取 getsockname()
+    来获取本机对外 IPv6 地址。若 IPv6 不可用，返回 None。
+
+    :return: 公网 IPv6 地址字符串，或 None
+    """
+    try:
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        sock.settimeout(2)
+        sock.connect(('2001:4860:4860::8888', 80))
+        addr = sock.getsockname()[0]
+        sock.close()
+        # 过滤掉链路本地地址（fe80::）和回环地址（::1）
+        if addr.startswith('fe80:') or addr == '::1':
+            return None
+        return addr
+    except (OSError, socket.error):
+        return None
 
 
 def game_dir(game_id):
