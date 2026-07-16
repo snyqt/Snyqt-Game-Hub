@@ -12,6 +12,13 @@ SNYQT Game Hub 配置示例文件（开源可见）
 import os
 
 # ==================== 数据库配置 ====================
+# DB_HOST 支持 IPv4 / IPv6 字面量，例如：
+#   IPv4: 127.0.0.1
+#   IPv4 域名: db.example.com
+#   IPv6 字面量: ::1  或  fd00::1
+# 建议将 IPv6 字面量包在方括号中以消除歧义：
+#   DB_HOST = "[fd00::1]"  # 仅当直接传给 MySQL 客户端时需要
+# 当前 PyMySQL 实现下，IPv6 字面量可省略方括号（pymysql 会自动交给 socket.getaddrinfo 解析）
 DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
 DB_USER = os.getenv('DB_USER', 'your_db_user')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'your_db_password')
