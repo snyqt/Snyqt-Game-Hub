@@ -104,14 +104,6 @@ def _run_dual_stack(app, host_v4, host_v6, port, debug=False, use_reloader=False
     if not servers:
         raise OSError("IPv4 与 IPv6 监听全部失败，请检查端口 %d 是否被占用" % port)
 
-    # 检测并输出公网 IPv6
-    from app.helpers import get_public_ipv6
-    public_ipv6 = get_public_ipv6()
-    if public_ipv6:
-        logging.getLogger('run').info("[公网IPv6] %s", public_ipv6)
-    else:
-        logging.getLogger('run').info("[公网IPv6] 未检测到公网 IPv6 地址")
-
     # 每个 server 在独立线程 serve_forever
     threads = []
     for srv in servers:
