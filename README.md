@@ -176,7 +176,7 @@ Hub/
    python run.py
    ```
 
-   服务器监听 `http://[::]:5000`（**IPv4 + IPv6 双栈**）。
+   服务器监听 `http://0.0.0.0:5000`。
 
    > 开发服务器配置了 `use_reloader=False`（避免上传文件时中断）和 `threaded=True`（避免大文件上传阻塞），修改代码后需手动重启。
 
@@ -248,15 +248,12 @@ Hub/
 
    ```nginx
    server {
-       # IPv4 + IPv6 双栈监听
        listen 443 ssl http2;
-       listen [::]:443 ssl http2;
        server_name your-domain.com;
 
        client_max_body_size 500M;
 
        location / {
-           # 反代目标使用 socket 协议时改为 unix:/run/snyqt.sock
            proxy_pass http://127.0.0.1:5000;
            proxy_set_header Host $host;
            proxy_set_header X-Real-IP $remote_addr;
@@ -282,8 +279,7 @@ uwsgi --reload /tmp/uwsgi.pid
 
 | 配置 | 值 | 说明 |
 |------|-----|------|
-| `http-socket` | `0.0.0.0:5000` | 直接 HTTP（IPv4 监听），避免内置路由器缓冲请求体 |
-| `http6-socket` | `[::]:5000` | IPv6 监听，与 `http-socket` 共存实现双栈 |
+| `http-socket` | `0.0.0.0:5000` | 直接 HTTP，避免内置路由器缓冲请求体 |
 | `post-buffering` | `0` | 流式上传，避免大文件卡死 |
 | `limit-post` | `536870912` | 允许 512MB 请求体 |
 | `buffer-size` | `65535` | 64KB 请求头缓冲 |

@@ -66,30 +66,23 @@ def is_process_alive(pid):
 
 
 def _port_in_use(port):
-    """检测端口是否被占用（同时尝试 IPv4 与 IPv6 绑定，兼容双栈子进程）。"""
-    for family, addr in ((socket.AF_INET, '127.0.0.1'), (socket.AF_INET6, '::1')):
-        with socket.socket(family, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            if family == socket.AF_INET6:
-                # IPv6 only flag 关闭 → 双栈监听
-                s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-            try:
-                s.bind((addr, port))
-                return False
-            except OSError:
-                continue
-    return True
+    """检测端口是否被占用（socket 绑定测试）。"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind(('127.0.0.1', port))
+            return False
+        except OSError:
+            return True
 
 
 def _port_responds(port):
-    """检测端口是否已有进程在监听（优先尝试 IPv4，回退 IPv6）。"""
-    for family, addr in ((socket.AF_INET, '127.0.0.1'), (socket.AF_INET6, '::1')):
-        try:
-            with socket.create_connection((addr, port), timeout=1):
-                return True
-        except OSError:
-            continue
-    return False
+    """检测端口是否已有进程在监听。"""
+    try:
+        with socket.create_connection(('127.0.0.1', port), timeout=1):
+            return True
+    except OSError:
+        return False
 
 
 def allocate_port():

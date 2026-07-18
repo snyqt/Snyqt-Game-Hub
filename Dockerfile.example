@@ -94,16 +94,11 @@ RUN mkdir -p /app/uploads/games /app/logs
 VOLUME ["/app/uploads"]
 
 # ==================== 端口暴露 ====================
-# IPv4 + IPv6 双栈：uWSGI 同时绑定 0.0.0.0:80 和 [::]:80
-# 容器需通过 docker run -p 80:80 (IPv4) / docker run -p [::]:80 (IPv6) 暴露
-EXPOSE 80
+EXPOSE 5000
 
 # ==================== 健康检查 ====================
-# 使用 0.0.0.0 同时兼容 IPv4/IPv6（容器内 loopback；外部健康检查应指向容器 IP）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request,sys; \
-ok=any((urllib.request.urlopen(u,timeout=5).status==200) for u in ['http://127.0.0.1:80/','http://[::1]:80/']); \
-sys.exit(0 if ok else 1)" || exit 1
+    CMD python -c "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:5000/',timeout=5).status==200 else sys.exit(1)" || exit 1
 
 # ==================== 启动命令 ====================
 CMD ["uwsgi", "--ini", "uwsgi.ini"]

@@ -70,40 +70,10 @@ def is_turnstile_verified():
 
 
 def _is_localhost(addr):
-    """判断地址是否为本地开发地址（兼容 IPv4 / IPv6）。
-
-    支持以下形式：
-    - 127.0.0.1 / 127.x.x.x（IPv4 loopback）
-    - 192.168.x.x（私有网段）
-    - ::1（IPv6 loopback）
-    - fe80::/10（IPv6 link-local）
-    - fc00::/7（IPv6 unique local）
-    """
+    """判断 IP 是否为本地开发地址（127.0.0.1 或 192.168.*）。"""
     if not addr:
         return False
-    a = addr.strip()
-    # IPv6 loopback
-    if a in ('::1', '[::1]'):
-        return True
-    # IPv6 link-local
-    if a.lower().startswith('fe80:') or a.lower().startswith('[fe80:'):
-        return True
-    # IPv6 unique local addresses (fc00::/7 → 实际以 fc/fd 开头)
-    if a.lower().startswith(('fc', 'fd')) and ':' in a:
-        return True
-    # IPv4 loopback / 私有网段
-    if a.startswith('127.') or a == 'localhost':
-        return True
-    if a.startswith('192.168.') or a.startswith('10.'):
-        return True
-    if a.startswith('172.'):
-        # 172.16.0.0 - 172.31.255.255
-        try:
-            second = int(a.split('.')[1])
-            return 16 <= second <= 31
-        except (ValueError, IndexError):
-            return False
-    return False
+    return addr.startswith('127.0.0.1') or addr.startswith('192.168.')
 
 
 def register_turnstile_middleware(app):

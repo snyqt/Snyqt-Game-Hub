@@ -191,17 +191,8 @@ def _serve_python(game, gid, subpath):
             game_id=gid
         ), 503
 
-    # 构造目标 URL：优先尝试 IPv4 回环 127.0.0.1，失败后回退 IPv6 ::1
-    # Python 游戏子进程通常绑定 0.0.0.0（IPv4）或 ::（双栈），
-    # 但若子进程仅绑定 IPv6 ::1，此处回退仍可连通
-    target_host = '127.0.0.1'
-    try:
-        import socket as _sock
-        with _sock.create_connection(('127.0.0.1', port), timeout=0.5):
-            pass
-    except OSError:
-        target_host = '::1'
-    url = f'http://{target_host}:{port}/{subpath}'
+    # 构造目标 URL
+    url = f'http://127.0.0.1:{port}/{subpath}'
 
     # 转发请求头（剔除冲突项）
     fwd_headers = {

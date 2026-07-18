@@ -270,36 +270,19 @@ CREATE TABLE IF NOT EXISTS post_tags (
 
 
 # ==================== 连接与查询 ====================
-def _normalize_db_host(host):
-    """规范化数据库主机字符串，兼容 IPv4 / 域名 / IPv6 字面量。
-
-    PyMySQL 1.x 不接受方括号包裹的 IPv6 字面量（如 `[::1]`），需剥离。
-    端口仍通过独立参数传递，因此不处理 `[host]:port` 形式。
-    """
-    if not host:
-        return host
-    h = host.strip()
-    if h.startswith('[') and h.endswith(']'):
-        h = h[1:-1]
-    return h
-
-
 def get_db():
     """
     返回一个新的 MySQL 连接（DictCursor）。
     调用方需在用完后 close()，或在 with 语句中使用。
-    支持 IPv4（127.0.0.1）、域名、IPv6 字面量（::1、fd00::1）。
     """
     return pymysql.connect(
-        host=_normalize_db_host(DB_HOST),
+        host=DB_HOST,
         user=DB_USER,
         password=DB_PASSWORD,
         database=DB_NAME,
         port=DB_PORT,
         charset=DB_CHARSET,
         cursorclass=DictCursor,
-        # 当 host 是主机名（双栈 DNS）时，让系统自动按 AF_INET / AF_INET6 解析
-        # 避免强制 IPv4
     )
 
 

@@ -42,8 +42,6 @@ def create_app():
     app.config['PERMANENT_SESSION_LIFETIME'] = 60 * 60 * 24 * 7  # 7 天
     app.config['SESSION_PERMANENT'] = True
     app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 上传上限 500MB
-    # URL 生成默认协议（被反代时由 X-Forwarded-Proto 决定，外部回调需 https）
-    app.config['PREFERRED_URL_SCHEME'] = os.getenv('PREFERRED_URL_SCHEME', 'https')
 
     # ---------- Session Cookie 配置 ----------
     # OAuth 回调是从 account.snyqt.top 跨站重定向回 /callback，
