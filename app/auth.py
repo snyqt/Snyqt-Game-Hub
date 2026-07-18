@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 SNYQT Account OAuth 登录模块
-- /login: 发起 OAuth 授权（生成 state 存 session，跳转 account.snyqt.top）
+- /login: 发起 OAuth 授权（生成 state 存 session，跳转 snyqt-account.iepose.cn）
 - /callback: 校验 state，保存 auth_code（delete_code=False 复用），换 user_info 并 upsert users 表
 - /verify-callback: 验证码页面，调用 send-verification 复用 auth_code
 - /logout: 清除 session

@@ -44,7 +44,7 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 上传上限 500MB
 
     # ---------- Session Cookie 配置 ----------
-    # OAuth 回调是从 account.snyqt.top 跨站重定向回 /callback，
+    # OAuth 回调是从 snyqt-account.iepose.cn 跨站重定向回 /callback，
     # 必须正确设置 SameSite / Secure，否则浏览器会丢弃 cookie，
     # 导致回调时 session 丢失、state 校验失败。
     app.config['SESSION_COOKIE_SECURE'] = True          # 仅 HTTPS 传输

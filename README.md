@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="/static/images/LOGO.png" alt="SNYQT Logo" width="120" height="120" style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+  <img src="/static/images/logo.png" alt="SNYQT Logo" width="120" height="120" style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
 
 # SNYQT Game Hub
 
@@ -18,7 +18,7 @@
   </p>
 
   <p>
-    <a href="https://account.snyqt.top">在线演示</a> •
+    <a href="https://snyqt-game-hub.iepose.cn">在线演示</a> •
     <a href="#-快速开始">快速开始</a> •
     <a href="#-开发者平台oauth-20">开发者平台OAuth</a> •
     <a href="#-联系方式">联系方式</a>
@@ -193,7 +193,7 @@ Hub/
 | 数据库端口 | `DB_PORT` | `3306` | MySQL 端口 |
 | OAuth App ID | `SNYQT_APP_ID` | — | SNYQT Account 应用 ID |
 | OAuth App Secret | `SNYQT_APP_SECRET` | — | SNYQT Account 应用密钥 |
-| OAuth 基址 | `SNYQT_OAUTH_BASE` | `https://account.snyqt.top` | SNYQT Account 地址 |
+| OAuth 基址 | `SNYQT_OAUTH_BASE` | `https://snyqt-account.iepose.cn` | SNYQT Account 地址 |
 | 登录回调 | `LOGIN_CALLBACK` | — | OAuth 登录回调 URL |
 | 验证回调 | `VERIFY_CALLBACK` | — | Turnstile 验证回调 URL |
 | Turnstile Sitekey | `TURNSTILE_SITEKEY` | — | Turnstile 站点密钥 |
