@@ -1,0 +1,1129 @@
+{% extends "base.html" %}
+
+{% block title %}创作者中心{% endblock %}
+
+{% block head %}
+<style>
+    /* ==================== 创作者中心页 ==================== */
+    .creator-center-page {
+        padding: var(--space-6);
+        max-width: 1280px;
+        margin: 0 auto;
+    }
+
+    /* ---------- 面包屑 ---------- */
+    .cc-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: 0.82rem;
+        color: var(--fg-muted);
+        margin-bottom: var(--space-4);
+    }
+    .cc-breadcrumb a {
+        color: var(--fg-secondary);
+        text-decoration: none;
+        transition: color var(--transition-fast);
+    }
+    .cc-breadcrumb a:hover { color: var(--accent-primary); }
+    .cc-breadcrumb .sep { color: var(--fg-muted); }
+    .cc-breadcrumb .current { color: var(--fg-primary); font-weight: 600; }
+
+    /* ---------- 页面头部 ---------- */
+    .cc-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+    .cc-header-text h1 {
+        font-size: 2rem;
+        font-weight: 900;
+        margin: 0 0 var(--space-2);
+        background: linear-gradient(135deg, var(--fg-primary), var(--accent-primary));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .cc-header-text .subtitle {
+        color: var(--fg-secondary);
+        font-size: 0.95rem;
+        margin: 0;
+    }
+    .cc-header-actions {
+        display: flex;
+        gap: var(--space-3);
+        flex-shrink: 0;
+    }
+
+    /* ---------- 通用区块标题 ---------- */
+    .cc-section {
+        margin-bottom: var(--space-7);
+    }
+    .cc-section-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin-bottom: var(--space-4);
+    }
+    .cc-section-head h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .cc-section-head .sub {
+        color: var(--fg-muted);
+        font-size: 0.85rem;
+    }
+
+    /* ---------- 创作活动横幅 ---------- */
+    .cc-hero {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-lg);
+        padding: var(--space-7);
+        background: linear-gradient(135deg, rgba(0, 255, 157, 0.18), rgba(255, 200, 87, 0.12));
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--shadow-3);
+        margin-bottom: var(--space-7);
+    }
+    [data-theme="light"] .cc-hero {
+        background: linear-gradient(135deg, rgba(0, 204, 122, 0.18), rgba(212, 160, 23, 0.12));
+    }
+    .cc-hero::before {
+        content: "";
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 360px;
+        height: 360px;
+        background: radial-gradient(circle, rgba(0, 255, 157, 0.25), transparent 70%);
+        pointer-events: none;
+        filter: blur(20px);
+    }
+    [data-theme="light"] .cc-hero::before {
+        background: radial-gradient(circle, rgba(0, 204, 122, 0.25), transparent 70%);
+    }
+    .cc-hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 640px;
+    }
+    .cc-hero-content h2 {
+        font-size: 1.6rem;
+        font-weight: 800;
+        margin: 0 0 var(--space-2);
+        color: var(--fg-primary);
+    }
+    .cc-hero-content p {
+        color: var(--fg-secondary);
+        font-size: 0.95rem;
+        margin: 0 0 var(--space-4);
+    }
+    .cc-hero-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-5);
+        border-radius: var(--radius-pill);
+        background: var(--accent-primary);
+        color: #0a0e1a;
+        font-weight: 700;
+        font-size: 0.92rem;
+        text-decoration: none;
+        box-shadow: 0 6px 18px rgba(0, 255, 157, 0.3);
+        transition: transform var(--transition-base), box-shadow var(--transition-base), filter var(--transition-base);
+    }
+    [data-theme="light"] .cc-hero-cta { color: #ffffff; }
+    .cc-hero-cta:hover {
+        text-decoration: none;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 26px rgba(0, 255, 157, 0.4);
+        filter: brightness(1.08);
+    }
+    .cc-hero-cta svg { width: 16px; height: 16px; }
+
+    /* ---------- 热门活动 mini-cards ---------- */
+    .cc-events-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: var(--space-4);
+        margin-top: var(--space-5);
+        position: relative;
+        z-index: 1;
+    }
+    .cc-event-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+    .cc-event-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-primary);
+        box-shadow: var(--shadow-3);
+    }
+    .cc-event-cover {
+        height: 90px;
+        background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+        position: relative;
+    }
+    .cc-event-card:nth-child(2) .cc-event-cover {
+        background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+    }
+    .cc-event-card:nth-child(3) .cc-event-cover {
+        background: linear-gradient(135deg, var(--accent-cyan), var(--accent-primary));
+    }
+    .cc-event-card:nth-child(4) .cc-event-cover {
+        background: linear-gradient(135deg, var(--accent-danger), var(--accent-purple));
+    }
+    .cc-event-badge {
+        position: absolute;
+        top: var(--space-2);
+        right: var(--space-2);
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+        background: rgba(0, 0, 0, 0.45);
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+    }
+    .cc-event-info {
+        padding: var(--space-3);
+    }
+    .cc-event-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--fg-primary);
+        margin: 0 0 var(--space-1);
+        line-height: 1.3;
+    }
+    .cc-event-date {
+        font-size: 0.78rem;
+        color: var(--fg-muted);
+        font-family: var(--font-mono);
+    }
+
+    /* ---------- 统计卡片 ---------- */
+    .cc-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--space-4);
+        margin-bottom: var(--space-7);
+    }
+    .cc-stat-card {
+        position: relative;
+        padding: var(--space-5);
+        border-radius: var(--radius-md);
+        background: var(--bg-card);
+        backdrop-filter: blur(12px) saturate(160%);
+        -webkit-backdrop-filter: blur(12px) saturate(160%);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--shadow-2);
+        overflow: hidden;
+        transition: transform var(--transition-base), border-color var(--transition-base);
+    }
+    .cc-stat-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-primary);
+    }
+    .cc-stat-card .stat-icon {
+        position: absolute;
+        top: var(--space-4);
+        right: var(--space-4);
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+        background: var(--glass-bg);
+        color: var(--accent-primary);
+    }
+    .cc-stat-card .stat-icon svg { width: 20px; height: 20px; }
+    .cc-stat-card.is-success .stat-icon { color: var(--accent-primary); }
+    .cc-stat-card.is-warning .stat-icon { color: var(--accent-secondary); }
+    .cc-stat-card.is-danger .stat-icon { color: var(--accent-danger); }
+    .cc-stat-card.is-muted .stat-icon { color: var(--fg-muted); }
+    .cc-stat-card .stat-number {
+        font-family: var(--font-display);
+        font-weight: 900;
+        font-size: 2.4rem;
+        line-height: 1;
+        color: var(--fg-primary);
+        font-variant-numeric: tabular-nums;
+        margin-bottom: var(--space-2);
+    }
+    .cc-stat-card.is-success .stat-number { color: var(--accent-primary); }
+    .cc-stat-card.is-warning .stat-number { color: var(--accent-secondary); }
+    .cc-stat-card.is-danger .stat-number { color: var(--accent-danger); }
+    .cc-stat-card .stat-label {
+        font-size: 0.85rem;
+        color: var(--fg-secondary);
+        font-weight: 500;
+    }
+
+    /* ---------- 常用入口卡片 ---------- */
+    .cc-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--space-3);
+    }
+    .cc-action-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        padding: var(--space-4);
+        border-radius: var(--radius-md);
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        text-decoration: none;
+        color: inherit;
+        transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+    }
+    .cc-action-card:hover {
+        text-decoration: none;
+        transform: translateY(-3px);
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 1px var(--accent-primary), var(--shadow-3);
+        background: var(--glass-bg);
+    }
+    .cc-action-card .ac-icon {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+        background: var(--glass-bg);
+        color: var(--accent-primary);
+    }
+    .cc-action-card .ac-icon svg { width: 22px; height: 22px; }
+    .cc-action-card .ac-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--fg-primary);
+    }
+    .cc-action-card .ac-desc {
+        font-size: 0.78rem;
+        color: var(--fg-muted);
+        line-height: 1.4;
+    }
+
+    /* ---------- 投稿切换 Tabs ---------- */
+    .cc-tabs {
+        display: flex;
+        gap: var(--space-1);
+        padding: var(--space-1);
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-pill);
+        margin-bottom: var(--space-5);
+        width: fit-content;
+    }
+    .cc-tab {
+        padding: var(--space-2) var(--space-5);
+        border-radius: var(--radius-pill);
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--fg-secondary);
+        cursor: pointer;
+        transition: background var(--transition-fast), color var(--transition-fast);
+        border: none;
+        background: transparent;
+        font-family: inherit;
+    }
+    .cc-tab:hover { color: var(--fg-primary); }
+    .cc-tab.is-active {
+        background: var(--accent-primary);
+        color: #0a0e1a;
+    }
+    [data-theme="light"] .cc-tab.is-active { color: #ffffff; }
+    .cc-tab-panel { display: none; }
+    .cc-tab-panel.is-active { display: block; }
+
+    /* ---------- 筛选 Tab ---------- */
+    .cc-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin-bottom: var(--space-4);
+    }
+    .cc-filter {
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-pill);
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        color: var(--fg-secondary);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        font-family: inherit;
+    }
+    .cc-filter:hover {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+    }
+    .cc-filter.is-active {
+        background: var(--glass-bg);
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+    }
+    .cc-filter .count {
+        margin-left: var(--space-1);
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        opacity: 0.7;
+    }
+
+    /* ---------- 投稿列表 ---------- */
+    .cc-submissions { display: flex; flex-direction: column; gap: var(--space-3); }
+    .cc-sub-card {
+        display: flex;
+        gap: var(--space-4);
+        padding: var(--space-4);
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+    .cc-sub-card:hover {
+        transform: translateY(-1px);
+        border-color: var(--glass-border);
+        box-shadow: var(--shadow-2);
+    }
+    .cc-sub-cover {
+        width: 96px;
+        height: 96px;
+        flex-shrink: 0;
+        border-radius: var(--radius-md);
+        background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .cc-sub-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: var(--radius-md);
+    }
+    .cc-sub-body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+    .cc-sub-title-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+    }
+    .cc-sub-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--fg-primary);
+        margin: 0;
+    }
+    .cc-sub-uid {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--fg-muted);
+    }
+    .cc-sub-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 0.82rem;
+        color: var(--fg-secondary);
+        flex-wrap: wrap;
+    }
+    .cc-sub-meta .meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+    }
+    .cc-sub-meta svg { width: 14px; height: 14px; }
+    .cc-sub-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-shrink: 0;
+    }
+    .cc-mini-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+        background: var(--glass-bg);
+        color: var(--fg-secondary);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-fast);
+        font-family: inherit;
+        cursor: pointer;
+    }
+    .cc-mini-btn:hover {
+        text-decoration: none;
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+        background: rgba(0, 255, 157, 0.08);
+    }
+    .cc-mini-btn svg { width: 14px; height: 14px; }
+    .cc-mini-btn.primary {
+        background: var(--accent-primary);
+        color: #0a0e1a;
+        border-color: var(--accent-primary);
+    }
+    [data-theme="light"] .cc-mini-btn.primary { color: #ffffff; }
+    .cc-mini-btn.primary:hover {
+        background: var(--accent-primary);
+        color: #0a0e1a;
+        filter: brightness(1.08);
+    }
+    [data-theme="light"] .cc-mini-btn.primary:hover { color: #ffffff; }
+
+    /* ---------- 素材列表（cc-game-row） ---------- */
+    .cc-game-row {
+        display: flex;
+        gap: var(--space-4);
+        padding: var(--space-3) var(--space-4);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: var(--bg-card);
+        margin-bottom: var(--space-2);
+        transition: border-color var(--transition-base), transform var(--transition-base);
+        align-items: center;
+    }
+    .cc-game-row:hover {
+        border-color: var(--accent-primary);
+        transform: translateX(2px);
+    }
+    .cc-game-thumb {
+        width: 64px;
+        height: 48px;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        flex-shrink: 0;
+    }
+    .cc-game-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .cc-game-thumb-fallback {
+        width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-purple));
+        color: #fff;
+        font-family: var(--font-display);
+        font-weight: 900;
+        font-size: 1.2rem;
+    }
+    .cc-game-info { flex: 1; min-width: 0; }
+    .cc-game-title-row { display: flex; align-items: center; gap: var(--space-2); margin-bottom: 4px; flex-wrap: wrap; }
+    .cc-game-title { color: var(--fg-primary); font-weight: 700; font-size: 0.95rem; text-decoration: none; }
+    .cc-game-title:hover { color: var(--accent-primary); text-decoration: none; }
+    .cc-game-meta { display: flex; gap: var(--space-3); font-size: 0.82rem; color: var(--fg-muted); flex-wrap: wrap; }
+    .cc-game-actions { display: flex; gap: var(--space-1); flex-shrink: 0; }
+    .cc-game-action-btn {
+        width: 32px; height: 32px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: var(--radius-sm);
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        color: var(--fg-secondary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+    .cc-game-action-btn:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+    .cc-game-action-btn svg { width: 14px; height: 14px; }
+
+    /* 状态徽章颜色 */
+    .cc-status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: 2px var(--space-2);
+        border-radius: var(--radius-sm);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        border: 1px solid transparent;
+    }
+    .cc-status::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: var(--radius-md);
+        background: currentColor;
+    }
+    .cc-status.active { background: rgba(0, 255, 157, 0.12); color: var(--accent-primary); border-color: rgba(0, 255, 157, 0.35); }
+    .cc-status.pending_review { background: rgba(255, 200, 87, 0.12); color: var(--accent-secondary); border-color: rgba(255, 200, 87, 0.35); }
+    .cc-status.rejected { background: rgba(255, 56, 96, 0.12); color: var(--accent-danger); border-color: rgba(255, 56, 96, 0.35); }
+    .cc-status.draft { background: var(--glass-bg); color: var(--fg-muted); border-color: var(--border-color); }
+    .cc-status.locked { background: rgba(139, 92, 246, 0.12); color: var(--accent-purple); border-color: rgba(139, 92, 246, 0.35); }
+    .cc-status.error { background: rgba(255, 56, 96, 0.12); color: var(--accent-danger); border-color: rgba(255, 56, 96, 0.35); }
+    [data-theme="light"] .cc-status.active { background: rgba(0, 204, 122, 0.12); border-color: rgba(0, 204, 122, 0.4); }
+
+    /* ---------- 草稿卡片 ---------- */
+    .cc-drafts-list { display: flex; flex-direction: column; gap: var(--space-3); }
+    .cc-draft-card {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        padding: var(--space-4);
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        transition: border-color var(--transition-base);
+    }
+    .cc-draft-card:hover { border-color: var(--accent-secondary); }
+    .cc-draft-info { flex: 1; min-width: 0; }
+    .cc-draft-title {
+        font-size: 0.98rem;
+        font-weight: 700;
+        color: var(--fg-primary);
+        margin: 0 0 var(--space-1);
+    }
+    .cc-draft-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 0.8rem;
+        color: var(--fg-muted);
+        flex-wrap: wrap;
+    }
+    .cc-draft-countdown {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: rgba(255, 200, 87, 0.12);
+        color: var(--accent-secondary);
+        border: 1px solid rgba(255, 200, 87, 0.35);
+    }
+    .cc-draft-countdown.urgent {
+        background: rgba(255, 56, 96, 0.12);
+        color: var(--accent-danger);
+        border-color: rgba(255, 56, 96, 0.35);
+    }
+    .cc-draft-actions {
+        display: flex;
+        gap: var(--space-2);
+        flex-shrink: 0;
+    }
+
+    /* ---------- 空状态 ---------- */
+    .cc-empty {
+        padding: var(--space-8) var(--space-4);
+        text-align: center;
+        background: var(--bg-card);
+        border: 1px dashed var(--border-color);
+        border-radius: var(--radius-md);
+    }
+    .cc-empty-icon {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto var(--space-3);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-pill);
+        background: var(--glass-bg);
+        color: var(--fg-muted);
+    }
+    .cc-empty-icon svg { width: 28px; height: 28px; }
+    .cc-empty-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--fg-secondary);
+        margin: 0 0 var(--space-2);
+    }
+    .cc-empty-desc {
+        font-size: 0.85rem;
+        color: var(--fg-muted);
+        margin: 0 0 var(--space-4);
+    }
+
+    /* ---------- 响应式 ---------- */
+    @media (max-width: 768px) {
+        .creator-center-page { padding: var(--space-4); }
+        .cc-header { align-items: flex-start; }
+        .cc-stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .cc-actions-grid { grid-template-columns: repeat(2, 1fr); }
+        .cc-sub-card { flex-direction: column; }
+        .cc-sub-cover { width: 100%; height: 140px; }
+        .cc-sub-actions { flex-wrap: wrap; }
+        .cc-draft-card { flex-direction: column; align-items: stretch; }
+        .cc-draft-actions { width: 100%; }
+        .cc-draft-actions .cc-mini-btn { flex: 1; justify-content: center; }
+        .cc-hero { padding: var(--space-5); }
+        .cc-hero-content h2 { font-size: 1.3rem; }
+    }
+
+    /* 尊重 reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+        .cc-stat-card, .cc-action-card, .cc-sub-card, .cc-event-card, .cc-draft-card,
+        .cc-mini-btn, .cc-hero-cta, .cc-tab, .cc-filter {
+            transition: none !important;
+        }
+        .cc-stat-card:hover, .cc-action-card:hover, .cc-sub-card:hover,
+        .cc-event-card:hover, .cc-draft-card:hover, .cc-hero-cta:hover {
+            transform: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="creator-center-page">
+
+    {# ==================== 1. 面包屑 + 页头 ==================== #}
+    <nav class="cc-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <span class="current">创作者中心</span>
+    </nav>
+
+    <div class="cc-header">
+        <div class="cc-header-text">
+            <h1>创作者中心</h1>
+            <p class="subtitle">管理你的游戏作品、素材和创作活动</p>
+        </div>
+        <div class="cc-header-actions">
+            <a class="btn btn-primary" href="{{ url_for('games.developer_panel') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                新建游戏
+            </a>
+            <a class="btn btn-ghost" href="/submit-asset">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                提交素材
+            </a>
+        </div>
+    </div>
+
+    {# ==================== 3. 数据统计卡片 ==================== #}
+    <section class="cc-section" aria-label="数据统计">
+        <div class="cc-stats-grid">
+            <div class="cc-stat-card is-muted">
+                <span class="stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 9h16M9 9v11"/></svg>
+                </span>
+                <div class="stat-number" data-count="{{ status_counts.total }}" data-count-target="{{ status_counts.total }}">0</div>
+                <div class="stat-label">总投稿数</div>
+            </div>
+            <div class="cc-stat-card is-success">
+                <span class="stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </span>
+                <div class="stat-number" data-count="{{ status_counts.active }}" data-count-target="{{ status_counts.active }}">0</div>
+                <div class="stat-label">已通过</div>
+            </div>
+            <div class="cc-stat-card is-warning">
+                <span class="stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </span>
+                <div class="stat-number" data-count="{{ status_counts.pending_review }}" data-count-target="{{ status_counts.pending_review }}">0</div>
+                <div class="stat-label">审核中</div>
+            </div>
+            <div class="cc-stat-card is-danger">
+                <span class="stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </span>
+                <div class="stat-number" data-count="{{ status_counts.rejected }}" data-count-target="{{ status_counts.rejected }}">0</div>
+                <div class="stat-label">需修改</div>
+            </div>
+            <div class="cc-stat-card is-success" title="开发者收益为用户支付金额的 99%">
+                <span class="stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </span>
+                <div class="stat-number" data-count="{{ earnings_total }}" data-count-target="{{ earnings_total }}" data-decimals="2">0.00</div>
+                <div class="stat-label">累计收益（SB · {{ earnings_count }} 笔）</div>
+            </div>
+        </div>
+    </section>
+
+    {# ==================== 4. 常用入口 ==================== #}
+    <section class="cc-section" aria-label="常用入口">
+        <div class="cc-section-head">
+            <h2>常用入口</h2>
+            <span class="sub">快速进入创作者工具</span>
+        </div>
+        <div class="cc-actions-grid">
+            <a class="cc-action-card" href="#" aria-label="数据看板">
+                <span class="ac-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-5"/></svg>
+                </span>
+                <div class="ac-title">数据看板</div>
+                <div class="ac-desc">查看下载、游玩、评分趋势</div>
+            </a>
+            <a class="cc-action-card" href="{{ url_for('wallet.earnings_page') }}" aria-label="收益管理">
+                <span class="ac-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </span>
+                <div class="ac-title">收益管理</div>
+                <div class="ac-desc">查看 SB 收益明细</div>
+            </a>
+            <a class="cc-action-card" href="#" aria-label="发放 CDKey">
+                <span class="ac-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2"/></svg>
+                </span>
+                <div class="ac-title">发放 CDKey</div>
+                <div class="ac-desc">生成兑换码并管理发放</div>
+            </a>
+            <a class="cc-action-card" href="#" aria-label="支持二维码">
+                <span class="ac-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></svg>
+                </span>
+                <div class="ac-title">支持二维码</div>
+                <div class="ac-desc">生成扫码访问链接</div>
+            </a>
+            {% if current_user and current_user.permission_level|default('user') == 'super_admin' %}
+            <a class="cc-action-card" href="/admin/tags" aria-label="标签管理">
+                <span class="ac-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                </span>
+                <div class="ac-title">标签管理</div>
+                <div class="ac-desc">维护全站标签体系（仅管理员）</div>
+            </a>
+            {% endif %}
+            <a class="cc-action-card" href="{{ url_for('games.html_editor') }}" aria-label="HTML 在线编辑器">
+                <span class="ac-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </span>
+                <div class="ac-title">HTML 在线编辑器</div>
+                <div class="ac-desc">浏览器内编写并预览单页游戏</div>
+            </a>
+        </div>
+    </section>
+
+    {# ==================== 5. 投稿切换 Tabs ==================== #}
+    <section class="cc-section" aria-label="投稿列表">
+        <div class="cc-section-head">
+            <h2>我的投稿</h2>
+            <span class="sub">管理你提交的游戏与素材</span>
+        </div>
+
+        <div class="cc-tabs" role="tablist" aria-label="投稿类型">
+            <button class="cc-tab is-active" role="tab" aria-selected="true" data-tab="games" id="tab-games">我的游戏</button>
+            <button class="cc-tab" role="tab" aria-selected="false" data-tab="assets" id="tab-assets">我的素材</button>
+        </div>
+
+        {# ----- 游戏 Tab ----- #}
+        <div class="cc-tab-panel is-active" role="tabpanel" aria-labelledby="tab-games" id="panel-games">
+
+            {# ==================== 6. 我的草稿 ==================== #}
+            <div class="cc-section" aria-label="我的草稿">
+                <div class="cc-section-head">
+                    <h2 style="font-size:1.1rem;">我的草稿</h2>
+                    <span class="sub">草稿超过 7 天未编辑将被自动清理</span>
+                </div>
+
+                {% if not drafts %}
+                <div class="cc-empty">
+                    <div class="cc-empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <p class="cc-empty-title">暂无草稿</p>
+                    <p class="cc-empty-desc">新建游戏后会自动保存草稿，方便随时继续编辑</p>
+                    <a class="btn btn-primary btn-sm" href="{{ url_for('games.developer_panel') }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        新建游戏
+                    </a>
+                </div>
+                {% else %}
+                <div class="cc-drafts-list">
+                    {% for d in drafts %}
+                    {% set created_ts = d.created_at.timestamp() if d.created_at else none %}
+                    {% set days_left = (7 - ((now_ts|default(0) - (created_ts|default(0))) / 86400))|int if created_ts else 7 %}
+                    {% if days_left < 0 %}{% set days_left = 0 %}{% endif %}
+                    <article class="cc-draft-card" data-draft-id="{{ d.id }}">
+                        <div class="cc-draft-info">
+                            <h3 class="cc-draft-title">{{ d.title|default('未命名草稿') }}</h3>
+                            <div class="cc-draft-meta">
+                                <span>UID: <code>{{ d.game_uid|default('-') }}</code></span>
+                                <span>创建于 {{ d.created_at|default('-') }}</span>
+                                <span class="cc-draft-countdown {{ 'urgent' if days_left <= 2 else '' }}" title="距离自动清理">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    剩 {{ days_left }} 天
+                                </span>
+                            </div>
+                        </div>
+                        <div class="cc-draft-actions">
+                            <a class="cc-mini-btn primary" href="{{ url_for('games.developer_panel') }}?game_uid={{ d.game_uid }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                继续编辑
+                            </a>
+                            <button class="cc-mini-btn" type="button"
+                                    onclick="return confirm('确认删除草稿「{{ d.title|default('未命名草稿') }}」？此操作不可恢复。') ? (window.location.href='{{ url_for('games.developer_panel') }}?delete_draft={{ d.id }}') : false;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                删除
+                            </button>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            {# ==================== 7. 投稿列表 ==================== #}
+            <div class="cc-section" aria-label="游戏投稿列表">
+                <div class="cc-section-head">
+                    <h2 style="font-size:1.1rem;">游戏投稿</h2>
+                    <span class="sub">共 {{ status_counts.total }} 个作品</span>
+                </div>
+
+                <div class="cc-filters" role="tablist" aria-label="状态筛选">
+                    <button class="cc-filter is-active" data-filter="all" type="button">全部 <span class="count">{{ status_counts.total }}</span></button>
+                    <button class="cc-filter" data-filter="pending_review" type="button">审核中 <span class="count">{{ status_counts.pending_review }}</span></button>
+                    <button class="cc-filter" data-filter="active" type="button">已通过 <span class="count">{{ status_counts.active }}</span></button>
+                    <button class="cc-filter" data-filter="rejected" type="button">需修改 <span class="count">{{ status_counts.rejected }}</span></button>
+                    <button class="cc-filter" data-filter="locked" type="button">已锁定 <span class="count">0</span></button>
+                    <button class="cc-filter" data-filter="error" type="button">异常 <span class="count">0</span></button>
+                </div>
+
+                {% if not my_games %}
+                <div class="cc-empty">
+                    <div class="cc-empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    </div>
+                    <p class="cc-empty-title">还没有投稿</p>
+                    <p class="cc-empty-desc">点击「新建游戏」上传你的第一个作品吧</p>
+                    <a class="btn btn-primary btn-sm" href="{{ url_for('games.developer_panel') }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        新建游戏
+                    </a>
+                </div>
+                {% else %}
+                <div class="cc-submissions" id="submissions-list">
+                    {% for g in my_games %}
+                    <article class="cc-sub-card" data-status="{{ g.status|default('draft') }}">
+                        <div class="cc-sub-cover"
+                             {% if g.cover_image %}style="background-image:url('{% if g.cover_image.startswith('uploads/') %}/uploads/{{ g.cover_image[8:] }}{% else %}{{ g.cover_image }}{% endif %}');"{% endif %}>
+                            {% if not g.cover_image %}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            {% endif %}
+                        </div>
+                        <div class="cc-sub-body">
+                            <div class="cc-sub-title-row">
+                                <h3 class="cc-sub-title">{{ g.title|default('未命名游戏') }}</h3>
+                                <span class="cc-status {{ g.status|default('draft') }}">{{ {'active':'已通过','pending_review':'审核中','rejected':'需修改','draft':'草稿','locked':'已锁定','error':'异常'}.get(g.status|default('draft'), g.status|default('draft')) }}</span>
+                                {% if g.version %}<span class="cc-sub-uid">v{{ g.version }}</span>{% endif %}
+                            </div>
+                            <div class="cc-sub-meta">
+                                <span class="meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/></svg>
+                                    UID: <code>{{ g.game_uid|default('-') }}</code>
+                                </span>
+                                {% if g.hosting_type %}
+                                <span class="meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+                                    {{ g.hosting_type }}
+                                </span>
+                                {% endif %}
+                                <span class="meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                    下载 {{ g.download_count|default(0) }}
+                                </span>
+                                <span class="meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                    游玩 {{ g.play_count|default(0) }}
+                                </span>
+                                <span class="meta-item">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                                    {{ '%.1f'|format(g.avg_rating|default(0)|float) }} ({{ g.rating_count|default(0) }})
+                                </span>
+                            </div>
+                        </div>
+                        <div class="cc-sub-actions">
+                            <a class="cc-mini-btn primary" href="{{ url_for('games.developer_panel') }}?game_uid={{ g.game_uid }}" title="编辑游戏信息">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                编辑
+                            </a>
+                            <a class="cc-mini-btn" href="{{ url_for('games.game_detail', gid=g.id) }}" title="查看游戏详情">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                查看详情
+                            </a>
+                            <a class="cc-mini-btn" href="{{ url_for('games.developer_data', gid=g.id) }}" title="查看数据看板">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-5"/></svg>
+                                数据
+                            </a>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        {# ----- 素材 Tab ----- #}
+        <div class="cc-tab-panel" role="tabpanel" aria-labelledby="tab-assets" id="panel-assets">
+            <div class="cc-panel-head" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5);flex-wrap:wrap;gap:var(--space-3);">
+                <div>
+                    <h2 style="margin:0;font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:var(--fg-primary);">我的素材</h2>
+                    <p style="margin:4px 0 0;color:var(--fg-muted);font-size:0.85rem;">管理你发布的游戏素材包</p>
+                </div>
+                <a class="btn btn-primary btn-sm" href="{{ url_for('games.submit_asset') }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    发布新素材
+                </a>
+            </div>
+            {% if my_assets %}
+            <div class="cc-games-list">
+                {% for a in my_assets %}
+                <article class="cc-game-row">
+                    <a class="cc-game-thumb" href="{{ url_for('games.asset_detail', aid=a.id) }}">
+                        {% if a.cover_image %}
+                        <img src="{{ a.cover_image }}" alt="{{ a.title }}">
+                        {% else %}
+                        <div class="cc-game-thumb-fallback">{{ a.title[:1]|upper }}</div>
+                        {% endif %}
+                    </a>
+                    <div class="cc-game-info">
+                        <div class="cc-game-title-row">
+                            <a class="cc-game-title" href="{{ url_for('games.asset_detail', aid=a.id) }}">{{ a.title }}</a>
+                            <span class="badge badge-info">{{ {'character':'角色','scene':'场景','ui':'UI','audio':'音效','effect':'特效','tool':'工具','other':'其它'}.get(a.category, a.category) }}</span>
+                            <span class="badge {{ 'badge-success' if a.status == 'active' else 'badge-warning' }}">{{ a.status }}</span>
+                        </div>
+                        <div class="cc-game-meta">
+                            <span>v{{ a.version }}</span>
+                            <span>{{ a.download_count }} 下载</span>
+                            <span>UID: {{ a.asset_uid }}</span>
+                            {% if a.price > 0 %}
+                            <span style="color:var(--accent-secondary);font-weight:600;">{{ a.price|int }} 积分</span>
+                            {% else %}
+                            <span style="color:var(--accent-primary);font-weight:600;">免费</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="cc-empty">
+                <div class="cc-empty-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                </div>
+                <p class="cc-empty-title">还没有发布任何素材</p>
+                <p class="cc-empty-desc">在这里管理图片、音频、3D 模型等游戏素材，让更多开发者受益</p>
+                <a class="btn btn-primary btn-sm" href="{{ url_for('games.submit_asset') }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    发布第一个素材
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    /* ---------- 投稿切换 Tabs（游戏 / 素材） ---------- */
+    (function initTabs() {
+        var tabs = document.querySelectorAll('.cc-tab');
+        var panels = document.querySelectorAll('.cc-tab-panel');
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var key = tab.getAttribute('data-tab');
+                tabs.forEach(function (t) {
+                    t.classList.toggle('is-active', t === tab);
+                    t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+                });
+                panels.forEach(function (p) {
+                    p.classList.toggle('is-active', p.id === 'panel-' + key);
+                });
+            });
+        });
+    })();
+
+    /* ---------- 状态筛选（全部 / 审核中 / 已通过 / 需修改 / 已锁定 / 异常） ---------- */
+    (function initFilters() {
+        var filters = document.querySelectorAll('.cc-filter');
+        var cards = document.querySelectorAll('#submissions-list .cc-sub-card');
+        filters.forEach(function (f) {
+            f.addEventListener('click', function () {
+                filters.forEach(function (x) { x.classList.toggle('is-active', x === f); });
+                var key = f.getAttribute('data-filter');
+                cards.forEach(function (card) {
+                    var status = card.getAttribute('data-status') || 'draft';
+                    var show = (key === 'all') || (status === key);
+                    card.style.display = show ? '' : 'none';
+                });
+            });
+        });
+    })();
+
+    /* ---------- 统计数字 CountUp（IntersectionObserver） ---------- */
+    (function initCountUp() {
+        var nodes = document.querySelectorAll('.cc-stat-card .stat-number[data-count]');
+        if (!nodes.length) return;
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function animate(node) {
+            var decimals = parseInt(node.getAttribute('data-decimals') || '0', 10) || 0;
+            var target = parseFloat(node.getAttribute('data-count-target') || '0') || 0;
+            if (reduceMotion) {
+                node.textContent = decimals > 0 ? target.toFixed(decimals) : String(target);
+                return;
+            }
+            var dur = 900;
+            var start = null;
+            var factor = Math.pow(10, decimals);
+            function step(ts) {
+                if (start === null) start = ts;
+                var p = Math.min((ts - start) / dur, 1);
+                // easeOutCubic
+                var eased = 1 - Math.pow(1 - p, 3);
+                var val = target * eased;
+                node.textContent = decimals > 0
+                    ? (Math.round(val * factor) / factor).toFixed(decimals)
+                    : String(Math.round(val));
+                if (p < 1) requestAnimationFrame(step);
+                else node.textContent = decimals > 0 ? target.toFixed(decimals) : String(target);
+            }
+            requestAnimationFrame(step);
+        }
+
+        if (!('IntersectionObserver' in window)) {
+            nodes.forEach(animate);
+            return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    animate(e.target);
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.4 });
+        nodes.forEach(function (n) { io.observe(n); });
+    })();
+})();
+</script>
+{% endblock %}

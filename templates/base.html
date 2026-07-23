@@ -4,19 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SNYQT Game Hub{% endblock %} · SNYQT Game Hub</title>
-    <meta name="description" content="SNYQT Game Hub — 浏览、上传、在线游玩 HTML 与 Python 游戏。">
+    <meta name="description" content="SN YQT Game Hub — 浏览、上传、在线游玩 HTML 与 Python 游戏。独立游戏创作社区。">
 
-    <!-- 浏览器标签页 favicon（使用小尺寸图标，避免加载大图） -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/favicon.png') }}">
-
-    <!-- Google Fonts: Orbitron + ZCOOL QingKe HuangYou + Outfit + Noto Sans SC -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Outfit:wght@300;400;500;600;700;900&family=ZCOOL+QingKe+HuangYou&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-
-    <!-- 主样式（带版本号强制刷新缓存） -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20260703d">
+    <!-- 浏览器标签页 favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/logo.png') }}">
 
     {# 主题提前应用：避免刷新时的深色闪烁（FOUC） #}
     <script>
@@ -30,9 +22,608 @@
         })();
     </script>
 
+    <!-- 主样式：设计系统 theme.css（含 @font-face 本地字体声明） -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=20260720a">
+
+    <!-- 旧版组件样式：site-header / user-menu / points-chip 等 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20260721e">
+
+    {# 布局专属样式：topbar / sidebar / layout-wrapper / footer #}
+    <style>
+        /* ==================== 布局骨架 ==================== */
+        /* --topbar-h 兼容旧代码，实际使用 --header-h（来自 style.css，默认 110px） */
+        :root {
+            --topbar-h: var(--header-h, 110px);
+            --sidebar-w: 260px;
+        }
+
+        html, body { height: 100%; }
+
+        body {
+            /* flex 布局已在 style.css 中定义，这里仅作补充 */
+            padding-bottom: 0;
+        }
+
+        /* ==================== 顶部导航 Topbar ==================== */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: var(--topbar-h);
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            padding: 0 var(--space-5);
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px) saturate(160%);
+            -webkit-backdrop-filter: blur(12px) saturate(160%);
+        }
+
+        .topbar-inner {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ---- 汉堡按钮（移动端切换侧边栏） ---- */
+        .hamburger {
+            display: none;
+            width: 40px;
+            height: 40px;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            color: var(--fg-primary);
+            transition: background var(--transition-fast), color var(--transition-fast);
+        }
+        .hamburger:hover { background: var(--glass-bg); color: var(--accent-primary); }
+        .hamburger svg { width: 22px; height: 22px; }
+
+        /* ---- Logo ---- */
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            text-decoration: none;
+            color: var(--fg-primary);
+            flex-shrink: 0;
+        }
+        .brand:hover { text-decoration: none; }
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-2);
+        }
+        .brand-text {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            color: var(--fg-primary);
+        }
+        .brand-text .accent { color: var(--accent-primary); }
+
+        /* ---- 搜索框 ---- */
+        .topbar-search {
+            flex: 1;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        .search-form {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .search-input {
+            width: 100%;
+            padding: var(--space-2) var(--space-4) var(--space-2) 42px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border-color);
+            background: var(--bg-base);
+            color: var(--fg-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+        }
+        .search-input::placeholder { color: var(--fg-muted); }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+            background: var(--bg-elevated);
+        }
+        [data-theme="light"] .search-input:focus {
+            box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+        }
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--fg-muted);
+            pointer-events: none;
+        }
+
+        /* ---- 顶部右侧动作区 ---- */
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+
+        .icon-btn {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            color: var(--fg-secondary);
+            transition: background var(--transition-fast), color var(--transition-fast);
+        }
+        .icon-btn:hover { background: var(--glass-bg); color: var(--accent-primary); }
+        .icon-btn svg { width: 20px; height: 20px; }
+
+        /* 主题切换：根据 data-theme 显隐太阳/月亮 */
+        .icon-btn .icon-sun { display: none; }
+        .icon-btn .icon-moon { display: block; }
+        [data-theme="light"] .icon-btn .icon-sun { display: block; }
+        [data-theme="light"] .icon-btn .icon-moon { display: none; }
+
+        /* 通知红点 */
+        .icon-btn .dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: var(--radius-pill);
+            background: var(--accent-danger);
+            box-shadow: 0 0 0 2px var(--bg-elevated);
+        }
+
+        /* ---- 积分胶囊 ---- */
+        .points-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-1);
+            padding: 4px var(--space-3);
+            border-radius: var(--radius-pill);
+            background: rgba(255, 200, 87, 0.12);
+            color: var(--accent-secondary);
+            border: 1px solid rgba(255, 200, 87, 0.3);
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+        .points-chip svg { width: 14px; height: 14px; }
+
+        /* ---- 用户头像菜单 ---- */
+        .user-menu {
+            position: relative;
+        }
+        .avatar-btn {
+            overflow: hidden;
+            background: var(--bg-elevated, var(--card-2));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        .avatar-btn:hover { border-color: var(--accent-primary); box-shadow: var(--shadow-2); }
+        .avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+
+        .dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 240px;
+            padding: var(--space-2);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-4);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: opacity var(--transition-base), transform var(--transition-base), visibility var(--transition-base);
+            z-index: 200;
+        }
+        .dropdown.is-open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        /* 覆盖 style.css 的 .user-dropdown，用 .is-open 触发（与 JS 一致） */
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 240px;
+            padding: var(--space-2);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-4);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: opacity var(--transition-base), transform var(--transition-base), visibility var(--transition-base);
+            z-index: 200;
+        }
+        .user-menu.is-open .user-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown .u-info {
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--border-subtle, var(--border-color));
+            margin-bottom: var(--space-2);
+        }
+        .user-dropdown .u-info .uname {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--fg-primary, var(--text));
+        }
+        .user-dropdown .u-info .upts {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--fg-muted, var(--muted));
+            margin-top: 2px;
+        }
+        .user-dropdown a,
+        .user-dropdown button {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            border-radius: var(--radius-sm);
+            color: var(--fg-secondary, var(--text));
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background var(--transition-fast), color var(--transition-fast);
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+        }
+        .user-dropdown a:hover,
+        .user-dropdown button:hover {
+            background: var(--glass-bg, var(--card-2));
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .user-dropdown a svg,
+        .user-dropdown button svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .user-dropdown .danger { color: var(--accent-danger, var(--danger)); }
+        .user-dropdown .danger:hover { background: rgba(255, 56, 96, 0.1); }
+        .dropdown-header {
+            padding: var(--space-3) var(--space-3) var(--space-2);
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: var(--space-2);
+        }
+        .dropdown-header .uname {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--fg-primary);
+        }
+        .dropdown-header .upts {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--fg-muted);
+            margin-top: 2px;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            border-radius: var(--radius-sm);
+            color: var(--fg-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background var(--transition-fast), color var(--transition-fast);
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+        }
+        .dropdown-item:hover {
+            background: var(--glass-bg);
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .dropdown-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .dropdown-item.danger { color: var(--accent-danger); }
+        .dropdown-item.danger:hover { background: rgba(255, 56, 96, 0.1); color: var(--accent-danger); }
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-subtle);
+            margin: var(--space-2) 0;
+        }
+
+        /* ---- 登录按钮 ---- */
+        .btn-login {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-5);
+            border-radius: var(--radius-pill);
+            background: var(--accent-primary);
+            color: #0a0e1a;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            box-shadow: 0 4px 14px rgba(0, 255, 157, 0.25);
+            transition: transform var(--transition-base), box-shadow var(--transition-base), filter var(--transition-base);
+        }
+        [data-theme="light"] .btn-login { color: #ffffff; }
+        .btn-login:hover {
+            text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-5), 0 8px 20px rgba(0, 255, 157, 0.35);
+            filter: brightness(1.08);
+        }
+
+        /* ---- Header 搜索框（替换原横向导航） ---- */
+        .header-search {
+            flex: 1;
+            max-width: 520px;
+            margin: 0 24px;
+        }
+        .header-search-form {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        .header-search-input {
+            width: 100%;
+            padding: 10px 16px 10px 42px;
+            border-radius: var(--radius-pill, 999px);
+            border: 1px solid var(--border-color, var(--border));
+            background: var(--bg-base, var(--card));
+            color: var(--fg-primary, var(--text));
+            font-family: var(--font-body, inherit);
+            font-size: 0.92rem;
+            transition: border-color var(--transition-base, .25s ease), box-shadow var(--transition-base, .25s ease), background var(--transition-base, .25s ease);
+        }
+        .header-search-input::placeholder { color: var(--fg-muted, var(--muted)); }
+        .header-search-input:focus {
+            outline: none;
+            border-color: var(--accent-primary, var(--primary));
+            box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+            background: var(--bg-elevated, var(--card-2));
+        }
+        [data-theme="light"] .header-search-input:focus {
+            box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+        }
+        .header-search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--fg-muted, var(--muted));
+            pointer-events: none;
+        }
+        @media (max-width: 900px) {
+            .header-search { max-width: none; margin: 0 12px; }
+        }
+        @media (max-width: 560px) {
+            .header-search { display: none; }
+        }
+
+        /* ==================== 布局容器 ==================== */
+        .layout-wrapper {
+            display: flex;
+            flex: 1;
+            /* 让 layout-wrapper 至少占据剩余视口高度（减去 header 和 footer 空间），
+               确保 sidebar 能拉伸到页面最下方 */
+            min-height: calc(100vh - var(--header-h, 110px));
+        }
+
+        /* ==================== 侧边栏 Sidebar ==================== */
+        /* 作为 layout-wrapper 的 flex 子元素，用 height:100% 明确占据全高，
+           延伸到页面最底部（所有 section 的下方） */
+        .sidebar {
+            width: var(--sidebar-w);
+            flex-shrink: 0;
+            height: 100%;
+            padding: var(--space-5) var(--space-3);
+            background: var(--bg-elevated);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar-group { margin-bottom: var(--space-6); }
+        .sidebar-group-title {
+            padding: 0 var(--space-3) var(--space-2);
+            font-family: var(--font-display);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--fg-muted);
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            margin-bottom: 2px;
+            border-radius: var(--radius-sm);
+            color: var(--fg-secondary);
+            font-size: 0.92rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background var(--transition-fast), color var(--transition-fast);
+        }
+        .sidebar-link:hover {
+            background: var(--glass-bg);
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .sidebar-link.active {
+            background: var(--glass-bg);
+            color: var(--accent-primary);
+            border-left: 2px solid var(--accent-primary);
+            padding-left: calc(var(--space-3) - 2px);
+        }
+        .sidebar-link svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+        .sidebar-link .placeholder-tag {
+            margin-left: auto;
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: var(--radius-sm);
+            background: var(--glass-bg);
+            color: var(--fg-muted);
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* 移动端遮罩 */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: var(--topbar-h) 0 0 0;
+            background: var(--bg-overlay);
+            z-index: 90;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--transition-base), visibility var(--transition-base);
+        }
+        .sidebar-backdrop.is-open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ==================== 主内容区 ==================== */
+        .main-content {
+            flex: 1;
+            min-width: 0;
+            padding: var(--space-6) var(--space-6) var(--space-8);
+        }
+
+        /* ==================== Flash 消息 Toast ==================== */
+        .toast-container {
+            position: fixed;
+            top: calc(var(--topbar-h) + var(--space-4));
+            right: var(--space-5);
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            max-width: 360px;
+        }
+        .toast {
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--fg-muted);
+            box-shadow: var(--shadow-3);
+            font-size: 0.9rem;
+            color: var(--fg-primary);
+            opacity: 0;
+            transform: translateX(20px);
+            transition: opacity var(--transition-base), transform var(--transition-base);
+        }
+        .toast.show { opacity: 1; transform: translateX(0); }
+        .toast.success { border-left-color: var(--accent-primary); }
+        .toast.error   { border-left-color: var(--accent-danger); }
+        .toast.warning { border-left-color: var(--accent-secondary); }
+        .toast.info    { border-left-color: var(--accent-cyan); }
+
+        /* ==================== 响应式：移动端 ==================== */
+        @media (max-width: 900px) {
+            .topbar { padding: 0 var(--space-3); gap: var(--space-2); }
+            .hamburger { display: inline-flex; }
+            .brand-text { display: none; }
+            .topbar-search { max-width: none; }
+            .points-chip { display: none; }
+
+            .sidebar {
+                position: fixed;
+                top: var(--topbar-h);
+                left: 0;
+                bottom: 0;
+                height: calc(100vh - var(--topbar-h));
+                overflow-y: auto;
+                z-index: 95;
+                transform: translateX(-100%);
+                transition: transform var(--transition-base);
+                box-shadow: var(--shadow-4);
+            }
+            .sidebar.is-open { transform: translateX(0); }
+            .sidebar-backdrop.is-open { display: block; }
+
+            .main-content { padding: var(--space-4) var(--space-3) var(--space-6); }
+        }
+
+        @media (max-width: 560px) {
+            .topbar-search { display: none; }
+            .dropdown { min-width: 220px; right: -8px; }
+        }
+
+        /* 主题切换过渡类（切换时短暂启用） */
+        .theme-transitioning,
+        .theme-transitioning *,
+        .theme-transitioning *::before,
+        .theme-transitioning *::after {
+            transition: background-color var(--transition-base),
+                        color var(--transition-base),
+                        border-color var(--transition-base) !important;
+        }
+
+        /* 可访问性：跳到主内容 */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            padding: var(--space-2) var(--space-4);
+            background: var(--accent-primary);
+            color: #0a0e1a;
+            font-weight: 600;
+            z-index: 1000;
+            border-radius: 0 0 var(--radius-sm) 0;
+            transition: top var(--transition-fast);
+        }
+        .skip-link:focus { top: 0; text-decoration: none; }
+
+        /* 尊重 reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar, .dropdown, .toast, .sidebar-backdrop { transition: none !important; }
+        }
+    </style>
+
     {% block head %}{% endblock %}
 </head>
 <body>
+    <a href="#main-content" class="skip-link">跳到主内容</a>
     <!-- ==================== Header ==================== -->
     <header class="site-header">
         <div class="container header-inner">
@@ -44,16 +635,13 @@
                 </span>
             </a>
 
-            <!-- 主导航 -->
-            <nav class="main-nav">
-                <a href="{{ url_for('games.index') }}" class="{{ 'active' if request.endpoint == 'games.index' else '' }}">发现</a>
-                <a href="{{ url_for('points.leaderboard') }}" class="{{ 'active' if request.endpoint == 'points.leaderboard' else '' }}">排行榜</a>
-                <a href="{{ url_for('community.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('community') else '' }}">社区</a>
-                <a href="{{ url_for('community.blacklist_public') }}" class="{{ 'active' if request.endpoint == 'community.blacklist_public' else '' }}">小黑屋</a>
-                {% if current_user %}
-                <a href="{{ url_for('points.library') }}" class="{{ 'active' if request.endpoint == 'points.library' else '' }}">游戏库</a>
-                {% endif %}
-            </nav>
+            <!-- 搜索框（替换原横向导航） -->
+            <div class="header-search">
+                <form class="header-search-form" action="{{ url_for('games.index') }}" method="get" role="search">
+                    <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input class="header-search-input" type="text" name="q" placeholder="搜索游戏、素材、开发者…" value="{{ request.args.get('q', '') }}" aria-label="搜索">
+                </form>
+            </div>
 
             <div class="header-spacer"></div>
 
@@ -94,6 +682,16 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v4H4zm0 6h16v10H4z"/></svg>
                         我的游戏库
                     </a>
+                    <a href="{{ url_for('wallet.wallet_page') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>
+                        我的钱包
+                    </a>
+                    {% if current_user.permission_level in ['developer', 'super_admin'] %}
+                    <a href="{{ url_for('wallet.earnings_page') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        收益管理
+                    </a>
+                    {% endif %}
                     {% if current_user.permission_level|default('user') != 'super_admin' %}
                     <a href="{{ url_for('permissions.apply_page') }}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
@@ -124,31 +722,220 @@
         </div>
     </header>
 
-    <!-- ==================== 主内容 ==================== -->
-    <main>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="container" style="padding-top:var(--header-h)">
-                    {% for cat, msg in messages %}
-                        <div class="toast show {{ cat }}">{{ msg }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+    {# ==================== 布局容器：侧边栏 + 主内容 ==================== #}
+    <div class="layout-wrapper">
+        {% if current_user %}
+        {# 移动端遮罩 #}
+        <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
 
-        {% block content %}{% endblock %}
-    </main>
+        {# 侧边栏（仅登录用户） #}
+        <aside class="sidebar" id="sidebar" role="complementary" aria-label="侧边导航">
+            {% set ep = request.endpoint %}
 
-    <!-- ==================== 页脚 ==================== -->
-    <footer class="site-footer">
-        <div class="container">
-            <div class="brand-line">SNYQT · GAME · HUB</div>
-            <div>© {{ now_year|default(2026) }} SNYQT Game Hub · snyqt-game-hub.iepose.cn</div>
-        </div>
-    </footer>
+            {# ---- 发现 ---- #}
+            <nav class="sidebar-group" aria-label="发现">
+                <div class="sidebar-group-title">发现</div>
+                <a class="sidebar-link {{ 'active' if ep == 'games.index' else '' }}" href="{{ url_for('games.index') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+                    首页
+                </a>
+                <a class="sidebar-link {{ 'active' if ep == 'games.store' else '' }}" href="{{ url_for('games.store') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM4 9h16M9 9v11"/></svg>
+                    游戏库
+                </a>
+                <a class="sidebar-link {{ 'active' if ep == 'games.assets_library' else '' }}" href="{{ url_for('games.assets_library') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    游戏素材
+                </a>
+                <a class="sidebar-link {{ 'active' if ep and ep.startswith('community') else '' }}" href="{{ url_for('community.index') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    游戏开发社区
+                </a>
+            </nav>
 
-    <!-- ==================== 脚本 ==================== -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+            {# ---- 我的 ---- #}
+            <nav class="sidebar-group" aria-label="我的">
+                <div class="sidebar-group-title">我的</div>
+                <a class="sidebar-link {{ 'active' if ep == 'points.library' else '' }}" href="{{ url_for('points.library') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zm0 6h16v10H4z"/></svg>
+                    我的游戏库
+                </a>
+                {% if current_user %}
+                <a class="sidebar-link {{ 'active' if ep == 'games.user_profile' else '' }}" href="{{ url_for('games.user_profile', username=current_user.username) }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg>
+                    个人主页
+                </a>
+                {% endif %}
+            </nav>
+
+            {# ---- 创作者（登录用户可见，开发者可使用全部功能） ---- #}
+            <nav class="sidebar-group" aria-label="创作者">
+                <div class="sidebar-group-title">创作者</div>
+                <a class="sidebar-link {{ 'active' if ep == 'games.creator_center' else '' }}" href="{{ url_for('games.creator_center') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    创作者中心
+                </a>
+                <a class="sidebar-link {{ 'active' if ep == 'games.developer_panel' else '' }}" href="{{ url_for('games.developer_panel') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/></svg>
+                    创作中心
+                </a>
+                <a class="sidebar-link" href="{{ url_for('games.developer_panel') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    提交游戏
+                </a>
+                <a class="sidebar-link {{ 'active' if ep == 'games.submit_asset' else '' }}" href="{{ url_for('games.submit_asset') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    提交素材
+                </a>
+            </nav>
+
+            {# ---- 网站支持 ---- #}
+            <nav class="sidebar-group" aria-label="网站支持">
+                <div class="sidebar-group-title">网站支持</div>
+                <a class="sidebar-link {{ 'active' if ep == 'games.feedback' else '' }}" href="{{ url_for('games.feedback') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    反馈社区
+                </a>
+                <a class="sidebar-link {{ 'active' if ep == 'games.privacy' else '' }}" href="{{ url_for('games.privacy') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg>
+                    隐私条款
+                </a>
+            </nav>
+        </aside>
+        {% endif %}
+
+        {# 主内容区 #}
+        <main class="main-content" id="main-content" role="main">
+            {# Flash 消息 Toast #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="toast-container" aria-live="polite" aria-atomic="true">
+                        {% for cat, msg in messages %}
+                            <div class="toast show {{ cat }}" role="status">{{ msg }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {# ==================== 脚本 ==================== #}
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=20260720a"></script>
+    <script>
+        (function () {
+            'use strict';
+
+            /* ---------- 主题切换：由 main.js 负责实际切换 data-theme 与 localStorage，
+                  此处仅在切换后关闭所有下拉菜单，并短暂启用 .theme-transitioning
+                  过渡类（body 自身的 CSS transition 已覆盖颜色平滑过渡） ---------- */
+            (function initThemeToggleHook() {
+                var btn = document.querySelector('.theme-toggle');
+                if (!btn) return;
+                btn.addEventListener('click', function () {
+                    document.body.classList.add('theme-transitioning');
+                    window.setTimeout(function () {
+                        document.body.classList.remove('theme-transitioning');
+                    }, 350);
+                    // 关闭所有下拉菜单，避免主题切换后视觉错乱
+                    document.querySelectorAll('.user-menu').forEach(function (m) {
+                        m.classList.remove('is-open');
+                        var trigger = m.querySelector('.icon-btn, .avatar-btn');
+                        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+                    });
+                });
+            })();
+
+            /* ---------- 通用下拉菜单（用户菜单 / 通知） ---------- */
+            (function initDropdowns() {
+                var menus = document.querySelectorAll('.user-menu');
+                menus.forEach(function (menu) {
+                    var trigger = menu.querySelector('.icon-btn, .avatar-btn');
+                    var dropdown = menu.querySelector('.dropdown, .user-dropdown');
+                    if (!trigger || !dropdown) return;
+                    trigger.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var isOpen = menu.classList.toggle('is-open');
+                        trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                        // 关闭其他菜单
+                        menus.forEach(function (other) {
+                            if (other !== menu) {
+                                other.classList.remove('is-open');
+                                var ot = other.querySelector('.icon-btn, .avatar-btn');
+                                if (ot) ot.setAttribute('aria-expanded', 'false');
+                            }
+                        });
+                    });
+                });
+                // 点击外部关闭
+                document.addEventListener('click', function () {
+                    menus.forEach(function (menu) {
+                        menu.classList.remove('is-open');
+                        var trigger = menu.querySelector('.icon-btn, .avatar-btn');
+                        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+                    });
+                });
+                // Escape 关闭
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') {
+                        menus.forEach(function (menu) {
+                            menu.classList.remove('is-open');
+                            var trigger = menu.querySelector('.icon-btn, .avatar-btn');
+                            if (trigger) {
+                                trigger.setAttribute('aria-expanded', 'false');
+                                trigger.focus();
+                            }
+                        });
+                    }
+                });
+                // 阻止 dropdown 内部点击冒泡到 document
+                document.querySelectorAll('.dropdown, .user-dropdown').forEach(function (dd) {
+                    dd.addEventListener('click', function (e) { e.stopPropagation(); });
+                });
+            })();
+
+            /* ---------- 侧边栏切换（移动端） ---------- */
+            (function initSidebar() {
+                var btn = document.getElementById('hamburger-btn');
+                var sidebar = document.getElementById('sidebar');
+                var backdrop = document.getElementById('sidebar-backdrop');
+                if (!btn || !sidebar) return;
+
+                function toggle(force) {
+                    var willOpen = (typeof force === 'boolean') ? force : !sidebar.classList.contains('is-open');
+                    sidebar.classList.toggle('is-open', willOpen);
+                    if (backdrop) backdrop.classList.toggle('is-open', willOpen);
+                    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                }
+
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    toggle();
+                });
+                if (backdrop) backdrop.addEventListener('click', function () { toggle(false); });
+                // 切换路由后自动关闭
+                window.addEventListener('hashchange', function () { toggle(false); });
+                // Escape 关闭
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && sidebar.classList.contains('is-open')) toggle(false);
+                });
+            })();
+
+            /* ---------- Flash 消息自动消失 ---------- */
+            (function initToasts() {
+                var toasts = document.querySelectorAll('.toast.show');
+                toasts.forEach(function (t) {
+                    window.setTimeout(function () {
+                        t.classList.remove('show');
+                        window.setTimeout(function () {
+                            if (t.parentNode) t.parentNode.removeChild(t);
+                        }, 250);
+                    }, 5000);
+                });
+            })();
+        })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

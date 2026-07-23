@@ -1,0 +1,553 @@
+{% extends "base.html" %}
+
+{% block title %}公告管理{% endblock %}
+
+{% block head %}
+<style>
+    /* ==================== 公告管理页 ==================== */
+    .admin-ann-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--space-2) 0 var(--space-6);
+    }
+
+    .page-header {
+        margin-bottom: var(--space-5);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+    }
+    .page-header .title-block h1 {
+        font-size: 2rem;
+        margin: 0 0 var(--space-2);
+        background: linear-gradient(135deg, var(--fg-primary) 0%, var(--accent-primary) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .page-header .title-block .note {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        background: rgba(255, 200, 87, 0.08);
+        border: 1px solid rgba(255, 200, 87, 0.25);
+        color: var(--accent-secondary);
+        font-size: 0.88rem;
+        margin: 0;
+    }
+    [data-theme="light"] .page-header .title-block .note {
+        background: rgba(212, 160, 23, 0.06);
+    }
+    .page-header .title-block .note svg {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+    }
+
+    /* ---- 表格容器 ---- */
+    .table-container {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        overflow-x: auto;
+        box-shadow: var(--shadow-2);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .ann-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+        min-width: 920px;
+    }
+    .ann-table thead {
+        background: var(--bg-elevated);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .ann-table th {
+        padding: var(--space-3) var(--space-4);
+        text-align: left;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+        white-space: nowrap;
+    }
+    .ann-table tbody tr {
+        border-bottom: 1px solid var(--border-subtle);
+        transition: background var(--transition-fast);
+    }
+    .ann-table tbody tr:last-child { border-bottom: none; }
+    .ann-table tbody tr:hover { background: var(--glass-bg); }
+    .ann-table td {
+        padding: var(--space-3) var(--space-4);
+        color: var(--fg-primary);
+        vertical-align: middle;
+    }
+    .ann-table td.col-title {
+        font-weight: 600;
+        color: var(--fg-primary);
+        max-width: 320px;
+    }
+    .ann-table td.col-dates,
+    .ann-table td.col-creator {
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+        color: var(--fg-secondary);
+        white-space: nowrap;
+    }
+    .ann-table td.col-action {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    /* ---- 类型徽章 ---- */
+    .type-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-display);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+    .type-badge.type-info    { background: var(--glass-bg); color: var(--fg-secondary); border: 1px solid var(--border-color); }
+    .type-badge.type-success { background: rgba(0, 255, 157, 0.12); color: var(--accent-primary); border: 1px solid rgba(0, 255, 157, 0.3); }
+    .type-badge.type-warning { background: rgba(255, 200, 87, 0.12); color: var(--accent-secondary); border: 1px solid rgba(255, 200, 87, 0.3); }
+    .type-badge.type-danger  { background: rgba(255, 56, 96, 0.12); color: var(--accent-danger); border: 1px solid rgba(255, 56, 96, 0.3); }
+    [data-theme="light"] .type-badge.type-success { background: rgba(0, 204, 122, 0.12); }
+
+    /* ---- 状态徽章 ---- */
+    .status-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-display);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+    }
+    .status-badge.status-active   { background: rgba(0, 255, 157, 0.12); color: var(--accent-primary); border: 1px solid rgba(0, 255, 157, 0.3); }
+    .status-badge.status-draft    { background: var(--glass-bg); color: var(--fg-muted); border: 1px solid var(--border-color); }
+    .status-badge.status-archived { background: rgba(255, 200, 87, 0.12); color: var(--accent-secondary); border: 1px solid rgba(255, 200, 87, 0.3); }
+    [data-theme="light"] .status-badge.status-active { background: rgba(0, 204, 122, 0.12); }
+
+    .pin-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--accent-secondary);
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+    .pin-mark svg { width: 14px; height: 14px; }
+
+    /* ---- 新建/编辑弹层 ---- */
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: var(--bg-overlay);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 300;
+        display: none;
+        align-items: flex-start;
+        justify-content: center;
+        padding: var(--space-6) var(--space-4);
+        overflow-y: auto;
+    }
+    .modal-backdrop.is-open { display: flex; }
+    .modal {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-4);
+        width: 100%;
+        max-width: 640px;
+        padding: var(--space-5) var(--space-6);
+        margin: auto;
+    }
+    .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-4);
+    }
+    .modal-header h3 {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        color: var(--fg-primary);
+        margin: 0;
+    }
+    .modal-close {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        color: var(--fg-muted);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background var(--transition-fast), color var(--transition-fast);
+    }
+    .modal-close:hover { background: var(--glass-bg); color: var(--accent-danger); }
+    .modal-close svg { width: 18px; height: 18px; }
+
+    /* ---- 表单 ---- */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-4);
+    }
+    .form-field { display: flex; flex-direction: column; gap: var(--space-2); }
+    .form-field.full { grid-column: 1 / -1; }
+    .form-field label {
+        font-family: var(--font-display);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+    }
+    .form-field .input,
+    .form-field .textarea,
+    .form-field select {
+        width: 100%;
+        padding: var(--space-3);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-color);
+        background: var(--bg-base);
+        color: var(--fg-primary);
+        font-family: var(--font-body);
+        font-size: 0.92rem;
+        transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+    .form-field .input:focus,
+    .form-field .textarea:focus,
+    .form-field select:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+    }
+    [data-theme="light"] .form-field .input:focus,
+    [data-theme="light"] .form-field .textarea:focus,
+    [data-theme="light"] .form-field select:focus {
+        box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+    }
+    .form-field .textarea { resize: vertical; min-height: 120px; font-family: var(--font-body); }
+    .form-field select {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7387' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right var(--space-3) center;
+        background-size: 16px;
+        padding-right: var(--space-7);
+        cursor: pointer;
+    }
+    .form-field .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) 0;
+    }
+    .form-field .checkbox-row input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-primary);
+        cursor: pointer;
+    }
+    .form-field .checkbox-row label {
+        margin: 0;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 0.9rem;
+        color: var(--fg-primary);
+        cursor: pointer;
+        font-weight: 500;
+    }
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-3);
+        margin-top: var(--space-5);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    /* ---- 空状态 ---- */
+    .empty-state {
+        text-align: center;
+        padding: var(--space-9) var(--space-4);
+        color: var(--fg-muted);
+    }
+    .empty-state svg {
+        width: 56px;
+        height: 56px;
+        margin-bottom: var(--space-3);
+        opacity: 0.4;
+    }
+    .empty-state p {
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    /* ---- 响应式 ---- */
+    @media (max-width: 720px) {
+        .admin-ann-page { padding: 0 0 var(--space-4); }
+        .page-header .title-block h1 { font-size: 1.5rem; }
+        .form-grid { grid-template-columns: 1fr; }
+        .ann-table { min-width: 800px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ann-table tbody tr,
+        .modal-close { transition: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-ann-page">
+    <div class="page-header">
+        <div class="title-block">
+            <h1>公告管理</h1>
+            <p class="note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 9v4M12 17h.01"/>
+                    <circle cx="12" cy="12" r="10"/>
+                </svg>
+                首页仅展示 status=生效中 且在生效时间内的公告，置顶优先。
+            </p>
+        </div>
+        <button class="btn btn-primary" id="btnNewAnn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            新建公告
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table class="ann-table">
+            <thead>
+                <tr>
+                    <th>标题</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>置顶</th>
+                    <th>生效时间</th>
+                    <th>创建人</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in announcements %}
+                <tr data-ann-id="{{ a.id }}"
+                    data-title="{{ a.title|default('')|e }}"
+                    data-type="{{ a.type|default('info') }}"
+                    data-status="{{ a.status|default('active') }}"
+                    data-is-pinned="{{ 1 if a.is_pinned else 0 }}"
+                    data-content="{{ a.content|default('')|e }}"
+                    data-start-at="{{ a.start_at|default('') }}"
+                    data-end-at="{{ a.end_at|default('') }}">
+                    <td class="col-title">{{ a.title|default('（无标题）') }}</td>
+                    <td>
+                        {% set t = a.type|default('info') %}
+                        <span class="type-badge type-{{ t }}">{{ {'info':'信息','success':'成功','warning':'警告','danger':'危险'}.get(t, t) }}</span>
+                    </td>
+                    <td>
+                        {% set s = a.status|default('active') %}
+                        <span class="status-badge status-{{ s }}">{{ {'active':'生效中','draft':'草稿','archived':'已归档'}.get(s, s) }}</span>
+                    </td>
+                    <td>
+                        {% if a.is_pinned %}
+                        <span class="pin-mark">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h6l-5 4 2 7-6-4-6 4 2-7-5-4h6z"/></svg>
+                            置顶
+                        </span>
+                        {% else %}
+                        <span style="color:var(--fg-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-dates">
+                        {% if a.start_at or a.end_at %}
+                        <div>{{ a.start_at|default('—') }}</div>
+                        <div style="font-size:0.78rem;color:var(--fg-muted);">至 {{ a.end_at|default('永久') }}</div>
+                        {% else %}
+                        <span style="color:var(--fg-muted);">永久</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-creator">{{ a.creator_name|default('—') }}</td>
+                    <td class="col-action">
+                        <div class="flex gap-8" style="flex-wrap:wrap;justify-content:flex-end;">
+                            <button class="btn btn-ghost btn-sm" data-edit type="button">编辑</button>
+                            <form method="post" action="{{ url_for('admin.admin_announcements_delete', aid=a.id) }}" style="display:inline;" onsubmit="return confirm('确认删除公告「{{ a.title|default('')|e }}」？此操作不可恢复。');">
+                                <button class="btn btn-danger btn-sm" type="submit">删除</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if not announcements %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+            </svg>
+            <p>暂无公告，点击右上角"新建公告"创建第一条</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ==================== 新建/编辑公告弹层（共用同一表单） ==================== #}
+<div class="modal-backdrop" id="annModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="annModalTitle" aria-modal="true">
+        <div class="modal-header">
+            <h3 id="annModalTitle">新建公告</h3>
+            <button class="modal-close" type="button" data-close-modal aria-label="关闭">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form method="post" id="annForm" action="{{ url_for('admin.admin_announcements_create') }}">
+            <div class="form-grid">
+                <div class="form-field full">
+                    <label for="ann-title">标题</label>
+                    <input type="text" id="ann-title" name="title" class="input" required maxlength="200" placeholder="公告标题（最多 200 字符）">
+                </div>
+                <div class="form-field">
+                    <label for="ann-type">类型</label>
+                    <select id="ann-type" name="type">
+                        <option value="info">信息</option>
+                        <option value="success">成功</option>
+                        <option value="warning">警告</option>
+                        <option value="danger">危险</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="ann-status">状态</label>
+                    <select id="ann-status" name="status">
+                        <option value="active">生效中</option>
+                        <option value="draft">草稿</option>
+                        <option value="archived">已归档</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="ann-start">开始时间（可空）</label>
+                    <input type="datetime-local" id="ann-start" name="start_at" class="input">
+                </div>
+                <div class="form-field">
+                    <label for="ann-end">结束时间（可空）</label>
+                    <input type="datetime-local" id="ann-end" name="end_at" class="input">
+                </div>
+                <div class="form-field full">
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="ann-pinned" name="is_pinned" value="1">
+                        <label for="ann-pinned">置顶（首页置顶显示）</label>
+                    </div>
+                </div>
+                <div class="form-field full">
+                    <label for="ann-content">内容</label>
+                    <textarea id="ann-content" name="content" class="textarea" rows="6" placeholder="公告正文（可选）"></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-ghost" type="button" data-close-modal>取消</button>
+                <button class="btn btn-primary" type="submit">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var modal = document.getElementById('annModal');
+    var form = document.getElementById('annForm');
+    var titleEl = document.getElementById('annModalTitle');
+    var btnNew = document.getElementById('btnNewAnn');
+    var createUrl = "{{ url_for('admin.admin_announcements_create') }}";
+
+    function openModal() {
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        setTimeout(function () {
+            var t = document.getElementById('ann-title');
+            if (t) t.focus();
+        }, 50);
+    }
+
+    function closeModal() {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function resetForm() {
+        form.action = createUrl;
+        form.reset();
+        titleEl.textContent = '新建公告';
+        document.getElementById('ann-type').value = 'info';
+        document.getElementById('ann-status').value = 'active';
+        document.getElementById('ann-pinned').checked = false;
+    }
+
+    function toLocalInput(dt) {
+        // 数据库返回 'YYYY-MM-DD HH:MM:SS'，datetime-local 需要 'YYYY-MM-DDTHH:MM'
+        if (!dt) return '';
+        var s = String(dt);
+        if (s.indexOf('T') !== -1) return s.substring(0, 16);
+        if (s.length >= 16) return s.substring(0, 10) + 'T' + s.substring(11, 16);
+        return '';
+    }
+
+    function fillForm(row) {
+        form.action = '/admin/announcements/' + encodeURIComponent(row.dataset.annId) + '/update';
+        document.getElementById('ann-title').value = row.dataset.title || '';
+        document.getElementById('ann-type').value = row.dataset.type || 'info';
+        document.getElementById('ann-status').value = row.dataset.status || 'active';
+        document.getElementById('ann-content').value = row.dataset.content || '';
+        document.getElementById('ann-pinned').checked = row.dataset.isPinned === '1';
+        document.getElementById('ann-start').value = toLocalInput(row.dataset.startAt);
+        document.getElementById('ann-end').value = toLocalInput(row.dataset.endAt);
+        titleEl.textContent = '编辑公告 #' + row.dataset.annId;
+    }
+
+    btnNew.addEventListener('click', function () {
+        resetForm();
+        openModal();
+    });
+
+    document.querySelectorAll('[data-edit]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var tr = btn.closest('tr[data-ann-id]');
+            if (!tr) return;
+            fillForm(tr);
+            openModal();
+        });
+    });
+
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+    });
+    document.querySelectorAll('[data-close-modal]').forEach(function (b) {
+        b.addEventListener('click', closeModal);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+    });
+})();
+</script>
+{% endblock %}

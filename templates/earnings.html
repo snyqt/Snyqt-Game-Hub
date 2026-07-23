@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block title %}收益管理{% endblock %}
+
+{% block head %}
+<style>
+.earnings-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-5) var(--space-9);
+}
+
+.earn-summary-card {
+    background: linear-gradient(135deg, rgba(255, 200, 87, 0.08), rgba(255, 200, 87, 0.02));
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6) var(--space-7);
+    margin-bottom: var(--space-5);
+}
+.earn-summary-label {
+    font-size: 0.88rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-1);
+}
+.earn-summary-value {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 900;
+    color: var(--accent-secondary);
+    line-height: 1;
+}
+.earn-summary-value .unit {
+    font-size: 1rem;
+    color: var(--fg-secondary);
+    margin-left: var(--space-2);
+    font-weight: 600;
+}
+.earn-summary-note {
+    margin-top: var(--space-3);
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+}
+
+.earn-section-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: var(--space-5) 0 var(--space-3);
+}
+
+.earn-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    margin-bottom: var(--space-5);
+}
+.earn-table th, .earn-table td {
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.88rem;
+}
+.earn-table th {
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+.earn-table tr:last-child td { border-bottom: none; }
+.earn-amount { color: var(--accent-secondary); font-weight: 700; font-family: var(--font-mono); }
+.earn-empty { text-align: center; padding: var(--space-7); color: var(--fg-muted); }
+
+.earn-game-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.earn-game-cover {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    object-fit: cover;
+}
+.earn-game-fallback {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    color: var(--accent-primary);
+    opacity: 0.5;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="earnings-page">
+    <nav class="lib-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <span class="current">收益管理</span>
+    </nav>
+
+    {# 总收益卡片 #}
+    <div class="earn-summary-card">
+        <div class="earn-summary-label">累计收益（SB）</div>
+        <div class="earn-summary-value">
+            {{ '%.2f'|format(total_earnings|default(0)|float) }}<span class="unit">SB</span>
+        </div>
+        <div class="earn-summary-note">收益 = 用户支付金额 × 99%（平台抽成 1%）。提现功能暂未开放。</div>
+    </div>
+
+    {# 按游戏分组的收益 #}
+    <h2 class="earn-section-title">按游戏统计</h2>
+    {% if by_game %}
+    <table class="earn-table">
+        <thead>
+            <tr>
+                <th>游戏</th>
+                <th>UID</th>
+                <th>销量</th>
+                <th>收益</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for g in by_game %}
+            <tr>
+                <td>
+                    <div class="earn-game-row">
+                        {% if g.cover_image %}
+                        <img src="{{ url_for('games.serve_upload', path=g.cover_image.replace('uploads/', '')) }}" class="earn-game-cover" alt="">
+                        {% else %}
+                        <div class="earn-game-fallback">{{ g.title[:1]|upper }}</div>
+                        {% endif %}
+                        <span>{{ g.title }}</span>
+                    </div>
+                </td>
+                <td><code>{{ g.game_uid }}</code></td>
+                <td>{{ g.sales_count }}</td>
+                <td class="earn-amount">{{ '%.2f'|format(g.earnings|default(0)|float) }} SB</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="earn-empty">暂无收益数据</div>
+    {% endif %}
+
+    {# 最近收益明细 #}
+    <h2 class="earn-section-title">最近收益明细</h2>
+    {% if recent %}
+    <table class="earn-table">
+        <thead>
+            <tr>
+                <th>时间</th>
+                <th>游戏</th>
+                <th>UID</th>
+                <th>收益</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in recent %}
+            <tr>
+                <td>{{ e.created_at.strftime('%Y-%m-%d %H:%M') if e.created_at else '-' }}</td>
+                <td>{{ e.game_title }}</td>
+                <td><code>{{ e.game_uid }}</code></td>
+                <td class="earn-amount">+{{ '%.2f'|format(e.amount|default(0)|float) }} SB</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="earn-empty">暂无收益明细</div>
+    {% endif %}
+</div>
+{% endblock %}

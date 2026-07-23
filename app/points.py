@@ -281,7 +281,7 @@ def download_game(gid):
 
 @points_bp.route('/library')
 def library():
-    """个人游戏库页面（需登录）。"""
+    """个人游戏库页面（需登录）- wakudemo 风格：左列表 + 右详情。"""
     user = current_user()
     if not user:
         return render_template('view_denied.html', message='请先登录'), 403
@@ -292,12 +292,38 @@ def library():
         'WHERE gl.user_id = %s ORDER BY gl.added_at DESC',
         [user['id']]
     )
-    return render_template('library.html', games=games)
+
+    # 关注列表：当前用户关注的开发者的最新作品（最近 10 个游戏）
+    following = query(
+        'SELECT g.id, g.title, g.cover_image, g.game_uid, g.developer_id, '
+        'u.username AS developer_name, g.created_at '
+        'FROM user_follows uf '
+        'JOIN games g ON g.developer_id = uf.followed_id '
+        'JOIN users u ON u.id = uf.followed_id '
+        'WHERE uf.follower_id = %s AND g.status = "active" AND g.is_banned = 0 '
+        'ORDER BY g.created_at DESC '
+        'LIMIT 10',
+        [user['id']]
+    )
+
+    return render_template(
+        'library.html',
+        games=games,
+        following=following,
+        games_count=len(games),
+    )
 
 
 @points_bp.route('/leaderboard')
 def leaderboard():
-    """排行榜：游戏排行（按 avg_rating / download_count）+ 用户积分排行。"""
+    """排行榜：游戏排行（按 avg_rating / download_count）+ 用户积分排行 + 开发者荣耀榜。
+
+    开发者荣耀榜积分公式：
+        总分 = Star数×3 + 下载量×1 + 游玩量×2 + 好评率×100
+    其中好评率为 0-1 的小数（如 0.85），×100 后为 0-100 量级，
+    与下载量/游玩量处于同一量级，避免单一指标淹没其他指标。
+    仅认证为开发者的用户可上榜。
+    """
     # 游戏排行
     games = query(
         'SELECT * FROM games WHERE is_banned = 0 '
@@ -308,4 +334,31 @@ def leaderboard():
         'SELECT id, snyqt_user_id, username, avatar, points '
         'FROM users ORDER BY points DESC LIMIT 50'
     )
-    return render_template('leaderboard.html', games=games, users=users)
+    # 开发者荣耀榜：仅认证开发者
+    # avg_rating 为 0-5 的浮点数，归一化为 0-1 的好评率：avg_rating/5
+    # 积分公式：SUM(rating_count)×3 + SUM(download_count)×1 + SUM(play_count)×2 + (AVG(avg_rating)/5)×100
+    developers = query(
+        '''
+        SELECT u.id, u.snyqt_user_id, u.username, u.avatar,
+               COUNT(g.id) AS game_count,
+               COALESCE(SUM(g.rating_count), 0) AS total_stars,
+               COALESCE(SUM(g.download_count), 0) AS total_downloads,
+               COALESCE(SUM(g.play_count), 0) AS total_plays,
+               COALESCE(AVG(g.avg_rating), 0) AS avg_rating_raw,
+               ROUND(
+                   COALESCE(SUM(g.rating_count), 0) * 3 +
+                   COALESCE(SUM(g.download_count), 0) * 1 +
+                   COALESCE(SUM(g.play_count), 0) * 2 +
+                   COALESCE(AVG(g.avg_rating), 0) / 5 * 100
+               ) AS dev_score
+        FROM users u
+        JOIN permissions p ON p.user_id = u.id AND p.permission_level = 'developer' AND p.status = 'approved'
+        LEFT JOIN games g ON g.developer_id = u.id AND g.is_banned = 0
+        WHERE u.status = 'active'
+        GROUP BY u.id, u.snyqt_user_id, u.username, u.avatar
+        HAVING game_count > 0
+        ORDER BY dev_score DESC
+        LIMIT 50
+        '''
+    )
+    return render_template('leaderboard.html', games=games, users=users, developers=developers)

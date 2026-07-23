@@ -81,6 +81,8 @@ def create_app():
     from app.points import points_bp
     from app.admin import admin_bp
     from app.community import community_bp
+    from app.payments import payments_bp
+    from app.wallet import wallet_bp
 
     app.register_blueprint(turnstile_bp)
     app.register_blueprint(auth_bp)
@@ -90,6 +92,8 @@ def create_app():
     app.register_blueprint(points_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(community_bp)
+    app.register_blueprint(payments_bp)
+    app.register_blueprint(wallet_bp)
 
     # ---------- 请求生命周期日志中间件 ----------
     @app.before_request
@@ -142,7 +146,12 @@ def create_app():
             logger.exception("[REQ %s] 异常: %s", req_id, exc)
 
     # ---------- 注册 Turnstile 中间件 ----------
-    register_turnstile_middleware(app)
+    from config.config import TURNSTILE_ENABLED
+    if TURNSTILE_ENABLED:
+        register_turnstile_middleware(app)
+        logger.info("Turnstile 人机验证已启用")
+    else:
+        logger.info("Turnstile 人机验证已关闭（TURNSTILE_ENABLED=false）")
 
     logger.info("#" * 60)
     logger.info("# SNYQT Game Hub 启动完成，已注册全部蓝图与中间件")

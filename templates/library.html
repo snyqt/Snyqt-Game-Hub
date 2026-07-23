@@ -3,66 +3,1648 @@
 
 {% block title %}我的游戏库{% endblock %}
 
-{% block content %}
-<section class="page">
-    <div class="container">
-        <div class="section-title">
-            <span class="accent-bar"></span>
-            <h2>MY LIBRARY</h2>
-            <span class="sub">{{ games|length if games else 0 }} 款已入库游戏</span>
-        </div>
+{% block head %}
+<style>
+/* ====================================================================
+   SNYQT Game Hub — 我的游戏库（library.html）页面专属样式
+   依赖 theme.css 的变量与组件类（.btn-* / .badge-* / .tag-chip）
+   --------------------------------------------------------------------
+   布局借鉴 wakudemo.cn：左侧游戏列表 + 右侧详情面板
+   ==================================================================== */
 
+.library-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-5) var(--space-9);
+}
+
+/* ==================== 面包屑 ==================== */
+.lib-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+}
+.lib-breadcrumb a {
+    color: var(--fg-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.lib-breadcrumb a:hover { color: var(--accent-primary); }
+.lib-breadcrumb .sep {
+    color: var(--fg-muted);
+    opacity: 0.6;
+}
+.lib-breadcrumb .current {
+    color: var(--fg-primary);
+    font-weight: 600;
+}
+
+/* ==================== 页面标题 ==================== */
+.lib-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-5);
+}
+
+.lib-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    color: var(--fg-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.lib-title::before {
+    content: "";
+    width: 4px;
+    height: 28px;
+    background: var(--accent-primary);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0 8px rgba(0, 255, 157, 0.5);
+}
+
+/* ==================== 兑换码输入区 ==================== */
+.lib-redeem {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+.lib-redeem-input {
+    width: 220px;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--fg-primary);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.lib-redeem-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.12);
+}
+.lib-redeem-input::placeholder {
+    color: var(--fg-muted);
+    text-transform: none;
+    letter-spacing: 0;
+}
+@media (max-width: 600px) {
+    .lib-redeem-input { width: 100%; }
+}
+
+/* ==================== Tab 切换栏 ==================== */
+.lib-tabs {
+    display: inline-flex;
+    gap: var(--space-1);
+    padding: var(--space-1);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-pill);
+    margin-bottom: var(--space-5);
+}
+.lib-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-pill);
+    color: var(--fg-secondary);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.92rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition-base), color var(--transition-base);
+}
+.lib-tab:hover { color: var(--fg-primary); }
+.lib-tab.is-active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    box-shadow: 0 4px 12px rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .lib-tab.is-active { color: #ffffff; }
+.lib-tab .tab-count {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    opacity: 0.85;
+}
+
+/* ==================== Tab 内容容器 ==================== */
+.lib-tab-content { display: none; }
+.lib-tab-content.is-active { display: block; }
+
+/* ==================== 两栏布局 ==================== */
+.lib-layout {
+    display: grid;
+    grid-template-columns: 40fr 60fr;
+    gap: var(--space-5);
+    align-items: stretch;
+}
+
+/* ==================== 左列：列表 ==================== */
+.lib-list-col {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    max-height: calc(100vh - 280px);
+    min-height: 460px;
+}
+
+/* 工具栏（搜索 + 排序） */
+.lib-toolbar {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--glass-bg);
+    flex-shrink: 0;
+}
+.lib-search {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+.lib-search svg {
+    position: absolute;
+    left: var(--space-3);
+    width: 14px;
+    height: 14px;
+    color: var(--fg-muted);
+    pointer-events: none;
+}
+.lib-search input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3) var(--space-2) 34px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-color);
+    background: var(--bg-base);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.lib-search input::placeholder { color: var(--fg-muted); }
+.lib-search input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+}
+[data-theme="light"] .lib-search input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+}
+.lib-sort {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-color);
+    background: var(--bg-base);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color var(--transition-base);
+}
+.lib-sort:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+}
+
+/* 游戏列表 */
+.lib-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-2);
+    overflow-y: auto;
+    flex: 1 1 auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+.lib-list::-webkit-scrollbar { width: 8px; }
+.lib-list::-webkit-scrollbar-track { background: transparent; }
+.lib-list::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-pill);
+}
+.lib-list::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+/* 列表项 */
+.lib-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background var(--transition-base), border-color var(--transition-base),
+                transform var(--transition-base);
+    margin-bottom: 2px;
+}
+.lib-item:hover {
+    background: var(--glass-bg);
+    transform: translateX(2px);
+}
+.lib-item.is-selected {
+    background: var(--glass-bg);
+    border-left-color: var(--accent-primary);
+    box-shadow: inset 0 0 0 1px var(--glass-border);
+}
+.lib-item.is-selected .lib-item-name {
+    color: var(--accent-primary);
+}
+
+/* 缩略图 */
+.lib-item-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
+    border: 1px solid var(--border-subtle);
+    position: relative;
+}
+.lib-item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.lib-item-thumb-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: var(--accent-primary);
+    opacity: 0.5;
+}
+
+/* 列表项信息 */
+.lib-item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.lib-item-name {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--fg-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--transition-base);
+}
+.lib-item-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.lib-item-tags .mini-tag {
+    display: inline-flex;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-subtle);
+    color: var(--fg-muted);
+    font-size: 0.68rem;
+    font-weight: 500;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 列表项价格 */
+.lib-item-price {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+}
+.lib-item-price.free {
+    color: var(--accent-primary);
+    background: rgba(0, 255, 157, 0.1);
+}
+[data-theme="light"] .lib-item-price.free {
+    background: rgba(0, 204, 122, 0.1);
+}
+.lib-item-price.paid {
+    color: var(--accent-secondary);
+    background: rgba(255, 200, 87, 0.12);
+}
+
+/* 列表为空（搜索无结果） */
+.lib-list-empty {
+    text-align: center;
+    padding: var(--space-7) var(--space-3);
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+}
+
+/* ==================== 右列：详情面板 ==================== */
+.lib-detail-col {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    min-height: 460px;
+}
+.lib-detail-col::-webkit-scrollbar { width: 8px; }
+.lib-detail-col::-webkit-scrollbar-track { background: transparent; }
+.lib-detail-col::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-pill);
+}
+
+/* 详情默认状态 */
+.lib-detail-default {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    min-height: 460px;
+    padding: var(--space-7);
+    text-align: center;
+    color: var(--fg-muted);
+}
+.lib-detail-default svg {
+    width: 64px;
+    height: 64px;
+    color: var(--accent-primary);
+    opacity: 0.5;
+    animation: lib-pulse 3s ease-in-out infinite;
+}
+@keyframes lib-pulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50%      { opacity: 0.7; transform: scale(1.05); }
+}
+.lib-detail-default-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--fg-secondary);
+}
+.lib-detail-default-desc {
+    font-size: 0.88rem;
+    color: var(--fg-muted);
+}
+
+/* 详情内容 */
+.lib-detail {
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+/* 封面大图 */
+.lib-detail-cover {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
+    border: 1px solid var(--border-subtle);
+}
+.lib-detail-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+    will-change: transform;
+}
+.lib-detail-cover:hover img { transform: scale(1.05); }
+.lib-detail-cover-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: clamp(48px, 10vw, 96px);
+    font-weight: 900;
+    color: var(--accent-primary);
+    opacity: 0.4;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(0, 255, 157, 0.18), transparent 60%),
+        linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-card) 100%);
+}
+.lib-detail-cover-badges {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    display: flex;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+    z-index: 1;
+}
+
+/* 标题 + 价格行 */
+.lib-detail-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+.lib-detail-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 900;
+    color: var(--fg-primary);
+    margin: 0;
+    line-height: 1.2;
+    flex: 1 1 auto;
+    min-width: 200px;
+}
+.lib-detail-price {
+    flex-shrink: 0;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+}
+.lib-detail-price.free {
+    background: rgba(0, 255, 157, 0.15);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+}
+[data-theme="light"] .lib-detail-price.free {
+    background: rgba(0, 204, 122, 0.12);
+}
+.lib-detail-price.paid {
+    background: rgba(255, 200, 87, 0.15);
+    color: var(--accent-secondary);
+    border: 1px solid rgba(255, 200, 87, 0.35);
+}
+
+/* 标签行 */
+.lib-detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+/* 操作按钮区 */
+.lib-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+}
+.lib-detail-actions .btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+    justify-content: center;
+}
+.lib-detail-actions .btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+.lib-detail-actions .btn-danger-ghost {
+    background: transparent;
+    color: var(--accent-danger);
+    border: 1px solid rgba(255, 56, 96, 0.35);
+}
+.lib-detail-actions .btn-danger-ghost:hover:not(:disabled) {
+    background: rgba(255, 56, 96, 0.1);
+    border-color: var(--accent-danger);
+    transform: translateY(-2px);
+}
+
+/* 描述区 */
+.lib-detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.lib-detail-section-title {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.lib-detail-section-title::before {
+    content: "";
+    width: 3px;
+    height: 12px;
+    background: var(--accent-primary);
+    border-radius: var(--radius-pill);
+}
+.lib-detail-description {
+    max-height: 200px;
+    overflow-y: auto;
+    color: var(--fg-secondary);
+    font-size: 0.92rem;
+    line-height: 1.65;
+    padding-right: var(--space-2);
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.lib-detail-description::-webkit-scrollbar { width: 6px; }
+.lib-detail-description::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-pill);
+}
+.lib-detail-description-empty {
+    color: var(--fg-muted);
+    font-style: italic;
+    font-size: 0.88rem;
+}
+
+/* 元信息（开发者 + 版本 + 时间） */
+.lib-detail-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-3);
+}
+.lib-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-3);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+}
+.lib-meta-label {
+    font-size: 0.72rem;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.lib-meta-label svg {
+    width: 12px;
+    height: 12px;
+}
+.lib-meta-value {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--fg-primary);
+    font-weight: 600;
+}
+
+/* 统计行 */
+.lib-detail-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--glass-bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+}
+.lib-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+}
+.lib-stat-num {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: var(--accent-primary);
+    line-height: 1;
+}
+.lib-stat-label {
+    font-size: 0.72rem;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ==================== 空状态 ==================== */
+.lib-empty {
+    text-align: center;
+    padding: var(--space-10) var(--space-5);
+    margin: var(--space-7) auto 0;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+.lib-empty-illustration {
+    width: 200px;
+    height: 140px;
+    color: var(--accent-primary);
+    filter: drop-shadow(0 8px 24px rgba(0, 255, 157, 0.25));
+}
+.lib-empty-illustration .controller-body {
+    transform-origin: center;
+    animation: lib-float 4s ease-in-out infinite;
+    will-change: transform;
+}
+.lib-empty-illustration .dot {
+    animation: lib-blink 2.4s ease-in-out infinite;
+    will-change: opacity;
+}
+.lib-empty-illustration .dot-2 { animation-delay: 0.8s; }
+.lib-empty-illustration .dot-3 { animation-delay: 1.6s; }
+@keyframes lib-float {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-8px) rotate(2deg); }
+}
+@keyframes lib-blink {
+    0%, 100% { opacity: 0.25; }
+    50%      { opacity: 1; }
+}
+.lib-empty-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+}
+.lib-empty-desc {
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.6;
+}
+.lib-empty-cta {
+    margin-top: var(--space-2);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-7);
+    font-size: 1rem;
+}
+.lib-empty-cta svg {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--transition-base);
+}
+.lib-empty-cta:hover svg { transform: translateX(3px); }
+
+/* ==================== 关注 Tab 占位 ==================== */
+.lib-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    padding: var(--space-10) var(--space-5);
+    text-align: center;
+    color: var(--fg-muted);
+}
+.lib-placeholder svg {
+    width: 72px;
+    height: 72px;
+    color: var(--accent-primary);
+    opacity: 0.5;
+}
+.lib-placeholder-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--fg-secondary);
+    margin: 0;
+}
+.lib-placeholder-desc {
+    font-size: 0.92rem;
+    color: var(--fg-muted);
+    margin: 0;
+}
+
+/* ==================== 关注 Tab：游戏卡片网格 ==================== */
+.follow-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-4);
+}
+.follow-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--fg-primary);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+.follow-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-3);
+}
+.follow-card-cover {
+    aspect-ratio: 4 / 3;
+    background: var(--bg-base);
+    overflow: hidden;
+    position: relative;
+}
+.follow-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+}
+.follow-card:hover .follow-card-cover img { transform: scale(1.06); }
+.follow-cover-fallback {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-base));
+    color: var(--accent-primary);
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+}
+.follow-card-body {
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+.follow-card-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.follow-card-dev {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+}
+.follow-card-dev svg { width: 12px; height: 12px; }
+.follow-card-meta {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: 2px;
+}
+.follow-card-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.follow-card-meta svg { width: 12px; height: 12px; }
+
+/* ==================== 自定义 Toast ==================== */
+.lib-toast {
+    position: fixed;
+    top: calc(var(--topbar-h) + var(--space-4));
+    right: var(--space-5);
+    z-index: 500;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
+    box-shadow: var(--shadow-3);
+    font-size: 0.9rem;
+    color: var(--fg-primary);
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity var(--transition-base), transform var(--transition-base);
+    max-width: 320px;
+}
+.lib-toast.show { opacity: 1; transform: translateX(0); }
+.lib-toast.warning { border-left-color: var(--accent-secondary); }
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 1024px) {
+    .lib-layout { grid-template-columns: 35fr 65fr; }
+}
+
+@media (max-width: 768px) {
+    .library-page { padding: var(--space-4) var(--space-3) var(--space-7); }
+    .lib-layout {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+    .lib-list-col {
+        max-height: 380px;
+        min-height: 300px;
+    }
+    .lib-detail-col {
+        max-height: none;
+        min-height: 0;
+    }
+    .lib-detail-actions .btn { flex: 1 1 100%; }
+    .lib-detail-stats { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+    .lib-title { font-size: 1.5rem; }
+    .lib-title::before { height: 22px; }
+    .lib-tab { padding: var(--space-2) var(--space-3); font-size: 0.85rem; }
+    .lib-detail-stats { grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+    .lib-stat-num { font-size: 1.1rem; }
+    .lib-detail-meta { grid-template-columns: 1fr; }
+}
+
+/* ==================== 尊重 reduced-motion ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .lib-empty-illustration .controller-body,
+    .lib-empty-illustration .dot,
+    .lib-detail-default svg,
+    .lib-detail-cover img,
+    .lib-item,
+    .lib-toast {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="library-page">
+
+    {# ==================== 面包屑 ==================== #}
+    <nav class="lib-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <span class="current">我的游戏库</span>
+    </nav>
+
+    {# ==================== 页面标题 ==================== #}
+    <header class="lib-header">
+        <h1 class="lib-title">我的游戏库</h1>
+        <div class="lib-redeem">
+            <input type="text" class="lib-redeem-input" id="redeemCodeInput"
+                   placeholder="输入兑换码 / 邀请码" maxlength="32"
+                   autocomplete="off" spellcheck="false" aria-label="兑换码">
+            <button type="button" class="btn btn-primary" id="redeemBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/>
+                    <path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/>
+                    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/>
+                </svg>
+                兑换
+            </button>
+        </div>
+    </header>
+
+    {# ==================== Tab 切换栏 ==================== #}
+    <div class="lib-tabs" role="tablist">
+        <button type="button"
+                class="lib-tab is-active"
+                role="tab"
+                aria-selected="true"
+                aria-controls="tab-library"
+                data-tab="library">
+            游戏库 <span class="tab-count">({{ games_count }})</span>
+        </button>
+        <button type="button"
+                class="lib-tab"
+                role="tab"
+                aria-selected="false"
+                aria-controls="tab-following"
+                data-tab="following">
+            关注 <span class="tab-count">({{ following|length }})</span>
+        </button>
+    </div>
+
+    {# ==================== Tab: 游戏库 ==================== #}
+    <div class="lib-tab-content is-active" id="tab-library" role="tabpanel">
         {% if games and games|length > 0 %}
-        <div class="game-grid">
-            {% for g in games %}
-            <div class="game-card" style="animation-delay: {{ (loop.index0 * 0.04)|round(2) }}s;">
-                <div class="game-cover">
-                    {{ m.cover_img(g) }}
-                    <div class="game-badges">
-                        {{ m.host_badge(g.hosting_type) }}
-                        {{ m.ban_badge(g.is_banned) }}
+        <div class="lib-layout">
+            {# ---- 左列：搜索 + 排序 + 列表 ---- #}
+            <aside class="lib-list-col" aria-label="游戏列表">
+                <div class="lib-toolbar">
+                    <div class="lib-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"/>
+                            <path d="M21 21l-4.3-4.3"/>
+                        </svg>
+                        <input type="search" id="lib-search-input"
+                               placeholder="搜索游戏..." aria-label="搜索游戏">
                     </div>
+                    <select id="lib-sort-select" class="lib-sort" aria-label="排序方式">
+                        <option value="recent">最近添加</option>
+                        <option value="name">名称</option>
+                        <option value="downloads">下载量</option>
+                        <option value="plays">游玩量</option>
+                    </select>
                 </div>
-                <div class="game-body">
-                    <h3 class="game-title" title="{{ g.title|default('') }}">{{ g.title|default('未命名游戏') }}</h3>
-                    <div class="game-meta">
-                        {{ m.stars_svg(g.avg_rating, none) }}
-                        <span title="入库时间" style="font-size:.74rem;">
-                            {% if g.added_at %}{{ g.added_at }}{% endif %}
-                        </span>
-                    </div>
-                    <div class="game-tags">{{ m.tag_list(g.tags) }}</div>
-                    <div class="flex gap-8 mt-16">
-                        {% if g.status|default('active') == 'active' and not g.is_banned %}
-                        <a class="btn btn-primary btn-sm btn-block" href="{{ url_for('view.view_game', gid=g.game_uid|default(g.id, true)) }}" target="_blank">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            在线玩
-                        </a>
-                        {% else %}
-                        <button class="btn btn-ghost btn-sm btn-block" disabled title="游戏未激活或已封禁">不可游玩</button>
-                        {% endif %}
-                        {% if not g.is_banned %}
-                            {% if g.get('source_open', 1) %}
-                            <a class="btn btn-ghost btn-sm btn-block" href="{{ url_for('points.download_game', gid=g.id) }}">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                下载
-                            </a>
-                            {% endif %}
-                        {% else %}
-                        <button class="btn btn-ghost btn-sm btn-block" disabled>已封禁</button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+                <ul class="lib-list" id="lib-list" role="list">
+                    {# 列表项由 JS 渲染 #}
+                </ul>
+            </aside>
+
+            {# ---- 右列：详情面板 ---- #}
+            <section class="lib-detail-col" aria-label="游戏详情" id="lib-detail-panel">
+                {# 详情由 JS 渲染 #}
+            </section>
         </div>
         {% else %}
-        <div class="empty-state card card-noise">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v4H4zm0 6h16v10H4z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-            <h3>游戏库空空如也</h3>
-            <p>去 <a href="{{ url_for('games.index') }}" class="text-gold">发现页</a> 找些感兴趣的游戏吧</p>
+        {# ==================== 空状态 ==================== #}
+        <div class="lib-empty reveal">
+            <svg class="lib-empty-illustration" viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle class="dot" cx="30" cy="28" r="2.5" fill="currentColor"/>
+                <circle class="dot dot-2" cx="210" cy="44" r="3" fill="currentColor"/>
+                <circle class="dot dot-3" cx="42" cy="130" r="2" fill="currentColor"/>
+                <circle class="dot" cx="200" cy="120" r="2.5" fill="currentColor"/>
+                <g class="controller-body">
+                    <path d="M62 70 C62 52 78 50 92 50 L148 50 C162 50 178 52 178 70 L178 96 C178 116 162 122 152 122 C144 122 140 116 134 110 L106 110 C100 116 96 122 88 122 C78 122 62 116 62 96 Z"
+                          fill="rgba(0, 255, 157, 0.08)"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linejoin="round"/>
+                    <path d="M80 78 L92 78 M86 72 L86 86"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"/>
+                    <circle cx="150" cy="72" r="3" fill="currentColor"/>
+                    <circle cx="162" cy="82" r="3" fill="currentColor"/>
+                    <circle cx="138" cy="82" r="3" fill="currentColor"/>
+                    <circle cx="150" cy="92" r="3" fill="currentColor"/>
+                    <path d="M100 102 L140 102"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-dasharray="2 4"
+                          opacity="0.4"/>
+                </g>
+            </svg>
+            <h2 class="lib-empty-title">你的游戏库还是空的</h2>
+            <p class="lib-empty-desc">
+                去发现页找些喜欢的游戏，加入库中即可在此处查看与在线游玩。
+            </p>
+            <a href="{{ url_for('games.index') }}" class="btn btn-primary btn-lg lib-empty-cta">
+                去发现好游戏
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+            </a>
         </div>
         {% endif %}
     </div>
-</section>
+
+    {# ==================== Tab: 关注 ==================== #}
+    <div class="lib-tab-content" id="tab-following" role="tabpanel">
+        {% if following and following|length > 0 %}
+        <div class="follow-grid">
+            {% for g in following %}
+            <a class="follow-card" href="{{ url_for('games.game_detail', gid=g.id) }}" aria-label="{{ g.title|default('未命名游戏') }} - 查看详情">
+                <div class="follow-card-cover">
+                    {% if g.cover_image %}
+                        {% if g.cover_image.startswith('uploads/') %}
+                        <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                        {% else %}
+                        <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                        {% endif %}
+                    {% else %}
+                    <div class="follow-cover-fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
+                    {% endif %}
+                </div>
+                <div class="follow-card-body">
+                    <h3 class="follow-card-title" title="{{ g.title|default('未命名游戏') }}">{{ g.title|default('未命名游戏') }}</h3>
+                    <div class="follow-card-dev">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg>
+                        <span>{{ g.developer_name|default('开发者 #' ~ g.developer_id|string) }}</span>
+                    </div>
+                    <div class="follow-card-meta">
+                        <span title="发布时间">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            {{ g.created_at.strftime('%Y-%m-%d') if g.created_at else '-' }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="lib-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <h2 class="lib-placeholder-title">还没有关注任何开发者</h2>
+            <p class="lib-placeholder-desc">
+                去发现页找找喜欢的开发者，关注后这里会显示他们的最新作品。
+            </p>
+            <a href="{{ url_for('games.index') }}" class="btn btn-primary btn-lg lib-empty-cta">
+                去发现好游戏
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ==================== 注入游戏数据 ====================
+       服务端通过 Jinja2 注入 JSON 数据，避免 JS 端再发请求 */
+    var GAMES = [
+        {% for g in games %}
+        {
+            id: {{ g.id|default(0)|int }},
+            title: {{ g.title|default('')|tojson|safe }},
+            game_uid: {{ g.game_uid|default('')|tojson|safe }},
+            description: {{ g.description|default('')|tojson|safe }},
+            developer_id: {{ g.developer_id|default(0)|int }},
+            hosting_type: {{ g.hosting_type|default('html')|tojson|safe }},
+            status: {{ g.status|default('active')|tojson|safe }},
+            tags: {{ g.tags|default('')|tojson|safe }},
+            is_banned: {{ g.is_banned|default(0)|int }},
+            source_open: {{ g.source_open|default(1)|int }},
+            access_mode: {{ g.access_mode|default('open')|tojson|safe }},
+            external_url: {{ g.external_url|default('')|tojson|safe }},
+            price: {{ g.price|default(0)|float }},
+            version: {{ g.version|default('')|tojson|safe }},
+            cover_image: {{ g.cover_image|default('')|tojson|safe }},
+            entry_file: {{ g.entry_file|default('')|tojson|safe }},
+            created_at: {{ g.created_at|default('')|string|tojson|safe }},
+            download_count: {{ g.download_count|default(0)|int }},
+            play_count: {{ g.play_count|default(0)|int }},
+            avg_rating: {{ g.avg_rating|default(0)|float }},
+            rating_count: {{ g.rating_count|default(0)|int }},
+            added_at: {{ g.added_at|default('')|string|tojson|safe }},
+            play_url: {{ url_for('view.view_game', gid=g.game_uid|default(g.id, true))|tojson|safe }},
+            download_url: {{ url_for('points.download_game', gid=g.id)|tojson|safe }},
+            detail_url: {{ url_for('games.game_detail', gid=g.id)|tojson|safe }}
+        }{{ ',' if not loop.last else '' }}
+        {% endfor %}
+    ];
+
+    /* ==================== 状态 ==================== */
+    var state = {
+        sort: 'recent',
+        search: '',
+        selectedId: (GAMES.length > 0) ? GAMES[0].id : null
+    };
+
+    /* ==================== DOM 引用 ==================== */
+    var listEl = document.getElementById('lib-list');
+    var detailEl = document.getElementById('lib-detail-panel');
+    var searchEl = document.getElementById('lib-search-input');
+    var sortEl = document.getElementById('lib-sort-select');
+
+    /* ==================== 工具函数 ==================== */
+    function escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function coverSrc(g) {
+        if (!g.cover_image) return null;
+        if (g.cover_image.indexOf('uploads/') === 0) {
+            return '/uploads/' + g.cover_image.substring(8);
+        }
+        return g.cover_image;
+    }
+
+    function parseTags(g) {
+        if (!g.tags) return [];
+        return g.tags.split(',').map(function (t) { return t.trim(); })
+            .filter(function (t) { return t.length > 0; });
+    }
+
+    function priceInfo(g) {
+        var p = parseFloat(g.price || 0);
+        if (!p || p <= 0) {
+            return { text: '免费', cls: 'free', isFree: true };
+        }
+        return { text: '¥' + p.toFixed(2), cls: 'paid', isFree: false };
+    }
+
+    function fmtNum(n) {
+        n = parseInt(n || 0, 10);
+        if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+        return String(n);
+    }
+
+    /* ==================== 列表渲染 ==================== */
+    function sortGames(arr) {
+        var sorted = arr.slice();
+        if (state.sort === 'recent') {
+            sorted.sort(function (a, b) {
+                return String(b.added_at || '').localeCompare(String(a.added_at || ''));
+            });
+        } else if (state.sort === 'name') {
+            sorted.sort(function (a, b) {
+                return (a.title || '').localeCompare(b.title || '', 'zh');
+            });
+        } else if (state.sort === 'downloads') {
+            sorted.sort(function (a, b) {
+                return (b.download_count || 0) - (a.download_count || 0);
+            });
+        } else if (state.sort === 'plays') {
+            sorted.sort(function (a, b) {
+                return (b.play_count || 0) - (a.play_count || 0);
+            });
+        }
+        return sorted;
+    }
+
+    function filterGames(arr) {
+        if (!state.search) return arr;
+        var q = state.search.toLowerCase();
+        return arr.filter(function (g) {
+            return (g.title || '').toLowerCase().indexOf(q) !== -1;
+        });
+    }
+
+    function renderList() {
+        if (!listEl) return;
+        var list = sortGames(filterGames(GAMES));
+        if (!list.length) {
+            listEl.innerHTML = '<li class="lib-list-empty">无匹配的游戏</li>';
+            return;
+        }
+        var html = list.map(function (g) {
+            var tags = parseTags(g).slice(0, 2);
+            var tagsHtml = tags.map(function (t) {
+                return '<span class="mini-tag">' + escapeHtml(t) + '</span>';
+            }).join('');
+            var pi = priceInfo(g);
+            var thumb = '';
+            var src = coverSrc(g);
+            if (src) {
+                thumb = '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(g.title || '游戏') + '封面" loading="lazy">';
+            } else {
+                thumb = '<div class="lib-item-thumb-fallback">' + escapeHtml((g.title || '?').charAt(0).toUpperCase()) + '</div>';
+            }
+            var sel = (g.id === state.selectedId) ? ' is-selected' : '';
+            return ''
+                + '<li class="lib-item' + sel + '" data-game-id="' + g.id + '" role="button" tabindex="0" aria-label="选择 ' + escapeHtml(g.title || '游戏') + '">'
+                +   '<div class="lib-item-thumb">' + thumb + '</div>'
+                +   '<div class="lib-item-info">'
+                +     '<div class="lib-item-name">' + escapeHtml(g.title || '未命名游戏') + '</div>'
+                +     '<div class="lib-item-tags">' + tagsHtml + '</div>'
+                +   '</div>'
+                +   '<div class="lib-item-price ' + pi.cls + '">' + escapeHtml(pi.text) + '</div>'
+                + '</li>';
+        }).join('');
+        listEl.innerHTML = html;
+    }
+
+    /* ==================== 详情渲染 ==================== */
+    function renderDetail() {
+        if (!detailEl) return;
+        if (state.selectedId === null) {
+            detailEl.innerHTML = defaultDetailHtml();
+            return;
+        }
+        var g = null;
+        for (var i = 0; i < GAMES.length; i++) {
+            if (GAMES[i].id === state.selectedId) { g = GAMES[i]; break; }
+        }
+        if (!g) {
+            detailEl.innerHTML = defaultDetailHtml();
+            return;
+        }
+        detailEl.innerHTML = detailHtml(g);
+        attachDetailHandlers(g);
+    }
+
+    function defaultDetailHtml() {
+        return ''
+            + '<div class="lib-detail-default">'
+            +   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            +     '<rect x="3" y="3" width="18" height="18" rx="2"/>'
+            +     '<path d="M3 9h18M9 3v18"/>'
+            +   '</svg>'
+            +   '<div class="lib-detail-default-title">从左侧选择一款游戏查看详情</div>'
+            +   '<div class="lib-detail-default-desc">点击列表中的游戏即可在此处展开完整信息与操作</div>'
+            + '</div>';
+    }
+
+    function detailHtml(g) {
+        var pi = priceInfo(g);
+        var tags = parseTags(g);
+
+        // 封面
+        var coverHtml = '';
+        var src = coverSrc(g);
+        if (src) {
+            coverHtml = '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(g.title || '游戏') + '封面">';
+        } else {
+            coverHtml = '<div class="lib-detail-cover-fallback">' + escapeHtml((g.title || '?').charAt(0).toUpperCase()) + '</div>';
+        }
+
+        // 角标徽章
+        var badgesHtml = '';
+        if (g.hosting_type === 'python') {
+            badgesHtml += '<span class="badge badge-purple">PYTHON</span>';
+        } else {
+            badgesHtml += '<span class="badge badge-info">HTML</span>';
+        }
+        if (g.is_banned) {
+            badgesHtml += '<span class="badge badge-danger">已封禁</span>';
+        }
+
+        // 标签 chips
+        var tagsChipsHtml = tags.length
+            ? tags.map(function (t) {
+                return '<span class="tag-chip">' + escapeHtml(t) + '</span>';
+            }).join('')
+            : '<span class="lib-detail-description-empty">暂无标签</span>';
+
+        // 描述
+        var descHtml = g.description
+            ? '<div class="lib-detail-description">' + escapeHtml(g.description) + '</div>'
+            : '<div class="lib-detail-description-empty">暂无描述</div>';
+
+        // 操作按钮
+        var canPlay = (g.status === 'active') && !g.is_banned;
+        var playBtnHtml = canPlay
+            ? '<button type="button" class="btn btn-primary" data-action="play">'
+              + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>'
+              + '游玩</button>'
+            : '<button type="button" class="btn btn-ghost" disabled title="游戏未激活或已封禁">不可游玩</button>';
+
+        var dlBtnHtml = '';
+        if (!g.is_banned) {
+            dlBtnHtml = '<button type="button" class="btn btn-secondary" data-action="download">'
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                + '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+                + '<path d="M7 10l5 5 5-5"/>'
+                + '<path d="M12 15V3"/>'
+                + '</svg>下载</button>';
+        }
+
+        var detailBtnHtml = '<a href="' + escapeHtml(g.detail_url) + '" class="btn btn-ghost" data-action="detail">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            + '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>'
+            + '<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'
+            + '</svg>查看详情</a>';
+
+        var removeBtnHtml = '<button type="button" class="btn btn-danger-ghost" data-action="remove">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            + '<path d="M3 6h18"/>'
+            + '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'
+            + '</svg>移出游戏库</button>';
+
+        // 激活按钮已移除：游戏库仅展示已兑换游戏，邀请码在页面头部兑换码输入区激活
+
+        // 评分（avg_rating 0-5）
+        var ratingDisplay = parseFloat(g.avg_rating || 0).toFixed(1);
+
+        return ''
+            + '<div class="lib-detail">'
+            +   '<div class="lib-detail-cover">'
+            +     coverHtml
+            +     '<div class="lib-detail-cover-badges">' + badgesHtml + '</div>'
+            +   '</div>'
+            +   '<div class="lib-detail-head">'
+            +     '<h2 class="lib-detail-title">' + escapeHtml(g.title || '未命名游戏') + '</h2>'
+            +     '<span class="lib-detail-price ' + pi.cls + '">' + escapeHtml(pi.text) + '</span>'
+            +   '</div>'
+            +   '<div class="lib-detail-tags">' + tagsChipsHtml + '</div>'
+            +   '<div class="lib-detail-actions">'
+            +     playBtnHtml + dlBtnHtml + detailBtnHtml + removeBtnHtml
+            +   '</div>'
+            +   '<div class="lib-detail-section">'
+            +     '<h3 class="lib-detail-section-title">游戏简介</h3>'
+            +     descHtml
+            +   '</div>'
+            +   '<div class="lib-detail-section">'
+            +     '<h3 class="lib-detail-section-title">开发者信息</h3>'
+            +     '<div class="lib-detail-meta">'
+            +       '<div class="lib-meta-item">'
+            +         '<span class="lib-meta-label">'
+            +           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+            +           '开发者'
+            +         '</span>'
+            +         '<span class="lib-meta-value">#' + escapeHtml(g.game_uid || g.developer_id || '未知') + '</span>'
+            +       '</div>'
+            +       '<div class="lib-meta-item">'
+            +         '<span class="lib-meta-label">'
+            +           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>'
+            +           '版本'
+            +         '</span>'
+            +         '<span class="lib-meta-value">' + escapeHtml(g.version || '未发布') + '</span>'
+            +       '</div>'
+            +       '<div class="lib-meta-item">'
+            +         '<span class="lib-meta-label">'
+            +           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>'
+            +           '创建时间'
+            +         '</span>'
+            +         '<span class="lib-meta-value">' + escapeHtml(g.created_at || '未知') + '</span>'
+            +       '</div>'
+            +       '<div class="lib-meta-item">'
+            +         '<span class="lib-meta-label">'
+            +           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'
+            +           '入库时间'
+            +         '</span>'
+            +         '<span class="lib-meta-value">' + escapeHtml(g.added_at || '未知') + '</span>'
+            +       '</div>'
+            +     '</div>'
+            +   '</div>'
+            +   '<div class="lib-detail-section">'
+            +     '<h3 class="lib-detail-section-title">统计数据</h3>'
+            +     '<div class="lib-detail-stats">'
+            +       '<div class="lib-stat">'
+            +         '<span class="lib-stat-num">' + escapeHtml(fmtNum(g.download_count)) + '</span>'
+            +         '<span class="lib-stat-label">下载量</span>'
+            +       '</div>'
+            +       '<div class="lib-stat">'
+            +         '<span class="lib-stat-num">' + escapeHtml(fmtNum(g.play_count)) + '</span>'
+            +         '<span class="lib-stat-label">游玩量</span>'
+            +       '</div>'
+            +       '<div class="lib-stat">'
+            +         '<span class="lib-stat-num">' + escapeHtml(ratingDisplay) + '</span>'
+            +         '<span class="lib-stat-label">评分</span>'
+            +       '</div>'
+            +     '</div>'
+            +   '</div>'
+            + '</div>';
+    }
+
+    /* ==================== 详情按钮事件 ==================== */
+    function attachDetailHandlers(g) {
+        if (!detailEl) return;
+        var btns = detailEl.querySelectorAll('[data-action]');
+        Array.prototype.forEach.call(btns, function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var action = btn.getAttribute('data-action');
+                if (action === 'play') {
+                    if (g.play_url) window.open(g.play_url, '_blank', 'noopener');
+                } else if (action === 'download') {
+                    if (g.download_url) window.location.href = g.download_url;
+                } else if (action === 'detail') {
+                    if (g.detail_url) window.location.href = g.detail_url;
+                } else if (action === 'remove') {
+                    if (window.confirm('确定将 "' + (g.title || '该游戏') + '" 从游戏库移除？')) {
+                        showToast('功能开发中', 'warning');
+                    }
+                }
+            });
+        });
+    }
+
+    /* ==================== Toast ==================== */
+    function showToast(msg, type) {
+        var existing = document.querySelector('.lib-toast');
+        if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+        var toast = document.createElement('div');
+        toast.className = 'lib-toast' + (type === 'warning' ? ' warning' : '');
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        // 双 rAF 确保 transition 触发
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                toast.classList.add('show');
+            });
+        });
+        setTimeout(function () {
+            toast.classList.remove('show');
+            setTimeout(function () {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 250);
+        }, 2800);
+    }
+
+    /* ==================== 列表交互 ==================== */
+    function initListInteraction() {
+        if (!listEl) return;
+        listEl.addEventListener('click', function (e) {
+            var item = e.target.closest('.lib-item');
+            if (!item || !listEl.contains(item)) return;
+            var id = parseInt(item.getAttribute('data-game-id'), 10);
+            if (isNaN(id)) return;
+            state.selectedId = id;
+            // 仅更新选中态，避免完整重渲染丢焦点
+            var items = listEl.querySelectorAll('.lib-item');
+            Array.prototype.forEach.call(items, function (el) {
+                el.classList.toggle('is-selected', parseInt(el.getAttribute('data-game-id'), 10) === id);
+            });
+            renderDetail();
+            // 移动端：选中后滚动到详情
+            if (window.innerWidth <= 768 && detailEl) {
+                setTimeout(function () {
+                    detailEl.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+                }, 50);
+            }
+        });
+        // 键盘可达性
+        listEl.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var item = e.target.closest('.lib-item');
+            if (!item) return;
+            e.preventDefault();
+            item.click();
+        });
+    }
+
+    /* ==================== 搜索 ==================== */
+    function initSearch() {
+        if (!searchEl) return;
+        var timer = null;
+        searchEl.addEventListener('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                state.search = (searchEl.value || '').trim();
+                renderList();
+            }, 180);
+        });
+    }
+
+    /* ==================== 排序 ==================== */
+    function initSort() {
+        if (!sortEl) return;
+        sortEl.addEventListener('change', function () {
+            state.sort = sortEl.value || 'recent';
+            renderList();
+        });
+    }
+
+    /* ==================== Tab 切换 ==================== */
+    function initTabs() {
+        var tabs = document.querySelectorAll('.lib-tab');
+        var panels = document.querySelectorAll('.lib-tab-content');
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var target = tab.getAttribute('data-tab');
+                tabs.forEach(function (t) {
+                    var active = (t === tab);
+                    t.classList.toggle('is-active', active);
+                    t.setAttribute('aria-selected', active ? 'true' : 'false');
+                });
+                panels.forEach(function (p) {
+                    p.classList.toggle('is-active', p.id === 'tab-' + target);
+                });
+            });
+        });
+    }
+
+    /* ==================== Reveal 入场动画 ==================== */
+    function initRevealAnimations() {
+        var reveals = document.querySelectorAll('.reveal');
+        if (!reveals.length) return;
+        if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+            reveals.forEach(function (el) { el.classList.add('is-visible'); });
+            return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    e.target.classList.add('is-visible');
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        reveals.forEach(function (el) { io.observe(el); });
+    }
+
+    /* ==================== 兑换码 ==================== */
+    function redeemCode(code) {
+        if (!code) {
+            showToast('请输入兑换码', 'warning');
+            return;
+        }
+        fetch('/api/invite/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ code: code })
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+            var d = res.data || {};
+            if (res.ok && d.success) {
+                showToast(d.message || '兑换成功，已加入游戏库', 'success');
+                // 兑换成功后刷新页面以加载新游戏
+                setTimeout(function () { window.location.reload(); }, 900);
+            } else {
+                showToast(d.message || '兑换失败', 'warning');
+            }
+        })
+        .catch(function () { showToast('网络错误，请稍后重试', 'warning'); });
+    }
+
+    function initRedeem() {
+        var input = document.getElementById('redeemCodeInput');
+        var btn = document.getElementById('redeemBtn');
+        if (!input || !btn) return;
+        function submit() {
+            var code = (input.value || '').trim().toUpperCase();
+            if (!code) {
+                showToast('请输入兑换码', 'warning');
+                input.focus();
+                return;
+            }
+            btn.disabled = true;
+            redeemCode(code);
+            setTimeout(function () { btn.disabled = false; }, 1200);
+        }
+        btn.addEventListener('click', submit);
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); submit(); }
+        });
+    }
+
+    /* ==================== 启动 ==================== */
+    function init() {
+        initTabs();
+        if (GAMES.length > 0) {
+            initListInteraction();
+            initSearch();
+            initSort();
+            renderList();
+            renderDetail();
+        }
+        initRevealAnimations();
+        initRedeem();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
 {% endblock %}

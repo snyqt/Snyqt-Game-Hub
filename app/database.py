@@ -25,8 +25,11 @@ CREATE TABLE users (
     username VARCHAR(100) NOT NULL,
     avatar VARCHAR(255),
     points INT DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
+    last_login DATETIME,
+    bio VARCHAR(2000) NOT NULL DEFAULT '',
+    custom_profile_html LONGTEXT NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 """,
     'permissions': """
@@ -190,7 +193,52 @@ CREATE TABLE invite_codes (
     is_used TINYINT DEFAULT 0,
     used_by INT,
     used_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    purchased_by INT,
+    purchased_at DATETIME
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'wallets': """
+CREATE TABLE wallets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    balance DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total_recharged DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total_spent DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'wallet_transactions': """
+CREATE TABLE wallet_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    tx_type VARCHAR(20) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    balance_after DECIMAL(10,2) NOT NULL,
+    related_type VARCHAR(20),
+    related_id INT,
+    invite_code VARCHAR(32),
+    game_id INT,
+    remark VARCHAR(255) DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_user (user_id),
+    KEY idx_type (tx_type),
+    KEY idx_game (game_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'game_earnings': """
+CREATE TABLE game_earnings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    developer_id INT NOT NULL,
+    game_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    order_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_dev (developer_id),
+    KEY idx_game (game_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 """,
     'game_pricing': """
@@ -221,6 +269,7 @@ CREATE TABLE config_review_queue (
 CREATE TABLE tags (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
+    is_verified TINYINT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 """,
@@ -234,13 +283,19 @@ CREATE TABLE game_tags (
     'penalty_records': """
 CREATE TABLE IF NOT EXISTS penalty_records (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    target_type ENUM('game','post') NOT NULL,
+    target_type ENUM('game','post','user') NOT NULL,
     target_id INT NOT NULL,
     target_title VARCHAR(255) DEFAULT '',
+    target_user_id INT DEFAULT NULL,
     reason TEXT,
     action VARCHAR(20) DEFAULT 'ban',
+    duration_days INT DEFAULT NULL,
+    expires_at DATETIME DEFAULT NULL,
+    is_public TINYINT DEFAULT 1,
     admin_id INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_target (target_type, target_id),
+    INDEX idx_public (is_public)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 """,
     'reports': """
@@ -264,6 +319,101 @@ CREATE TABLE IF NOT EXISTS post_tags (
     tag_name VARCHAR(50) NOT NULL,
     INDEX idx_post (post_id),
     INDEX idx_tag (tag_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'reviewer_votes': """
+CREATE TABLE IF NOT EXISTS reviewer_votes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    target_type ENUM('game','post','user') NOT NULL,
+    target_id INT NOT NULL,
+    reviewer_id INT NOT NULL,
+    reason TEXT,
+    status ENUM('voting','auto_banned','pending_admin','confirmed','rejected') DEFAULT 'voting',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    confirmed_at DATETIME DEFAULT NULL,
+    UNIQUE KEY uk_vote (target_type, target_id, reviewer_id),
+    INDEX idx_target_status (target_type, target_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'assets': """
+CREATE TABLE IF NOT EXISTS assets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    tagline VARCHAR(255) DEFAULT '',
+    description TEXT,
+    author_id INT NOT NULL,
+    category VARCHAR(50) DEFAULT 'other',
+    tags VARCHAR(500) DEFAULT '',
+    cover_image VARCHAR(500) DEFAULT '',
+    asset_file VARCHAR(500) DEFAULT '',
+    asset_size BIGINT DEFAULT 0,
+    preview_images TEXT,
+    price DECIMAL(10,2) DEFAULT 0.00,
+    version VARCHAR(20) DEFAULT '1.0.0',
+    license_type VARCHAR(50) DEFAULT 'cc-by',
+    license_detail TEXT,
+    status VARCHAR(20) DEFAULT 'active',
+    download_count INT DEFAULT 0,
+    asset_uid VARCHAR(20) UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_author (author_id),
+    INDEX idx_status (status),
+    INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'asset_library': """
+CREATE TABLE IF NOT EXISTS asset_library (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    asset_id INT NOT NULL,
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_asset_lib (user_id, asset_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'announcements': """
+CREATE TABLE IF NOT EXISTS announcements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    type VARCHAR(20) DEFAULT 'info',
+    content TEXT,
+    is_pinned TINYINT DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'active',
+    start_at DATETIME NULL,
+    end_at DATETIME NULL,
+    created_by INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_pinned (is_pinned)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'user_follows': """
+CREATE TABLE IF NOT EXISTS user_follows (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    follower_id INT NOT NULL,
+    followed_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_follow (follower_id, followed_id),
+    INDEX idx_followed (followed_id),
+    INDEX idx_follower (follower_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+""",
+    'payment_orders': """
+CREATE TABLE IF NOT EXISTS payment_orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    out_trade_no VARCHAR(64) NOT NULL UNIQUE,
+    user_id INT NOT NULL,
+    target_type VARCHAR(20) NOT NULL,
+    target_id INT,
+    amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    trade_no VARCHAR(64),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    paid_at DATETIME NULL,
+    INDEX idx_user (user_id),
+    INDEX idx_status (status),
+    INDEX idx_target (target_type, target_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 """,
 }
@@ -396,6 +546,25 @@ def _migrate_schema(conn):
                 if null_rows:
                     conn.commit()
                     logger.warning("[MIGRATE] 已为 %d 款游戏补全 game_uid", len(null_rows))
+
+    # users 表：修正旧域名头像（account.snyqt.top → snyqt-account.iepose.cn）
+    if _table_exists(conn, 'users') and _column_exists(conn, 'users', 'avatar'):
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET avatar = REPLACE(avatar, 'account.snyqt.top', 'snyqt-account.iepose.cn') "
+                "WHERE avatar LIKE '%account.snyqt.top%'"
+            )
+            affected = cur.rowcount
+            if affected:
+                conn.commit()
+                logger.warning("[MIGRATE] 已修正 %d 条用户头像的旧域名", affected)
+
+    # users 表：添加 status 列（用户封禁支持）
+    if _table_exists(conn, 'users') and not _column_exists(conn, 'users', 'status'):
+        with conn.cursor() as cur:
+            cur.execute("ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT 'active' AFTER points")
+        conn.commit()
+        logger.warning("[MIGRATE] 已添加 users.status 列")
     # permissions 表：迁移至多行权限模型（每个用户可有多条权限记录）
     if _table_exists(conn, 'permissions'):
         # 1. 删除 pending_level 列（如存在）
@@ -524,6 +693,63 @@ def _migrate_schema(conn):
             cur.execute(EXPECTED_TABLES['post_tags'])
         conn.commit()
         logger.warning("[MIGRATE] 已创建表 post_tags")
+
+    # tags 表：添加 is_verified 列（管理员认证标签）
+    if _table_exists(conn, 'tags') and not _column_exists(conn, 'tags', 'is_verified'):
+        with conn.cursor() as cur:
+            cur.execute("ALTER TABLE tags ADD COLUMN is_verified TINYINT DEFAULT 0 AFTER name")
+        conn.commit()
+        logger.warning("[MIGRATE] tags.is_verified 列已添加")
+
+    # penalty_records 表：扩展处罚类型与时长/公开字段
+    if _table_exists(conn, 'penalty_records'):
+        # 1. target_type ENUM 扩展为 ('game','post','user')
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COLUMN_TYPE FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'penalty_records' AND COLUMN_NAME = 'target_type'",
+                (DB_NAME,)
+            )
+            col_row = cur.fetchone()
+            if col_row and "'user'" not in str(col_row.get('COLUMN_TYPE', '')):
+                cur.execute("ALTER TABLE penalty_records MODIFY COLUMN target_type ENUM('game','post','user') NOT NULL")
+                conn.commit()
+                logger.warning("[MIGRATE] penalty_records.target_type 已扩展为 ENUM('game','post','user')")
+
+        # 2. 新增 target_user_id 列
+        if not _column_exists(conn, 'penalty_records', 'target_user_id'):
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE penalty_records ADD COLUMN target_user_id INT DEFAULT NULL AFTER target_title")
+            conn.commit()
+            logger.warning("[MIGRATE] penalty_records.target_user_id 列已添加")
+
+        # 3. 新增 duration_days 列（NULL=永久封禁）
+        if not _column_exists(conn, 'penalty_records', 'duration_days'):
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE penalty_records ADD COLUMN duration_days INT DEFAULT NULL AFTER action")
+            conn.commit()
+            logger.warning("[MIGRATE] penalty_records.duration_days 列已添加")
+
+        # 4. 新增 expires_at 列（封禁到期时间）
+        if not _column_exists(conn, 'penalty_records', 'expires_at'):
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE penalty_records ADD COLUMN expires_at DATETIME DEFAULT NULL AFTER duration_days")
+            conn.commit()
+            logger.warning("[MIGRATE] penalty_records.expires_at 列已添加")
+
+        # 5. 新增 is_public 列（是否公开处罚记录）
+        if not _column_exists(conn, 'penalty_records', 'is_public'):
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE penalty_records ADD COLUMN is_public TINYINT DEFAULT 1 AFTER expires_at")
+            conn.commit()
+            logger.warning("[MIGRATE] penalty_records.is_public 列已添加")
+
+    # 自动创建 reviewer_votes 表（如缺失）- 评鉴员投票记录
+    if not _table_exists(conn, 'reviewer_votes'):
+        with conn.cursor() as cur:
+            cur.execute(EXPECTED_TABLES['reviewer_votes'])
+        conn.commit()
+        logger.warning("[MIGRATE] 已创建表 reviewer_votes")
 
 
 def check_tables():

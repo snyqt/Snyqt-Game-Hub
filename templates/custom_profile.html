@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ profile_user.username|default('用户') }} · 个性化主页</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        /* 顶部平台标识横幅 */
+        .cp-banner {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: linear-gradient(90deg, #0a0e1a 0%, #131829 100%);
+            border-bottom: 1px solid rgba(0, 255, 157, 0.25);
+            z-index: 9999;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        }
+        .cp-banner-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .cp-logo {
+            font-weight: 900;
+            font-size: 1rem;
+            color: #00ff9d;
+            letter-spacing: 0.05em;
+        }
+        .cp-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: rgba(0, 255, 157, 0.12);
+            border: 1px solid rgba(0, 255, 157, 0.3);
+            color: #00ff9d;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+        .cp-badge::before {
+            content: "";
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #00ff9d;
+            box-shadow: 0 0 6px #00ff9d;
+        }
+        .cp-username {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.82rem;
+        }
+        .cp-banner-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .cp-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.85);
+            transition: all 0.2s;
+        }
+        .cp-btn:hover {
+            background: rgba(0, 255, 157, 0.12);
+            border-color: rgba(0, 255, 157, 0.4);
+            color: #00ff9d;
+        }
+        .cp-btn svg { width: 14px; height: 14px; }
+        /* iframe 容器 */
+        .cp-frame-wrap {
+            position: fixed;
+            top: 48px; left: 0; right: 0; bottom: 0;
+            width: 100%;
+            height: calc(100% - 48px);
+        }
+        #custom-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+        @media (max-width: 640px) {
+            .cp-username { display: none; }
+            .cp-banner { padding: 0 12px; height: 44px; }
+            .cp-frame-wrap { top: 44px; height: calc(100% - 44px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="cp-banner">
+        <div class="cp-banner-left">
+            <span class="cp-logo">SNYQT</span>
+            <span class="cp-badge">个性化主页</span>
+            <span class="cp-username">{{ profile_user.username|default('用户') }}</span>
+        </div>
+        <div class="cp-banner-right">
+            <a class="cp-btn" href="{{ url_for('games.user_profile', username=profile_user.username) }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+                返回自带主页
+            </a>
+        </div>
+    </div>
+    <div class="cp-frame-wrap">
+        <iframe id="custom-frame" sandbox="allow-scripts allow-same-origin" title="个性化主页内容"></iframe>
+    </div>
+    <script>
+        // 使用 tojson 安全注入用户 HTML 内容到 iframe srcdoc
+        var customHtml = {{ custom_html|tojson|safe }};
+        document.getElementById('custom-frame').srcdoc = customHtml;
+    </script>
+</body>
+</html>

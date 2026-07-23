@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+
+{% block title %}我的钱包{% endblock %}
+
+{% block head %}
+<style>
+.wallet-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-5) var(--space-9);
+}
+
+/* 余额卡片 */
+.wallet-balance-card {
+    background: linear-gradient(135deg, rgba(0, 255, 157, 0.08), rgba(0, 255, 157, 0.02));
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6) var(--space-7);
+    margin-bottom: var(--space-5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+.wallet-balance-label {
+    font-size: 0.88rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-1);
+}
+.wallet-balance-value {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 900;
+    color: var(--accent-primary);
+    line-height: 1;
+}
+.wallet-balance-value .unit {
+    font-size: 1rem;
+    color: var(--fg-secondary);
+    margin-left: var(--space-2);
+    font-weight: 600;
+}
+.wallet-stats {
+    display: flex;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+}
+.wallet-stat {
+    text-align: center;
+}
+.wallet-stat-num {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+}
+.wallet-stat-label {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+}
+.wallet-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+/* 转让弹窗 */
+.transfer-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+}
+.transfer-modal.is-open { display: flex; }
+.transfer-box {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    width: 380px;
+    max-width: 92vw;
+}
+.transfer-box h3 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    margin-bottom: var(--space-4);
+}
+.transfer-field {
+    margin-bottom: var(--space-3);
+}
+.transfer-field label {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+.transfer-field input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--fg-primary);
+    font-family: var(--font-mono);
+}
+.transfer-field input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+}
+.transfer-tip {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    margin-top: var(--space-3);
+    line-height: 1.5;
+}
+
+/* 交易记录表 */
+.wallet-section-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: var(--space-5) 0 var(--space-3);
+}
+.tx-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+.tx-table th, .tx-table td {
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.88rem;
+}
+.tx-table th {
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+.tx-table tr:last-child td { border-bottom: none; }
+.tx-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+.tx-type.recharge { background: rgba(0, 255, 157, 0.12); color: var(--accent-primary); }
+.tx-type.spend { background: rgba(255, 100, 100, 0.12); color: var(--accent-danger); }
+.tx-type.transfer { background: rgba(120, 180, 255, 0.12); color: var(--accent-cyan); }
+.tx-type.earn { background: rgba(255, 200, 87, 0.12); color: var(--accent-secondary); }
+.tx-amount.positive { color: var(--accent-primary); font-weight: 700; }
+.tx-amount.negative { color: var(--accent-danger); font-weight: 700; }
+.tx-code {
+    font-family: var(--font-mono);
+    background: var(--bg-base);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+}
+.tx-code:hover { border-color: var(--accent-primary); }
+.tx-empty {
+    text-align: center;
+    padding: var(--space-7);
+    color: var(--fg-muted);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wallet-page">
+    <nav class="lib-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <span class="current">我的钱包</span>
+    </nav>
+
+    {# 余额卡片 #}
+    <div class="wallet-balance-card">
+        <div>
+            <div class="wallet-balance-label">SB 余额</div>
+            <div class="wallet-balance-value">
+                {{ '%.2f'|format(wallet.balance|default(0)|float) }}<span class="unit">SB</span>
+            </div>
+            <div class="wallet-stats" style="margin-top: var(--space-3);">
+                <div class="wallet-stat">
+                    <div class="wallet-stat-num">{{ '%.2f'|format(wallet.total_recharged|default(0)|float) }} SB</div>
+                    <div class="wallet-stat-label">累计获得</div>
+                </div>
+                <div class="wallet-stat">
+                    <div class="wallet-stat-num">{{ '%.2f'|format(wallet.total_spent|default(0)|float) }} SB</div>
+                    <div class="wallet-stat-label">累计消费</div>
+                </div>
+            </div>
+        </div>
+        <div class="wallet-actions">
+            <button type="button" class="btn btn-primary" id="transfer-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                转让 SB
+            </button>
+            <button type="button" class="btn btn-ghost" id="recharge-btn" title="充值渠道已关闭">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                充值
+            </button>
+        </div>
+    </div>
+
+    {# 交易记录 #}
+    <h2 class="wallet-section-title">交易记录</h2>
+    {% if transactions %}
+    <table class="tx-table">
+        <thead>
+            <tr>
+                <th>时间</th>
+                <th>类型</th>
+                <th>金额</th>
+                <th>余额</th>
+                <th>邀请码</th>
+                <th>备注</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tx in transactions %}
+            <tr>
+                <td>{{ tx.created_at.strftime('%Y-%m-%d %H:%M') if tx.created_at else '-' }}</td>
+                <td>
+                    {% if tx.tx_type == 'recharge' %}
+                    <span class="tx-type recharge">获得</span>
+                    {% elif tx.tx_type == 'spend' %}
+                    <span class="tx-type spend">消费</span>
+                    {% elif tx.tx_type == 'transfer_out' %}
+                    <span class="tx-type transfer">转出</span>
+                    {% elif tx.tx_type == 'transfer_in' %}
+                    <span class="tx-type transfer">转入</span>
+                    {% elif tx.tx_type == 'earn' %}
+                    <span class="tx-type earn">收益</span>
+                    {% else %}
+                    <span class="tx-type">{{ tx.tx_type }}</span>
+                    {% endif %}
+                </td>
+                <td class="tx-amount {{ 'positive' if (tx.amount|default(0)|float) > 0 else 'negative' }}">
+                    {{ '%+.2f'|format(tx.amount|default(0)|float) }} SB
+                </td>
+                <td>{{ '%.2f'|format(tx.balance_after|default(0)|float) }} SB</td>
+                <td>
+                    {% if tx.invite_code %}
+                    <span class="tx-code" title="点击复制邀请码" data-code="{{ tx.invite_code }}">{{ tx.invite_code }}</span>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>{{ tx.remark or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="tx-empty">暂无交易记录</div>
+    {% endif %}
+</div>
+
+{# 转让弹窗 #}
+<div class="transfer-modal" id="transfer-modal">
+    <div class="transfer-box">
+        <h3>转让 SB</h3>
+        <div class="transfer-field">
+            <label>接收方用户名</label>
+            <input type="text" id="transfer-username" placeholder="输入对方用户名" autocomplete="off">
+        </div>
+        <div class="transfer-field">
+            <label>转让数量（SB）</label>
+            <input type="number" id="transfer-amount" min="0.01" step="0.01" placeholder="输入 SB 数量">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:var(--space-3);">
+            <button type="button" class="btn btn-primary" id="transfer-confirm" style="flex:1;">确认转让</button>
+            <button type="button" class="btn btn-ghost" id="transfer-cancel">取消</button>
+        </div>
+        <p class="transfer-tip">转让后 SB 将立即到账对方钱包，请确认用户名无误。转让操作不可撤销。</p>
+    </div>
+</div>
+
+<script>
+(function () {
+    // 充值按钮：渠道已关闭，提示无法充值
+    var rechargeBtn = document.getElementById('recharge-btn');
+    if (rechargeBtn) rechargeBtn.addEventListener('click', function () {
+        alert('无法充值！\n\n充值渠道已关闭，平台仅通过注册赠送、收益及转让等方式流通 SB。');
+    });
+
+    // 转让弹窗
+    var modal = document.getElementById('transfer-modal');
+    var openBtn = document.getElementById('transfer-btn');
+    var cancelBtn = document.getElementById('transfer-cancel');
+    var confirmBtn = document.getElementById('transfer-confirm');
+    var usernameInput = document.getElementById('transfer-username');
+    var amountInput = document.getElementById('transfer-amount');
+
+    if (openBtn) openBtn.addEventListener('click', function () {
+        modal.classList.add('is-open');
+        usernameInput.value = '';
+        amountInput.value = '';
+        usernameInput.focus();
+    });
+    if (cancelBtn) cancelBtn.addEventListener('click', function () { modal.classList.remove('is-open'); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('is-open'); });
+
+    if (confirmBtn) confirmBtn.addEventListener('click', function () {
+        var username = usernameInput.value.trim();
+        var amount = parseFloat(amountInput.value);
+        if (!username) { alert('请输入接收方用户名'); return; }
+        if (!amount || amount <= 0) { alert('请输入有效的转让数量'); return; }
+        if (!confirm('确认向用户「' + username + '」转让 ' + amount.toFixed(2) + ' SB？\n\n此操作不可撤销。')) return;
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '处理中...';
+        fetch('{{ url_for("wallet.transfer_sb") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, amount: amount })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '确认转让';
+                if (data.success) {
+                    alert('转让成功！已向「' + username + '」转让 ' + amount.toFixed(2) + ' SB');
+                    modal.classList.remove('is-open');
+                    location.reload();
+                } else {
+                    alert(data.message || '转让失败');
+                }
+            })
+            .catch(function () {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '确认转让';
+                alert('网络错误，请重试');
+            });
+    });
+
+    // 邀请码点击复制
+    document.querySelectorAll('.tx-code').forEach(function (el) {
+        el.addEventListener('click', function () {
+            var code = el.getAttribute('data-code');
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(function () {
+                    alert('邀请码已复制：' + code + '\n请到游戏库输入该邀请码激活游戏');
+                });
+            } else {
+                alert('邀请码：' + code + '\n请到游戏库输入该邀请码激活游戏');
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

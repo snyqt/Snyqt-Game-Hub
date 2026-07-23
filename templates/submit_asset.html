@@ -1,0 +1,2094 @@
+{# submit_asset.html — 提交素材表单页（wakudemo 风格）
+   依赖：
+     - base.html 提供的 blocks: title, head, content, scripts
+     - theme.css 提供的 CSS 变量与组件类（.card / .btn / .input / .tag-chip 等）
+     - _tag_picker.html 提供 window.openTagPicker(options) API
+   后端契约：
+     - POST /api/assets/upload (multipart/form-data)  ← 占位端点，目前不存在（404）
+        字段: title, tagline, description, version, license, category, tags, price,
+              cover, asset_package, previews
+#}
+{% extends "base.html" %}
+
+{% block title %}提交素材{% endblock %}
+
+{% block head %}
+<style>
+/* ==================== 提交素材表单 - 页面级样式 ==================== */
+
+.sap-page {
+    --sap-gap: var(--space-6);
+    --sap-radius: var(--radius-md);
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) calc(var(--space-10) + 64px);
+}
+
+/* ---------- 面包屑 ---------- */
+.sap-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-4);
+    font-family: var(--font-body);
+    flex-wrap: wrap;
+}
+.sap-breadcrumb a {
+    color: var(--fg-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.sap-breadcrumb a:hover { color: var(--accent-primary); text-decoration: none; }
+.sap-breadcrumb .sep { color: var(--fg-muted); opacity: 0.6; }
+.sap-breadcrumb .current { color: var(--fg-primary); font-weight: 600; }
+
+/* ---------- 页头 ---------- */
+.sap-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+}
+.sap-header-text { flex: 1; min-width: 240px; }
+.sap-header h1 {
+    margin: 0 0 var(--space-2);
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--fg-primary) 0%, var(--accent-primary) 120%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+.sap-header .sap-subtitle {
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+.sap-header .sap-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+}
+.sap-header .sap-back-btn:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    transform: translateX(-2px);
+    text-decoration: none;
+}
+.sap-header .sap-back-btn svg { width: 16px; height: 16px; }
+
+/* ---------- 两栏布局 ---------- */
+.sap-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-6);
+    align-items: start;
+}
+.sap-main { min-width: 0; }
+.sap-sidebar {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--space-4));
+    align-self: start;
+}
+
+/* ---------- 表单卡片（区段） ---------- */
+.sap-section {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--sap-radius);
+    padding: var(--space-6);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-2);
+    position: relative;
+    transition: border-color var(--transition-base);
+}
+.sap-section:focus-within {
+    border-color: rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .sap-section:focus-within {
+    border-color: rgba(0, 204, 122, 0.25);
+}
+.sap-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 28px;
+    background: var(--accent-primary);
+    border-radius: 0 0 var(--radius-sm) 0;
+    opacity: 0.7;
+}
+
+.sap-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+}
+.sap-section-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.sap-section-title .sap-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.sap-section-hint {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+
+/* ---------- 表单字段 ---------- */
+.sap-field {
+    margin-bottom: var(--space-5);
+}
+.sap-field:last-child { margin-bottom: 0; }
+.sap-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+}
+.sap-label .req {
+    color: var(--accent-danger);
+    font-size: 0.78rem;
+    line-height: 1;
+}
+.sap-label .sap-counter {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    font-weight: 400;
+}
+.sap-label .sap-counter.is-warn { color: var(--accent-secondary); }
+.sap-label .sap-counter.is-over { color: var(--accent-danger); }
+.sap-help {
+    margin-top: var(--space-2);
+    font-size: 0.76rem;
+    color: var(--fg-muted);
+    line-height: 1.5;
+}
+.sap-input,
+.sap-textarea {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+.sap-input::placeholder,
+.sap-textarea::placeholder { color: var(--fg-muted); }
+.sap-input:focus,
+.sap-textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.12);
+    background: var(--bg-base);
+}
+[data-theme="light"] .sap-input:focus,
+[data-theme="light"] .sap-textarea:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.12);
+}
+.sap-textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.55;
+    font-family: var(--font-body);
+}
+.sap-input:disabled,
+.sap-textarea:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: var(--bg-base);
+}
+
+/* 输入框行内按钮组 */
+.sap-input-with-btn {
+    display: flex;
+    gap: var(--space-2);
+    align-items: stretch;
+    flex-direction: column;
+}
+.sap-input-with-btn .sap-textarea { width: 100%; }
+.sap-md-btn-row {
+    margin-top: var(--space-2);
+}
+
+/* ---------- 拖拽上传区 ---------- */
+.sap-drop {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-7) var(--space-5);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    min-height: 160px;
+}
+.sap-drop:hover {
+    border-color: var(--accent-primary);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+}
+.sap-drop.is-dragover {
+    border-color: var(--accent-primary);
+    background: rgba(0, 255, 157, 0.08);
+    color: var(--accent-primary);
+    transform: scale(1.01);
+}
+[data-theme="light"] .sap-drop.is-dragover {
+    background: rgba(0, 204, 122, 0.06);
+}
+.sap-drop-icon {
+    width: 36px;
+    height: 36px;
+    color: var(--fg-muted);
+    transition: color var(--transition-base);
+}
+.sap-drop:hover .sap-drop-icon,
+.sap-drop.is-dragover .sap-drop-icon {
+    color: var(--accent-primary);
+}
+.sap-drop-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg-secondary);
+}
+.sap-drop-hint {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.sap-drop .sap-browse-link {
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* 封面预览（16:9） */
+.sap-cover-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    margin-bottom: var(--space-3);
+}
+.sap-cover-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.sap-cover-preview .sap-cover-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+}
+.sap-cover-preview .sap-cover-empty svg {
+    width: 36px;
+    height: 36px;
+    opacity: 0.5;
+}
+.sap-cover-preview .sap-cover-remove {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+.sap-cover-preview:hover .sap-cover-remove { opacity: 1; }
+.sap-cover-preview .sap-cover-remove:hover { background: var(--accent-danger); }
+.sap-cover-preview .sap-cover-remove svg { width: 14px; height: 14px; }
+
+/* 素材包文件信息 */
+.sap-pkg-info {
+    display: none;
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-md);
+    background: rgba(0, 255, 157, 0.06);
+    color: var(--fg-primary);
+    font-size: 0.86rem;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+[data-theme="light"] .sap-pkg-info {
+    background: rgba(0, 204, 122, 0.05);
+}
+.sap-pkg-info.is-visible { display: flex; }
+.sap-pkg-info .sap-pkg-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+.sap-pkg-info .sap-pkg-name {
+    flex: 1;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.sap-pkg-info .sap-pkg-size {
+    font-family: var(--font-mono);
+    color: var(--fg-muted);
+    font-size: 0.78rem;
+}
+.sap-pkg-info .sap-pkg-remove {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--fg-muted);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+.sap-pkg-info .sap-pkg-remove:hover {
+    background: rgba(255, 56, 96, 0.15);
+    color: var(--accent-danger);
+}
+.sap-pkg-info .sap-pkg-remove svg { width: 14px; height: 14px; }
+
+/* 预览图网格 */
+.sap-previews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+.sap-preview-item {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+}
+.sap-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.sap-preview-item .sap-preview-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+.sap-preview-item:hover .sap-preview-remove { opacity: 1; }
+.sap-preview-item .sap-preview-remove:hover { background: var(--accent-danger); }
+.sap-preview-item .sap-preview-remove svg { width: 12px; height: 12px; }
+.sap-preview-item .sap-preview-num {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* ---------- 自定义复选框（授权方式） ---------- */
+.sap-check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+.sap-check {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: all var(--transition-fast);
+}
+.sap-check:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+.sap-check input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.sap-check-box {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border-color);
+    background: var(--bg-base);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.sap-check-box::after {
+    content: "";
+    width: 9px;
+    height: 5px;
+    border-left: 2px solid #0a0e1a;
+    border-bottom: 2px solid #0a0e1a;
+    transform: rotate(-45deg) scale(0);
+    margin-top: -2px;
+    transition: transform var(--transition-fast);
+}
+[data-theme="light"] .sap-check-box::after {
+    border-left-color: #ffffff;
+    border-bottom-color: #ffffff;
+}
+.sap-check input:checked + .sap-check-box {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+.sap-check input:checked + .sap-check-box::after {
+    transform: rotate(-45deg) scale(1);
+}
+.sap-check input:focus-visible + .sap-check-box {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+.sap-check:has(input:checked) {
+    background: rgba(0, 255, 157, 0.06);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+[data-theme="light"] .sap-check:has(input:checked) {
+    background: rgba(0, 204, 122, 0.05);
+}
+
+/* ---------- 分类按钮（radio pills） ---------- */
+.sap-category-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+.sap-cat-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.86rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+.sap-cat-pill:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+.sap-cat-pill input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.sap-cat-pill input:checked + .sap-cat-label {
+    color: #0a0e1a;
+}
+[data-theme="light"] .sap-cat-pill input:checked + .sap-cat-label {
+    color: #ffffff;
+}
+.sap-cat-pill:has(input:checked) {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #0a0e1a;
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .sap-cat-pill:has(input:checked) {
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 204, 122, 0.25);
+}
+.sap-cat-pill input:focus-visible + .sap-cat-label {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-pill);
+}
+.sap-cat-label { pointer-events: none; }
+
+/* ---------- 标签区 ---------- */
+.sap-tags-display {
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin-bottom: var(--space-2);
+}
+.sap-tags-display .sap-tags-empty {
+    color: var(--fg-muted);
+    font-size: 0.84rem;
+    font-style: italic;
+}
+.sap-tags-display .sap-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px var(--space-3) 3px var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.sap-tags-display .sap-tag-chip .sap-tag-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+.sap-tags-display .sap-tag-chip .sap-tag-remove:hover {
+    opacity: 1;
+    background: rgba(255, 56, 96, 0.2);
+    color: var(--accent-danger);
+}
+.sap-tags-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+.sap-popular-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin-top: var(--space-2);
+}
+.sap-popular-label {
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: var(--space-1);
+}
+.sap-popular-chip {
+    padding: 2px var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.sap-popular-chip:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+.sap-popular-chip.is-selected {
+    background: rgba(0, 255, 157, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* ---------- 价格输入 ---------- */
+.sap-price-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+.sap-price-input {
+    flex: 1;
+    min-width: 140px;
+    position: relative;
+}
+.sap-price-input .sap-price-prefix {
+    position: absolute;
+    left: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    pointer-events: none;
+}
+.sap-price-input .sap-input { padding-left: calc(var(--space-4) + 14px); }
+.sap-free-btn {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.86rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+.sap-free-btn:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+.sap-free-btn.is-active {
+    background: rgba(0, 255, 157, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+[data-theme="light"] .sap-free-btn.is-active {
+    background: rgba(0, 204, 122, 0.08);
+}
+
+/* ---------- 底部操作栏 ---------- */
+.sap-actions-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-6);
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border-color);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+}
+.sap-actions-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    font-family: var(--font-mono);
+}
+.sap-actions-info .sap-actions-mode {
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+}
+.sap-actions-buttons {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+/* ---------- 右侧帮助侧栏 ---------- */
+.sap-help-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+}
+.sap-help-card h3 {
+    margin: 0 0 var(--space-3);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.sap-help-card h3 .sap-help-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--accent-primary);
+}
+.sap-help-card ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.sap-help-card li {
+    font-size: 0.82rem;
+    color: var(--fg-secondary);
+    line-height: 1.55;
+    padding-left: var(--space-3);
+    position: relative;
+}
+.sap-help-card li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--accent-primary);
+}
+.sap-help-card li strong { color: var(--fg-primary); }
+.sap-help-card li code {
+    background: var(--glass-bg);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--accent-primary);
+}
+
+/* 流程步骤 */
+.sap-help-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+.sap-help-step {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+}
+.sap-help-step .sap-step-num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+.sap-help-step .sap-step-text {
+    font-size: 0.82rem;
+    color: var(--fg-secondary);
+    line-height: 1.5;
+}
+.sap-help-step .sap-step-text strong { color: var(--fg-primary); }
+
+/* 折叠 FAQ */
+.sap-faq-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    overflow: hidden;
+    background: var(--bg-elevated);
+}
+.sap-faq-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    border: none;
+    color: var(--fg-secondary);
+    font-size: 0.84rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+    text-align: left;
+    font-family: inherit;
+}
+.sap-faq-trigger:hover { color: var(--accent-primary); }
+.sap-faq-trigger .sap-faq-icon {
+    width: 14px;
+    height: 14px;
+    transition: transform var(--transition-base);
+    flex-shrink: 0;
+    color: var(--fg-muted);
+}
+.sap-faq-trigger[aria-expanded="true"] .sap-faq-icon {
+    transform: rotate(180deg);
+    color: var(--accent-primary);
+}
+.sap-faq-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-base);
+}
+.sap-faq-content.is-open {
+    max-height: 400px;
+}
+.sap-faq-content-inner {
+    padding: 0 var(--space-4) var(--space-3);
+    font-size: 0.8rem;
+    color: var(--fg-secondary);
+    line-height: 1.55;
+}
+
+/* ---------- 入场动画 ---------- */
+.sap-section {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 400ms ease, transform 400ms ease, border-color var(--transition-base);
+}
+.sap-section.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ---------- Toast ---------- */
+.sap-toast {
+    position: fixed;
+    top: calc(var(--topbar-h) + var(--space-4));
+    right: var(--space-5);
+    z-index: 600;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--fg-muted);
+    box-shadow: var(--shadow-3);
+    color: var(--fg-primary);
+    font-size: 0.88rem;
+    max-width: 360px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity var(--transition-base), transform var(--transition-base);
+}
+.sap-toast.show { opacity: 1; transform: translateX(0); }
+.sap-toast.success { border-left-color: var(--accent-primary); }
+.sap-toast.error { border-left-color: var(--accent-danger); }
+.sap-toast.warning { border-left-color: var(--accent-secondary); }
+.sap-toast.info { border-left-color: var(--accent-cyan); }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1100px) {
+    .sap-layout {
+        grid-template-columns: 1fr;
+    }
+    .sap-sidebar {
+        position: static;
+        order: -1;
+    }
+}
+@media (max-width: 768px) {
+    .sap-page { padding: var(--space-4) var(--space-3) calc(var(--space-10) + 64px); }
+    .sap-section { padding: var(--space-4); }
+    .sap-check-group { flex-direction: column; align-items: stretch; }
+    .sap-actions-bar {
+        padding: var(--space-2) var(--space-3);
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+    }
+    .sap-actions-info { justify-content: center; }
+    .sap-actions-buttons { justify-content: space-between; }
+    .sap-actions-buttons .btn { flex: 1; }
+    .sap-header { flex-direction: column; align-items: stretch; }
+    .sap-header .sap-back-btn { align-self: flex-start; }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .sap-section,
+    .sap-toast,
+    .sap-cat-pill,
+    .sap-drop,
+    .sap-check,
+    .sap-check-box,
+    .sap-check-box::after,
+    .sap-faq-trigger .sap-faq-icon,
+    .sap-faq-content {
+        transition: none !important;
+        animation: none !important;
+    }
+    .sap-section {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{# ==================== 上下文变量准备 ==================== #}
+{% set popular_tags = popular_tags|default([]) %}
+
+<div class="sap-page">
+
+    {# ==================== 面包屑 ==================== #}
+    <nav class="sap-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <a href="{{ url_for('games.creator_center') }}">创作者中心</a>
+        <span class="sep">/</span>
+        <span class="current">提交素材</span>
+    </nav>
+
+    {# ==================== 页头 ==================== #}
+    <header class="sap-header">
+        <div class="sap-header-text">
+            <h1>提交素材</h1>
+            <p class="sap-subtitle">分享游戏素材，助力开发者创作</p>
+        </div>
+        <a href="{{ url_for('games.creator_center') }}" class="sap-back-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            返回创作者中心
+        </a>
+    </header>
+
+    {# ==================== 主体布局 ==================== #}
+    <div class="sap-layout">
+
+        {# ============== 左侧：表单 ============== #}
+        <div class="sap-main">
+
+            <form id="submit-asset-form"
+                  action="/api/assets/upload"
+                  method="post"
+                  enctype="multipart/form-data"
+                  novalidate>
+
+                {# ==================== 1. 基本信息 ==================== #}
+                <section class="sap-section" data-section="basic">
+                    <div class="sap-section-header">
+                        <h2 class="sap-section-title">
+                            <span class="sap-num">01</span>
+                            基本信息
+                        </h2>
+                        <span class="sap-section-hint">玩家首先看到的部分</span>
+                    </div>
+
+                    {# 素材标题 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="field-title">
+                            素材标题 <span class="req">*</span>
+                            <span class="sap-counter" id="title-counter">0 / 100</span>
+                        </label>
+                        <input type="text"
+                               id="field-title"
+                               name="title"
+                               class="sap-input"
+                               maxlength="100"
+                               required
+                               placeholder="例如：奇幻森林像素风 Tilemap 套件"
+                               autocomplete="off">
+                        <p class="sap-help">2-100 个字符。建议使用简短、易记、有辨识度的名称。</p>
+                    </div>
+
+                    {# 一句话卖点 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="field-tagline">
+                            一句话卖点 <span class="req">*</span>
+                            <span class="sap-counter" id="tagline-counter">0 / 200</span>
+                        </label>
+                        <input type="text"
+                               id="field-tagline"
+                               name="tagline"
+                               class="sap-input"
+                               maxlength="200"
+                               required
+                               placeholder="一句话概括素材亮点，将显示在卡片与列表中"
+                               autocomplete="off">
+                        <p class="sap-help">最多 200 字符。用于列表卡片、推荐位、搜索结果。</p>
+                    </div>
+
+                    {# 详细介绍 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="field-description">
+                            详细介绍
+                        </label>
+                        <div class="sap-input-with-btn">
+                            <textarea id="field-description"
+                                      name="description"
+                                      class="sap-textarea"
+                                      placeholder="详细介绍你的素材：内容、规格、适用场景、技术亮点..."></textarea>
+                        </div>
+                        <div class="sap-md-btn-row">
+                            <a href="#" class="btn btn-ghost btn-sm" aria-disabled="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                </svg>
+                                打开 Markdown 编辑器
+                            </a>
+                        </div>
+                        <p class="sap-help">支持 Markdown 语法，可在外部编辑后粘贴回此处。</p>
+                    </div>
+
+                    {# 版本号 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="field-version">
+                            版本号
+                        </label>
+                        <input type="text"
+                               id="field-version"
+                               name="version"
+                               class="sap-input"
+                               value="1.0.0"
+                               placeholder="1.0.0"
+                               pattern="^\d+\.\d+\.\d+([\-\.][\w\.]+)?$">
+                        <p class="sap-help">遵循语义化版本（<code>主.次.修订</code>），如 <code>1.0.0</code>、<code>2.1.3-beta</code>。</p>
+                    </div>
+
+                    {# 授权方式 #}
+                    <div class="sap-field">
+                        <label class="sap-label">授权方式</label>
+                        <div class="sap-check-group" id="license-group">
+                            <label class="sap-check">
+                                <input type="checkbox" name="license" value="commercial">
+                                <span class="sap-check-box"></span>
+                                可商用
+                            </label>
+                            <label class="sap-check">
+                                <input type="checkbox" name="license" value="attribution">
+                                <span class="sap-check-box"></span>
+                                需署名
+                            </label>
+                            <label class="sap-check">
+                                <input type="checkbox" name="license" value="no-redistribute">
+                                <span class="sap-check-box"></span>
+                                禁止二次分发
+                            </label>
+                        </div>
+                        <p class="sap-help">可多选。授权信息将展示在素材详情页。</p>
+                        {# 隐藏字段：用于序列化 license 为逗号分隔字符串 #}
+                        <input type="hidden" id="license-hidden" name="license_serialized" value="">
+                    </div>
+                </section>
+
+                {# ==================== 2. 封面与文件 ==================== #}
+                <section class="sap-section" data-section="files">
+                    <div class="sap-section-header">
+                        <h2 class="sap-section-title">
+                            <span class="sap-num">02</span>
+                            封面与文件
+                        </h2>
+                        <span class="sap-section-hint">16:9 推荐 · 单文件 ≤ 4GB</span>
+                    </div>
+
+                    {# 封面图 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="cover-input">
+                            封面图 <span class="req">*</span>
+                            <span class="sap-counter" id="cover-status">未选择</span>
+                        </label>
+                        <div class="sap-cover-preview" id="cover-preview">
+                            <div class="sap-cover-empty" id="cover-empty">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                                <span>16:9 · 点击下方区域上传封面</span>
+                            </div>
+                            <button type="button" class="sap-cover-remove" id="cover-remove" hidden aria-label="移除封面">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="sap-drop" id="cover-drop" tabindex="0" role="button" aria-label="上传封面图">
+                            <svg class="sap-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <path d="M17 8l-5-5-5 5"/>
+                                <path d="M12 3v12"/>
+                            </svg>
+                            <div class="sap-drop-title">拖拽图片到此处，或 <span class="sap-browse-link">点击上传</span></div>
+                            <div class="sap-drop-hint">支持 JPG / PNG / GIF / WEBP · 最大 10MB · 推荐 1920×1080</div>
+                            <input type="file" id="cover-input" name="cover" accept="image/*" hidden>
+                        </div>
+                    </div>
+
+                    {# 素材包 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="pkg-input">
+                            素材包 <span class="req">*</span>
+                            <span class="sap-counter" id="pkg-status">未选择</span>
+                        </label>
+                        <div class="sap-drop" id="pkg-drop" tabindex="0" role="button" aria-label="上传素材包">
+                            <svg class="sap-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <path d="M17 8l-5-5-5 5"/>
+                                <path d="M12 3v12"/>
+                            </svg>
+                            <div class="sap-drop-title">拖拽素材包到此处，或 <span class="sap-browse-link">点击上传</span></div>
+                            <div class="sap-drop-hint">支持 zip / rar / 7z / unitypackage · 最大 4096MB（4GB）· 仅限单文件</div>
+                            <input type="file" id="pkg-input" name="asset_package" accept=".zip,.rar,.7z,.unitypackage" hidden>
+                        </div>
+                        <div class="sap-pkg-info" id="pkg-info">
+                            <svg class="sap-pkg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                <path d="M3.27 6.96L12 12.01l8.73-5.05"/>
+                                <path d="M12 22.08V12"/>
+                            </svg>
+                            <span class="sap-pkg-name" id="pkg-name"></span>
+                            <span class="sap-pkg-size" id="pkg-size"></span>
+                            <button type="button" class="sap-pkg-remove" id="pkg-remove" aria-label="移除素材包">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {# 预览图 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="previews-input">
+                            预览图 <span class="req">*</span>
+                            <span class="sap-counter" id="previews-counter">0 / 10（至少 3 张）</span>
+                        </label>
+                        <div class="sap-previews-grid" id="previews-grid"></div>
+                        <div class="sap-drop" id="previews-drop" tabindex="0" role="button" aria-label="上传预览图">
+                            <svg class="sap-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                            <div class="sap-drop-title">拖拽多张图片到此处，或 <span class="sap-browse-link">点击上传</span></div>
+                            <div class="sap-drop-hint">3-10 张 · 每张 ≤ 10MB · 4:3 推荐</div>
+                            <input type="file" id="previews-input" name="previews" accept="image/*" multiple hidden>
+                        </div>
+                    </div>
+                </section>
+
+                {# ==================== 3. 分类与标签 ==================== #}
+                <section class="sap-section" data-section="category">
+                    <div class="sap-section-header">
+                        <h2 class="sap-section-title">
+                            <span class="sap-num">03</span>
+                            分类与标签
+                        </h2>
+                        <span class="sap-section-hint">帮助玩家快速找到你的素材</span>
+                    </div>
+
+                    {# 分类 #}
+                    <div class="sap-field">
+                        <label class="sap-label">分类 <span class="req">*</span></label>
+                        <div class="sap-category-row" id="category-row">
+                            {% set _cats = ['角色', '场景', 'UI', '音效', '特效', '工具'] %}
+                            {% for cat in _cats %}
+                            <label class="sap-cat-pill">
+                                <input type="radio" name="category" value="{{ cat }}" required>
+                                <span class="sap-cat-label">{{ cat }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <p class="sap-help">选择一个分类（必选）。</p>
+                        {# 隐藏字段：保存分类选择 #}
+                        <input type="hidden" id="category-hidden" name="category_value" value="">
+                    </div>
+
+                    {# 价格 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="field-price">价格（元）</label>
+                        <div class="sap-price-row">
+                            <div class="sap-price-input">
+                                <span class="sap-price-prefix">¥</span>
+                                <input type="number"
+                                       id="field-price"
+                                       name="price"
+                                       class="sap-input"
+                                       value="0"
+                                       min="0"
+                                       step="0.01"
+                                       placeholder="0.00">
+                            </div>
+                            <button type="button" class="sap-free-btn" id="free-btn">设为免费</button>
+                        </div>
+                        <p class="sap-help">价格为 0 表示免费下载。付费素材将进入审核流程。</p>
+                    </div>
+
+                    {# 标签 #}
+                    <div class="sap-field">
+                        <label class="sap-label" for="tags-trigger">
+                            标签 <span class="req">*</span>
+                            <span class="sap-counter" id="tags-count">0 / 20</span>
+                        </label>
+                        <div class="sap-tags-display" id="tags-display">
+                            <span class="sap-tags-empty">尚未选择标签</span>
+                        </div>
+                        <div class="sap-tags-actions">
+                            <button type="button" class="btn btn-primary btn-sm" id="tags-trigger">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                选择标签
+                            </button>
+                            <span class="sap-help" style="margin:0;">已选标签将以芯片形式展示，点击 × 可移除</span>
+                        </div>
+                        {% if popular_tags %}
+                        <div class="sap-popular-row">
+                            <span class="sap-popular-label">推荐:</span>
+                            {% for tag in popular_tags %}
+                            <button type="button" class="sap-popular-chip" data-popular-tag="{{ tag }}">{{ tag }}</button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <input type="hidden" name="tags" id="tags-hidden" value="">
+                    </div>
+                </section>
+
+            </form>
+        </div>
+
+        {# ============== 右侧：帮助侧栏 ============== #}
+        <aside class="sap-sidebar" aria-label="提交帮助">
+
+            {# 提交指南 #}
+            <div class="sap-help-card">
+                <h3>
+                    <svg class="sap-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    素材提交指南
+                </h3>
+                <ul>
+                    <li><strong>标题</strong>：2-100 字符，避免与已有素材重名</li>
+                    <li><strong>一句话卖点</strong>：突出核心价值，吸引点击</li>
+                    <li><strong>封面图</strong>：16:9 比例，≤ 10MB</li>
+                    <li><strong>预览图</strong>：3-10 张，每张 ≤ 10MB</li>
+                    <li><strong>素材包</strong>：≤ 4GB，建议附带 README</li>
+                </ul>
+            </div>
+
+            {# 文件格式要求 #}
+            <div class="sap-help-card">
+                <h3>
+                    <svg class="sap-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                    </svg>
+                    文件格式要求
+                </h3>
+                <ul>
+                    <li>封面 / 预览图：JPG / PNG / GIF / WEBP</li>
+                    <li>素材包：<code>.zip</code> / <code>.rar</code> / <code>.7z</code> / <code>.unitypackage</code></li>
+                    <li>封面大小：≤ <strong>10MB</strong></li>
+                    <li>预览图大小：每张 ≤ <strong>10MB</strong></li>
+                    <li>素材包大小：≤ <strong>4096MB（4GB）</strong></li>
+                    <li>预览图数量：3 - 10 张</li>
+                </ul>
+            </div>
+
+            {# 审核流程 #}
+            <div class="sap-help-card">
+                <h3>
+                    <svg class="sap-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M9 12l2 2 4-4"/>
+                        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.68.94 6.36 2.64"/>
+                    </svg>
+                    审核流程
+                </h3>
+                <div class="sap-help-steps">
+                    <div class="sap-help-step">
+                        <span class="sap-step-num">1</span>
+                        <span class="sap-step-text"><strong>提交</strong>：填写完成后点击「提交素材」</span>
+                    </div>
+                    <div class="sap-help-step">
+                        <span class="sap-step-num">2</span>
+                        <span class="sap-step-text"><strong>审核</strong>：管理员审核内容合规性与文件完整性</span>
+                    </div>
+                    <div class="sap-help-step">
+                        <span class="sap-step-num">3</span>
+                        <span class="sap-step-text"><strong>上架</strong>：审核通过后素材将对所有用户可见</span>
+                    </div>
+                </div>
+            </div>
+
+            {# 常见问题 FAQ #}
+            <div class="sap-help-card">
+                <h3>
+                    <svg class="sap-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M9 09c0-1.66 1.34-3 3-3s3 1.34 3 3c0 1-.5 2-2 2-1 0-2 1-2 2v1"/>
+                        <circle cx="12" cy="17" r=".5"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    常见问题
+                </h3>
+                <div class="sap-faq-item">
+                    <button type="button" class="sap-faq-trigger" aria-expanded="false" aria-controls="faq-1">
+                        <span>素材包支持哪些格式？</span>
+                        <svg class="sap-faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="sap-faq-content" id="faq-1">
+                        <div class="sap-faq-content-inner">
+                            支持 <code>.zip</code>、<code>.rar</code>、<code>.7z</code>、<code>.unitypackage</code> 四种主流打包格式，最大 4GB。建议在压缩包内放置 README 说明文件。
+                        </div>
+                    </div>
+                </div>
+                <div class="sap-faq-item">
+                    <button type="button" class="sap-faq-trigger" aria-expanded="false" aria-controls="faq-2">
+                        <span>预览图有什么要求？</span>
+                        <svg class="sap-faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="sap-faq-content" id="faq-2">
+                        <div class="sap-faq-content-inner">
+                            至少 3 张、最多 10 张预览图，每张不超过 10MB。建议 4:3 比例，清晰展示素材内容。
+                        </div>
+                    </div>
+                </div>
+                <div class="sap-faq-item">
+                    <button type="button" class="sap-faq-trigger" aria-expanded="false" aria-controls="faq-3">
+                        <span>授权方式如何选择？</span>
+                        <svg class="sap-faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="sap-faq-content" id="faq-3">
+                        <div class="sap-faq-content-inner">
+                            支持多选：<strong>可商用</strong>（允许商业用途）、<strong>需署名</strong>（使用时需注明作者）、<strong>禁止二次分发</strong>（不得再次分发或转售）。
+                        </div>
+                    </div>
+                </div>
+                <div class="sap-faq-item">
+                    <button type="button" class="sap-faq-trigger" aria-expanded="false" aria-controls="faq-4">
+                        <span>审核需要多长时间？</span>
+                        <svg class="sap-faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="sap-faq-content" id="faq-4">
+                        <div class="sap-faq-content-inner">
+                            一般 1-3 个工作日内完成审核。付费素材或可疑内容可能延长。审核结果将通过通知告知。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    {# ==================== 底部操作栏 ==================== #}
+    <div class="sap-actions-bar">
+        <div class="sap-actions-info">
+            <span>当前模式:</span>
+            <span class="sap-actions-mode" id="actions-mode">素材 · 提交申请</span>
+        </div>
+        <div class="sap-actions-buttons">
+            <a href="{{ url_for('games.creator_center') }}" class="btn btn-ghost">取消</a>
+            <button type="submit" class="btn btn-primary" id="btn-submit" form="submit-asset-form">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+                提交素材
+            </button>
+        </div>
+    </div>
+
+    {# Toast 容器 #}
+    <div id="sap-toast" class="sap-toast" role="status" aria-live="polite"></div>
+</div>
+
+{# ==================== 标签选择弹窗 ==================== #}
+{% include '_tag_picker.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    /* ============================================================
+       上下文数据 & 工具函数
+       ============================================================ */
+    var popularTagsData = {{ popular_tags|tojson }};
+
+    /* ---------- Toast ---------- */
+    var toastEl = document.getElementById('sap-toast');
+    var toastTimer = null;
+    function showToast(msg, type) {
+        type = type || 'info';
+        toastEl.textContent = msg;
+        toastEl.className = 'sap-toast ' + type;
+        void toastEl.offsetWidth;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3800);
+    }
+    if (!window.showToast) window.showToast = showToast;
+
+    /* ---------- 文件大小 / 类型校验 ---------- */
+    var MAX = {
+        cover: 10 * 1024 * 1024,
+        preview: 10 * 1024 * 1024,
+        pkg: 4096 * 1024 * 1024
+    };
+    var IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    var PKG_EXTS = ['zip', 'rar', '7z', 'unitypackage'];
+    var MIN_PREVIEWS = 3;
+    var MAX_PREVIEWS = 10;
+    var MAX_TAGS = 20;
+
+    function getExt(name) {
+        var i = (name || '').lastIndexOf('.');
+        return i >= 0 ? name.slice(i + 1).toLowerCase() : '';
+    }
+    function formatSize(bytes) {
+        if (!bytes) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    }
+    function isValidImage(file) {
+        return IMAGE_EXTS.indexOf(getExt(file.name)) >= 0 && /^image\//.test(file.type);
+    }
+    function isValidPkg(file) {
+        return PKG_EXTS.indexOf(getExt(file.name)) >= 0;
+    }
+
+    /* ============================================================
+       入场动画（IntersectionObserver）
+       ============================================================ */
+    var sections = document.querySelectorAll('.sap-section');
+    if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    e.target.classList.add('is-visible');
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+        sections.forEach(function (s, i) {
+            s.style.transitionDelay = (i * 40) + 'ms';
+            io.observe(s);
+        });
+    } else {
+        sections.forEach(function (s) { s.classList.add('is-visible'); });
+    }
+
+    /* ============================================================
+       字符计数器
+       ============================================================ */
+    function bindCounter(input, counterId, max) {
+        var counter = document.getElementById(counterId);
+        if (!input || !counter) return;
+        function update() {
+            var len = (input.value || '').length;
+            counter.textContent = len + ' / ' + max;
+            counter.classList.toggle('is-warn', len > max * 0.85);
+            counter.classList.toggle('is-over', len > max);
+        }
+        input.addEventListener('input', update);
+        update();
+    }
+    bindCounter(document.getElementById('field-title'), 'title-counter', 100);
+    bindCounter(document.getElementById('field-tagline'), 'tagline-counter', 200);
+
+    /* ============================================================
+       封面上传
+       ============================================================ */
+    var coverInput = document.getElementById('cover-input');
+    var coverDrop = document.getElementById('cover-drop');
+    var coverPreview = document.getElementById('cover-preview');
+    var coverEmpty = document.getElementById('cover-empty');
+    var coverRemove = document.getElementById('cover-remove');
+    var coverStatus = document.getElementById('cover-status');
+    var coverFile = null;
+
+    function setCoverPreview(url) {
+        var img = coverPreview.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            img.alt = '封面预览';
+            coverPreview.insertBefore(img, coverRemove);
+        }
+        img.src = url;
+        coverEmpty.hidden = true;
+        coverRemove.hidden = false;
+    }
+    function clearCoverPreview() {
+        var img = coverPreview.querySelector('img');
+        if (img) img.remove();
+        coverEmpty.hidden = false;
+        coverRemove.hidden = true;
+        coverStatus.textContent = '未选择';
+        coverFile = null;
+        coverInput.value = '';
+    }
+    function handleCoverFile(file) {
+        if (!file) return;
+        if (!isValidImage(file)) {
+            showToast('封面仅支持 JPG / PNG / GIF / WEBP 格式', 'error');
+            return;
+        }
+        if (file.size > MAX.cover) {
+            showToast('封面图大小不能超过 10MB（当前 ' + formatSize(file.size) + '）', 'error');
+            return;
+        }
+        coverFile = file;
+        var reader = new FileReader();
+        reader.onload = function (e) { setCoverPreview(e.target.result); };
+        reader.onerror = function () { showToast('封面图读取失败', 'error'); };
+        reader.readAsDataURL(file);
+        coverStatus.textContent = formatSize(file.size);
+    }
+    coverInput.addEventListener('change', function () {
+        if (coverInput.files && coverInput.files[0]) handleCoverFile(coverInput.files[0]);
+    });
+    coverDrop.addEventListener('click', function () { coverInput.click(); });
+    coverDrop.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); coverInput.click(); }
+    });
+    coverDrop.addEventListener('dragover', function (e) {
+        e.preventDefault(); coverDrop.classList.add('is-dragover');
+    });
+    coverDrop.addEventListener('dragleave', function () { coverDrop.classList.remove('is-dragover'); });
+    coverDrop.addEventListener('drop', function (e) {
+        e.preventDefault(); coverDrop.classList.remove('is-dragover');
+        var f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) handleCoverFile(f);
+    });
+    coverRemove.addEventListener('click', function (e) {
+        e.stopPropagation(); clearCoverPreview();
+    });
+
+    /* ============================================================
+       素材包上传
+       ============================================================ */
+    var pkgInput = document.getElementById('pkg-input');
+    var pkgDrop = document.getElementById('pkg-drop');
+    var pkgInfo = document.getElementById('pkg-info');
+    var pkgName = document.getElementById('pkg-name');
+    var pkgSize = document.getElementById('pkg-size');
+    var pkgStatus = document.getElementById('pkg-status');
+    var pkgRemove = document.getElementById('pkg-remove');
+
+    function setPkgFile(file) {
+        if (!file) return;
+        if (!isValidPkg(file)) {
+            showToast('素材包仅支持 zip / rar / 7z / unitypackage 格式', 'error');
+            return;
+        }
+        if (file.size > MAX.pkg) {
+            showToast('素材包大小不能超过 4GB（当前 ' + formatSize(file.size) + '）', 'error');
+            return;
+        }
+        // 通过 DataTransfer 赋值给 input 以便表单提交
+        var dt = new DataTransfer();
+        dt.items.add(file);
+        pkgInput.files = dt.files;
+        pkgName.textContent = file.name;
+        pkgSize.textContent = formatSize(file.size);
+        pkgInfo.classList.add('is-visible');
+        pkgStatus.textContent = '已选择';
+        showToast('已选择素材包：' + file.name, 'success');
+    }
+    function clearPkgFile() {
+        pkgInput.value = '';
+        pkgInfo.classList.remove('is-visible');
+        pkgStatus.textContent = '未选择';
+    }
+    pkgInput.addEventListener('change', function () {
+        if (pkgInput.files && pkgInput.files[0]) {
+            setPkgFile(pkgInput.files[0]);
+        }
+    });
+    pkgDrop.addEventListener('click', function () { pkgInput.click(); });
+    pkgDrop.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pkgInput.click(); }
+    });
+    pkgDrop.addEventListener('dragover', function (e) {
+        e.preventDefault(); pkgDrop.classList.add('is-dragover');
+    });
+    pkgDrop.addEventListener('dragleave', function () { pkgDrop.classList.remove('is-dragover'); });
+    pkgDrop.addEventListener('drop', function (e) {
+        e.preventDefault(); pkgDrop.classList.remove('is-dragover');
+        var f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) setPkgFile(f);
+    });
+    pkgRemove.addEventListener('click', function (e) {
+        e.stopPropagation();
+        clearPkgFile();
+    });
+
+    /* ============================================================
+       预览图上传
+       ============================================================ */
+    var previewsInput = document.getElementById('previews-input');
+    var previewsDrop = document.getElementById('previews-drop');
+    var previewsGrid = document.getElementById('previews-grid');
+    var previewsCounter = document.getElementById('previews-counter');
+    var previewFiles = [];
+
+    function renderPreviews() {
+        previewsGrid.innerHTML = '';
+        previewsCounter.textContent = previewFiles.length + ' / 10（至少 ' + MIN_PREVIEWS + ' 张）';
+        previewFiles.forEach(function (file, idx) {
+            var item = document.createElement('div');
+            item.className = 'sap-preview-item';
+
+            var img = document.createElement('img');
+            img.alt = '预览图 ' + (idx + 1);
+            img.src = URL.createObjectURL(file);
+            item.appendChild(img);
+
+            var numEl = document.createElement('span');
+            numEl.className = 'sap-preview-num';
+            numEl.textContent = idx + 1;
+            item.appendChild(numEl);
+
+            var rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'sap-preview-remove';
+            rm.setAttribute('aria-label', '移除预览图 ' + (idx + 1));
+            rm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+            rm.addEventListener('click', function () {
+                URL.revokeObjectURL(img.src);
+                previewFiles.splice(idx, 1);
+                renderPreviews();
+            });
+            item.appendChild(rm);
+            previewsGrid.appendChild(item);
+        });
+    }
+    function addPreviewFiles(files) {
+        var arr = Array.prototype.slice.call(files || []);
+        if (previewFiles.length >= MAX_PREVIEWS) {
+            showToast('最多只能上传 ' + MAX_PREVIEWS + ' 张预览图', 'warning');
+            return;
+        }
+        for (var i = 0; i < arr.length; i++) {
+            if (previewFiles.length >= MAX_PREVIEWS) {
+                showToast('已达到最多 ' + MAX_PREVIEWS + ' 张预览图', 'warning');
+                break;
+            }
+            var f = arr[i];
+            if (!isValidImage(f)) {
+                showToast('文件 ' + f.name + ' 不是有效图片', 'error');
+                continue;
+            }
+            if (f.size > MAX.preview) {
+                showToast('文件 ' + f.name + ' 超过 10MB（' + formatSize(f.size) + '）', 'error');
+                continue;
+            }
+            previewFiles.push(f);
+        }
+        renderPreviews();
+    }
+    previewsInput.addEventListener('change', function () {
+        if (previewsInput.files) addPreviewFiles(previewsInput.files);
+        previewsInput.value = '';
+    });
+    previewsDrop.addEventListener('click', function () { previewsInput.click(); });
+    previewsDrop.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); previewsInput.click(); }
+    });
+    previewsDrop.addEventListener('dragover', function (e) {
+        e.preventDefault(); previewsDrop.classList.add('is-dragover');
+    });
+    previewsDrop.addEventListener('dragleave', function () { previewsDrop.classList.remove('is-dragover'); });
+    previewsDrop.addEventListener('drop', function (e) {
+        e.preventDefault(); previewsDrop.classList.remove('is-dragover');
+        if (e.dataTransfer.files) addPreviewFiles(e.dataTransfer.files);
+    });
+
+    /* ============================================================
+       分类 & 标签
+       ============================================================ */
+    var tagsHidden = document.getElementById('tags-hidden');
+    var tagsDisplay = document.getElementById('tags-display');
+    var tagsCount = document.getElementById('tags-count');
+    var tagsTrigger = document.getElementById('tags-trigger');
+    var popularChips = document.querySelectorAll('.sap-popular-chip');
+    var catRadios = document.querySelectorAll('input[name="category"]');
+    var categoryHidden = document.getElementById('category-hidden');
+    var selectedTags = [];
+    var categoryValue = '';
+
+    function renderTags() {
+        tagsDisplay.innerHTML = '';
+        if (!selectedTags.length) {
+            var empty = document.createElement('span');
+            empty.className = 'sap-tags-empty';
+            empty.textContent = '尚未选择标签';
+            tagsDisplay.appendChild(empty);
+        } else {
+            selectedTags.forEach(function (name) {
+                var chip = document.createElement('span');
+                chip.className = 'sap-tag-chip';
+                chip.textContent = name;
+                var rm = document.createElement('button');
+                rm.type = 'button';
+                rm.className = 'sap-tag-remove';
+                rm.setAttribute('aria-label', '移除标签 ' + name);
+                rm.textContent = '×';
+                rm.addEventListener('click', function () {
+                    var idx = selectedTags.indexOf(name);
+                    if (idx >= 0) selectedTags.splice(idx, 1);
+                    renderTags();
+                });
+                chip.appendChild(rm);
+                tagsDisplay.appendChild(chip);
+            });
+        }
+        tagsCount.textContent = selectedTags.length + ' / ' + MAX_TAGS;
+        tagsHidden.value = selectedTags.join(',');
+        // 同步热门芯片选中态
+        popularChips.forEach(function (c) {
+            c.classList.toggle('is-selected', selectedTags.indexOf(c.dataset.popularTag) >= 0);
+        });
+    }
+    function addTag(name) {
+        name = (name || '').trim();
+        if (!name) return;
+        if (selectedTags.indexOf(name) >= 0) return;
+        if (selectedTags.length >= MAX_TAGS) {
+            showToast('最多选择 ' + MAX_TAGS + ' 个标签', 'warning');
+            return;
+        }
+        selectedTags.push(name);
+        renderTags();
+    }
+
+    // 标签选择弹窗
+    tagsTrigger.addEventListener('click', function () {
+        window.openTagPicker({
+            selectedTags: selectedTags.slice(),
+            popularTags: popularTagsData,
+            maxTags: MAX_TAGS,
+            onConfirm: function (tags, names) {
+                selectedTags = names.slice();
+                renderTags();
+            }
+        });
+    });
+
+    // 热门标签快速点击
+    popularChips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            var name = chip.dataset.popularTag;
+            if (selectedTags.indexOf(name) >= 0) {
+                // 已选则移除
+                var idx = selectedTags.indexOf(name);
+                selectedTags.splice(idx, 1);
+                renderTags();
+            } else {
+                addTag(name);
+            }
+        });
+    });
+
+    // 分类单选
+    catRadios.forEach(function (r) {
+        r.addEventListener('change', function () {
+            if (r.checked) {
+                categoryValue = r.value;
+                categoryHidden.value = r.value;
+            }
+        });
+    });
+
+    renderTags();
+
+    /* ============================================================
+       授权方式 - 同步到隐藏字段
+       ============================================================ */
+    var licenseCheckboxes = document.querySelectorAll('input[name="license"]');
+    var licenseHidden = document.getElementById('license-hidden');
+    function syncLicense() {
+        var values = [];
+        licenseCheckboxes.forEach(function (cb) {
+            if (cb.checked) values.push(cb.value);
+        });
+        licenseHidden.value = values.join(',');
+    }
+    licenseCheckboxes.forEach(function (cb) {
+        cb.addEventListener('change', syncLicense);
+    });
+    syncLicense();
+
+    /* ============================================================
+       价格 - 免费按钮
+       ============================================================ */
+    var priceInput = document.getElementById('field-price');
+    var freeBtn = document.getElementById('free-btn');
+    function syncFreeBtn() {
+        var v = parseFloat(priceInput.value);
+        freeBtn.classList.toggle('is-active', !isNaN(v) && v === 0);
+    }
+    priceInput.addEventListener('input', syncFreeBtn);
+    freeBtn.addEventListener('click', function () {
+        priceInput.value = '0';
+        syncFreeBtn();
+        showToast('已设为免费', 'success');
+    });
+    syncFreeBtn();
+
+    /* ============================================================
+       FAQ 折叠
+       ============================================================ */
+    var faqTriggers = document.querySelectorAll('.sap-faq-trigger');
+    faqTriggers.forEach(function (trigger) {
+        trigger.addEventListener('click', function () {
+            var isOpen = trigger.getAttribute('aria-expanded') === 'true';
+            trigger.setAttribute('aria-expanded', String(!isOpen));
+            var content = document.getElementById(trigger.getAttribute('aria-controls'));
+            if (content) content.classList.toggle('is-open', !isOpen);
+        });
+    });
+
+    /* ============================================================
+       表单提交校验 & 提交
+       ============================================================ */
+    var form = document.getElementById('submit-asset-form');
+    var btnSubmit = document.getElementById('btn-submit');
+
+    // 提交前同步 previews：使用 DataTransfer 把所有 File 合并到 input
+    function syncPreviewsInput() {
+        var dt = new DataTransfer();
+        previewFiles.forEach(function (f) { dt.items.add(f); });
+        previewsInput.files = dt.files;
+    }
+
+    function validate() {
+        var title = document.getElementById('field-title').value.trim();
+        if (!title) {
+            showToast('请填写素材标题', 'error');
+            document.getElementById('field-title').focus();
+            return false;
+        }
+        if (title.length < 2) {
+            showToast('标题至少 2 个字符', 'error');
+            return false;
+        }
+        var tagline = document.getElementById('field-tagline').value.trim();
+        if (!tagline) {
+            showToast('请填写一句话卖点', 'error');
+            document.getElementById('field-tagline').focus();
+            return false;
+        }
+        // 分类必选
+        var catChecked = document.querySelector('input[name="category"]:checked');
+        if (!catChecked) {
+            showToast('请选择分类', 'error');
+            return false;
+        }
+        // 标签必选
+        if (!selectedTags.length) {
+            showToast('请至少选择一个标签', 'error');
+            return false;
+        }
+        // 封面必选
+        if (!coverFile) {
+            showToast('请上传封面图', 'error');
+            return false;
+        }
+        // 素材包必选
+        if (!pkgInput.files || !pkgInput.files.length) {
+            showToast('请上传素材包', 'error');
+            return false;
+        }
+        // 预览图数量校验
+        if (previewFiles.length < MIN_PREVIEWS) {
+            showToast('预览图至少需要 ' + MIN_PREVIEWS + ' 张（当前 ' + previewFiles.length + ' 张）', 'error');
+            return false;
+        }
+        // 版本号格式
+        var version = document.getElementById('field-version').value.trim();
+        if (version && !/^\d+\.\d+\.\d+([\-\.][\w\.]+)?$/.test(version)) {
+            showToast('版本号格式无效，应为 X.Y.Z', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    // 拦截表单原生 submit 以做最终校验 + 友好的 404 提示
+    form.addEventListener('submit', function (e) {
+        if (!validate()) {
+            e.preventDefault();
+            return;
+        }
+        syncPreviewsInput();
+
+        // 提交中状态
+        btnSubmit.disabled = true;
+        var originalHTML = btnSubmit.innerHTML;
+        btnSubmit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14" class="sap-spinner"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> 提交中…';
+        showToast('正在提交…', 'info');
+
+        // 通过 fetch 提交以便处理 404 友好提示
+        e.preventDefault();
+        var formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        }).then(function (res) {
+            if (res.status === 404) {
+                // 占位端点 - 后端尚未实现
+                throw new Error('ENDPOINT_NOT_FOUND');
+            }
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+            // 尝试解析 JSON
+            var ct = res.headers.get('content-type') || '';
+            if (ct.indexOf('application/json') >= 0) {
+                return res.json();
+            }
+            return { success: true };
+        }).then(function (data) {
+            if (data && data.success === false) {
+                showToast(data.message || '提交失败', 'error');
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalHTML;
+                return;
+            }
+            showToast('素材提交成功，已上线素材库', 'success');
+            // 跳转回创作者中心
+            setTimeout(function () {
+                window.location.href = '{{ url_for("games.creator_center") }}';
+            }, 1500);
+        }).catch(function (err) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = originalHTML;
+            if (err && err.message === 'ENDPOINT_NOT_FOUND') {
+                showToast('上传接口未找到，请检查路由配置', 'warning');
+            } else if (err && err.name === 'TypeError') {
+                showToast('网络错误：' + (err.message || '请求失败'), 'error');
+            } else {
+                showToast('提交失败：' + (err && err.message || '未知错误'), 'error');
+            }
+        });
+    });
+
+    /* ============================================================
+       Spinner 样式（动态注入）
+       ============================================================ */
+    var spinnerStyle = document.createElement('style');
+    spinnerStyle.textContent = '.sap-spinner { animation: sap-spin 0.8s linear infinite; }' +
+        '@keyframes sap-spin { to { transform: rotate(360deg); } }' +
+        '@media (prefers-reduced-motion: reduce) { .sap-spinner { animation: none !important; } }';
+    document.head.appendChild(spinnerStyle);
+
+})();
+</script>
+{% endblock %}

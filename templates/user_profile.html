@@ -1,0 +1,1999 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile_user.username|default('用户') }}的个人主页{% endblock %}
+
+{% block head %}
+<style>
+/* ====================================================================
+   个人主页（user_profile.html）页面专属样式
+   设计方向：Editorial Tech · 深空蓝主调 + 函数绿脉冲 + 积分金点缀
+   依赖 theme.css 的变量与组件类，全部使用 CSS 变量（不硬编码颜色）
+   ==================================================================== */
+
+.profile-page {
+    --post-type-color: var(--accent-primary);
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) var(--space-10);
+}
+
+/* ==================== 1. Profile Header ==================== */
+.profile-header {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-2);
+}
+
+/* 封面横幅 */
+.profile-banner {
+    height: 200px;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(0, 255, 157, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 30%, rgba(255, 200, 87, 0.12) 0%, transparent 50%),
+        linear-gradient(135deg, #0a0e1a 0%, #131829 60%, #1a2240 100%);
+    position: relative;
+    overflow: hidden;
+}
+[data-theme="light"] .profile-banner {
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(0, 204, 122, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 30%, rgba(212, 160, 23, 0.14) 0%, transparent 50%),
+        linear-gradient(135deg, #e8eefc 0%, #f7f8fc 60%, #ffffff 100%);
+}
+.profile-banner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0, 255, 157, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 157, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+}
+
+.profile-header-inner {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-5);
+    padding: 0 var(--space-6) var(--space-5);
+    margin-top: -60px;
+    position: relative;
+    flex-wrap: wrap;
+}
+
+/* 头像 */
+.profile-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    border: 4px solid var(--bg-elevated);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.profile-avatar .avatar-letter {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 3rem;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+/* 开发者徽章（头像右下角） */
+.dev-badge-corner {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: var(--bg-elevated);
+    border: 2px solid var(--accent-primary);
+    color: var(--accent-primary);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.7rem;
+    box-shadow: var(--shadow-2);
+}
+
+/* 用户名 + 元信息 */
+.profile-meta {
+    flex: 1;
+    min-width: 220px;
+    padding-bottom: var(--space-2);
+}
+.profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-2);
+}
+.profile-username {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    line-height: 1.1;
+    color: var(--fg-primary);
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+.dev-badge-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+}
+.dev-badge-inline svg { width: 12px; height: 12px; }
+
+.profile-handle {
+    color: var(--fg-muted);
+    font-size: 0.88rem;
+    font-family: var(--font-mono);
+    margin-bottom: var(--space-1);
+}
+.profile-handle .uid {
+    color: var(--fg-secondary);
+}
+.profile-joined {
+    color: var(--fg-muted);
+    font-size: 0.85rem;
+}
+
+/* 动作按钮 */
+.profile-actions {
+    display: flex;
+    gap: var(--space-2);
+    align-self: flex-end;
+    padding-bottom: var(--space-2);
+}
+.btn-edit,
+.btn-follow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform var(--transition-base), box-shadow var(--transition-base),
+                background var(--transition-fast), color var(--transition-fast),
+                border-color var(--transition-fast);
+}
+.btn-edit {
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border-color: var(--glass-border);
+}
+.btn-edit:hover {
+    transform: translateY(-1px);
+    background: var(--accent-primary);
+    color: var(--bg-base);
+    box-shadow: var(--shadow-5);
+}
+[data-theme="light"] .btn-edit:hover { color: #ffffff; }
+.btn-edit svg { width: 14px; height: 14px; }
+
+.btn-follow {
+    background: var(--accent-primary);
+    color: var(--bg-base);
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .btn-follow { color: #ffffff; }
+.btn-follow:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow: 0 8px 20px rgba(0, 255, 157, 0.35);
+}
+.btn-follow.following {
+    background: var(--glass-bg);
+    color: var(--fg-secondary);
+    border-color: var(--border-color);
+    box-shadow: none;
+}
+
+/* 简介 */
+.profile-bio {
+    padding: 0 var(--space-6) var(--space-5);
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.profile-bio.is-empty {
+    color: var(--fg-muted);
+    font-style: italic;
+}
+
+/* ==================== 2. Stats Bar ==================== */
+.stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+}
+.stat-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-3);
+    text-align: center;
+    cursor: pointer;
+    transition: transform var(--transition-base), border-color var(--transition-base),
+                box-shadow var(--transition-base);
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--glass-border);
+    box-shadow: var(--shadow-3);
+}
+.stat-num {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+    color: var(--accent-primary);
+    line-height: 1;
+    margin-bottom: var(--space-1);
+    font-variant-numeric: tabular-nums;
+}
+.stat-label {
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+}
+
+/* ==================== 3. Tab Bar ==================== */
+.tab-bar {
+    display: flex;
+    gap: var(--space-1);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--space-6);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.tab-btn {
+    background: transparent;
+    border: none;
+    padding: var(--space-3) var(--space-4);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--fg-secondary);
+    cursor: pointer;
+    position: relative;
+    transition: color var(--transition-fast);
+    white-space: nowrap;
+}
+.tab-btn::after {
+    content: "";
+    position: absolute;
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: -1px;
+    height: 2px;
+    background: var(--accent-primary);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform var(--transition-base);
+}
+.tab-btn:hover { color: var(--fg-primary); }
+.tab-btn.active {
+    color: var(--accent-primary);
+}
+.tab-btn.active::after { transform: scaleX(1); }
+
+/* ==================== Tab Panels ==================== */
+.tab-panel {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+.tab-panel.active { display: block; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 区块标题 */
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+}
+.section-head h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--fg-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.section-head h3::before {
+    content: "";
+    width: 4px;
+    height: 18px;
+    background: var(--accent-primary);
+    border-radius: var(--radius-sm);
+}
+.section-link {
+    font-size: 0.85rem;
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity var(--transition-fast);
+}
+.section-link:hover { opacity: 0.8; text-decoration: none; }
+
+.section-block { margin-bottom: var(--space-7); }
+
+/* 关于我 */
+.about-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.about-card.is-empty {
+    color: var(--fg-muted);
+    font-style: italic;
+}
+
+/* ==================== 5. 项目 Tab - 游戏网格 ==================== */
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+}
+.game-card {
+    display: block;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--transition-base), box-shadow var(--transition-base),
+                border-color var(--transition-base);
+}
+.game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-4), 0 0 24px rgba(0, 255, 157, 0.18);
+    border-color: var(--glass-border);
+    text-decoration: none;
+}
+.game-cover {
+    aspect-ratio: 16 / 10;
+    background: linear-gradient(135deg, var(--bg-base) 0%, var(--bg-elevated) 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.game-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.game-cover-fallback {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2rem;
+    color: var(--fg-muted);
+    letter-spacing: 0.06em;
+}
+.game-hosting-tag {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--bg-overlay);
+    color: var(--fg-primary);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.game-card-body {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+}
+.game-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--fg-primary);
+    margin: 0 0 var(--space-2);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.game-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: var(--space-2);
+    min-height: 4px;
+}
+.game-tag {
+    font-size: 0.7rem;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+    font-family: var(--font-mono);
+}
+.game-stats {
+    display: flex;
+    gap: var(--space-3);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.game-stats span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 水平卡片（主页预览） */
+.games-preview-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: var(--space-9) var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+}
+.empty-state .empty-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--space-3);
+    color: var(--fg-muted);
+    opacity: 0.5;
+}
+.empty-state .empty-text {
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    margin-bottom: var(--space-3);
+}
+.empty-state .btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--accent-primary);
+    color: var(--bg-base);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.88rem;
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.25);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+[data-theme="light"] .empty-state .btn-create { color: #ffffff; }
+.empty-state .btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-5);
+    text-decoration: none;
+}
+
+/* ==================== 6. 素材 Tab - 占位 ==================== */
+.placeholder-panel {
+    text-align: center;
+    padding: var(--space-10) var(--space-4);
+}
+.placeholder-panel .ph-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--space-4);
+    color: var(--accent-secondary);
+    opacity: 0.55;
+}
+.placeholder-panel .ph-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--fg-secondary);
+    margin-bottom: var(--space-2);
+}
+.placeholder-panel .ph-desc {
+    color: var(--fg-muted);
+    font-size: 0.92rem;
+}
+
+/* ==================== 7. 动态 Tab - 帖子列表 ==================== */
+.posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.post-item {
+    display: block;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-5);
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--transition-base), border-color var(--transition-base),
+                box-shadow var(--transition-base);
+    --post-type-color: var(--accent-primary);
+}
+.post-item[data-type="question"]    { --post-type-color: var(--accent-cyan); }
+.post-item[data-type="suggestion"]  { --post-type-color: var(--accent-secondary); }
+.post-item:hover {
+    transform: translateX(4px);
+    border-color: var(--post-type-color);
+    box-shadow: var(--shadow-2);
+    text-decoration: none;
+}
+.post-item-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    flex-wrap: wrap;
+}
+.post-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--post-type-color) 14%, transparent);
+    color: var(--post-type-color);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid color-mix(in srgb, var(--post-type-color) 30%, transparent);
+}
+.post-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--fg-primary);
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.post-stats {
+    display: flex;
+    gap: var(--space-4);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.post-stats span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 主页 tab 内的帖子预览（紧凑列表） */
+.posts-preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+/* ==================== 8. Bio Editor Modal ==================== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-overlay);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.modal-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+.modal {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-4);
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(20px) scale(0.96);
+    transition: transform var(--transition-base);
+}
+.modal-overlay.is-open .modal { transform: translateY(0) scale(1); }
+
+.modal-head {
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.modal-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--fg-primary);
+    margin: 0;
+}
+.modal-close {
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+.modal-close:hover { background: var(--glass-bg); color: var(--accent-danger); }
+
+.modal-tabs {
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-5) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-tab {
+    background: transparent;
+    border: none;
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--fg-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+.modal-tab.active {
+    color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+}
+
+.modal-body {
+    padding: var(--space-4) var(--space-5);
+    overflow-y: auto;
+    flex: 1;
+}
+.bio-textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    resize: vertical;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.bio-textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.12);
+}
+[data-theme="light"] .bio-textarea:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+}
+.bio-preview {
+    width: 100%;
+    min-height: 200px;
+    padding: var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
+    color: var(--fg-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-y: auto;
+    display: none;
+}
+.bio-preview.active { display: block; }
+.bio-textarea.hidden { display: none; }
+
+.bio-hint-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-2);
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+}
+.bio-hint-row .md-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.bio-counter.is-over { color: var(--accent-danger); }
+
+.modal-foot {
+    padding: var(--space-3) var(--space-5);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+.btn-secondary,
+.btn-primary {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform var(--transition-base), box-shadow var(--transition-base),
+                background var(--transition-fast), color var(--transition-fast),
+                border-color var(--transition-fast);
+}
+.btn-secondary {
+    background: transparent;
+    color: var(--fg-secondary);
+    border-color: var(--border-color);
+}
+.btn-secondary:hover { background: var(--glass-bg); color: var(--fg-primary); }
+.btn-primary {
+    background: var(--accent-primary);
+    color: var(--bg-base);
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .btn-primary { color: #ffffff; }
+.btn-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow: 0 8px 20px rgba(0, 255, 157, 0.35);
+}
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Profile Toast */
+.profile-toast {
+    position: fixed;
+    top: calc(var(--topbar-h) + var(--space-4));
+    right: var(--space-5);
+    z-index: 700;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
+    box-shadow: var(--shadow-3);
+    font-size: 0.9rem;
+    color: var(--fg-primary);
+    opacity: 0;
+    transform: translateX(20px);
+    visibility: hidden;
+    transition: opacity var(--transition-base), transform var(--transition-base), visibility var(--transition-base);
+    max-width: 360px;
+}
+.profile-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+    visibility: visible;
+}
+.profile-toast.error   { border-left-color: var(--accent-danger); }
+.profile-toast.warning { border-left-color: var(--accent-secondary); }
+
+/* ==================== Follow List Modal 内容 ==================== */
+.follow-list-loading,
+.follow-list-empty {
+    padding: var(--space-6) var(--space-3);
+    text-align: center;
+    color: var(--fg-muted);
+    font-size: 0.92rem;
+}
+.follow-list-empty a { color: var(--accent-primary); }
+.follow-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.follow-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--fg-primary);
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+.follow-list-item:hover {
+    background: var(--glass-bg);
+    transform: translateX(2px);
+}
+.follow-list-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.follow-list-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.follow-list-meta {
+    flex: 1;
+    min-width: 0;
+}
+.follow-list-name {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--fg-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.follow-list-uid {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    margin-top: 2px;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 900px) {
+    .games-grid,
+    .games-preview-row { grid-template-columns: repeat(2, 1fr); }
+    .stats-bar { grid-template-columns: repeat(4, 1fr); gap: var(--space-2); }
+    .stat-card { padding: var(--space-3) var(--space-2); }
+}
+
+@media (max-width: 768px) {
+    .profile-page { padding: var(--space-4) var(--space-3) var(--space-8); }
+    .profile-banner { height: 140px; }
+    .profile-header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+        padding: 0 var(--space-4) var(--space-4);
+        margin-top: -50px;
+    }
+    .profile-avatar { width: 96px; height: 96px; }
+    .profile-avatar .avatar-letter { font-size: 2.4rem; }
+    .profile-meta { padding-bottom: 0; width: 100%; }
+    .profile-actions { align-self: stretch; padding-bottom: 0; }
+    .profile-actions .btn-edit,
+    .profile-actions .btn-follow { flex: 1; justify-content: center; }
+    .profile-bio { padding: 0 var(--space-4) var(--space-4); }
+
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .games-grid,
+    .games-preview-row { grid-template-columns: 1fr; }
+    .tab-btn { padding: var(--space-3) var(--space-3); font-size: 0.9rem; }
+
+    .modal { max-height: 95vh; }
+    .modal-head,
+    .modal-body,
+    .modal-foot { padding-left: var(--space-4); padding-right: var(--space-4); }
+}
+
+/* 尊重 reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .profile-page *,
+    .profile-page *::before,
+    .profile-page *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .tab-panel { animation: none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set _bio = profile_user.bio or '' %}
+{% set _username = profile_user.username|default('用户') %}
+{% set _first_letter = _username[:1]|upper %}
+
+<div class="profile-page">
+
+    {# ==================== 1. Profile Header ==================== #}
+    <header class="profile-header">
+        <div class="profile-banner" aria-hidden="true"></div>
+
+        <div class="profile-header-inner">
+            {# 头像 + 开发者徽章 #}
+            <div class="profile-avatar-wrap">
+                <div class="profile-avatar" id="profile-avatar-box">
+                    {% if profile_user.avatar %}
+                    <img src="{{ profile_user.avatar }}" alt="{{ _username }}的头像"
+                         onerror="this.style.display='none';var l=this.parentNode.querySelector('.avatar-letter');if(l){l.style.display='flex';}">
+                    <span class="avatar-letter" style="display:none;">{{ _first_letter }}</span>
+                    {% else %}
+                    <span class="avatar-letter">{{ _first_letter }}</span>
+                    {% endif %}
+                </div>
+                {% if is_developer %}
+                <span class="dev-badge-corner" title="认证开发者" aria-label="认证开发者">&lt;/&gt;</span>
+                {% endif %}
+            </div>
+
+            {# 用户名 + 元信息 #}
+            <div class="profile-meta">
+                <div class="profile-name-row">
+                    <h1 class="profile-username">{{ _username }}</h1>
+                    {% if is_developer %}
+                    <span class="dev-badge-inline">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="8 6 2 12 8 18"/>
+                            <polyline points="16 6 22 12 16 18"/>
+                        </svg>
+                        开发者
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="profile-handle">
+                    @{{ _username }} · <span class="uid">UID: {{ profile_user.snyqt_user_id|default('-') }}</span>
+                </div>
+                <div class="profile-joined">
+                    {% if profile_user.created_at %}
+                    加入于 {{ profile_user.created_at.strftime('%Y年%m月') }}
+                    {% endif %}
+                </div>
+            </div>
+
+            {# 动作按钮 #}
+            <div class="profile-actions">
+                {% if is_owner %}
+                <button type="button" class="btn-edit" id="btn-edit-profile" aria-label="编辑个人主页">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    编辑个人主页
+                </button>
+                {% if has_custom_profile %}
+                <a class="btn-edit" href="{{ url_for('games.custom_profile', username=profile_user.username) }}" target="_blank" rel="noopener" aria-label="查看个性化主页">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    个性化主页
+                </a>
+                {% endif %}
+                {% else %}
+                <button type="button"
+                        class="btn-follow {{ 'following' if is_following else '' }}"
+                        id="btn-follow"
+                        data-user-id="{{ profile_user.id }}"
+                        data-is-following="{{ 'true' if is_following else 'false' }}"
+                        aria-pressed="{{ 'true' if is_following else 'false' }}"
+                        aria-label="关注用户">
+                    {% if is_following %}已关注{% else %}+ 关注{% endif %}
+                </button>
+                {% if has_custom_profile %}
+                <a class="btn-edit" href="{{ url_for('games.custom_profile', username=profile_user.username) }}" target="_blank" rel="noopener" aria-label="查看个性化主页">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    个性化主页
+                </a>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        {# 简介 #}
+        <div class="profile-bio {{ 'is-empty' if not _bio else '' }}" id="profile-bio-display">
+            {% if _bio %}{{ _bio }}{% else %}这位用户还没有填写简介{% endif %}
+        </div>
+    </header>
+
+    {# ==================== 2. Stats Bar ==================== #}
+    <section class="stats-bar" aria-label="用户数据统计">
+        <div class="stat-card" data-stat="following" tabindex="0" role="button" aria-label="关注数">
+            <div class="stat-num" data-target="{{ stats.following|default(0) }}">0</div>
+            <div class="stat-label">关注</div>
+        </div>
+        <div class="stat-card" data-stat="followers" tabindex="0" role="button" aria-label="粉丝数">
+            <div class="stat-num" data-target="{{ stats.followers|default(0) }}">0</div>
+            <div class="stat-label">粉丝</div>
+        </div>
+        <div class="stat-card" data-stat="games" tabindex="0" role="button" aria-label="项目数">
+            <div class="stat-num" data-target="{{ stats.games_count|default(0) }}">0</div>
+            <div class="stat-label">项目</div>
+        </div>
+        <div class="stat-card" data-stat="materials" tabindex="0" role="button" aria-label="素材数">
+            <div class="stat-num" data-target="0">0</div>
+            <div class="stat-label">素材</div>
+        </div>
+    </section>
+
+    {# ==================== 3. Tab Bar ==================== #}
+    <nav class="tab-bar" role="tablist" aria-label="用户内容 Tab">
+        <button class="tab-btn active" type="button" data-tab="home" role="tab" aria-selected="true">主页</button>
+        <button class="tab-btn" type="button" data-tab="games" role="tab" aria-selected="false">项目</button>
+        <button class="tab-btn" type="button" data-tab="materials" role="tab" aria-selected="false">素材</button>
+        <button class="tab-btn" type="button" data-tab="posts" role="tab" aria-selected="false">动态</button>
+    </nav>
+
+    {# ==================== Tab Panels ==================== #}
+    <div class="tab-panels">
+
+        {# ---- 主页 Tab ---- #}
+        <div class="tab-panel active" data-panel="home" role="tabpanel">
+            {# 关于我 #}
+            <div class="section-block">
+                <div class="section-head">
+                    <h3>关于我</h3>
+                </div>
+                <div class="about-card {{ 'is-empty' if not _bio else '' }}" id="about-me-card">
+                    {% if _bio %}{{ _bio }}{% else %}这位用户还没有填写简介{% endif %}
+                </div>
+            </div>
+
+            {# 最近作品预览 #}
+            <div class="section-block">
+                <div class="section-head">
+                    <h3>最近作品</h3>
+                    {% if user_games|length > 3 %}
+                    <a class="section-link" data-jump-tab="games" aria-label="查看全部作品">查看全部 →</a>
+                    {% endif %}
+                </div>
+                {% if user_games %}
+                <div class="games-preview-row">
+                    {% for g in user_games[:3] %}
+                    <a class="game-card" href="{{ url_for('games.game_detail', gid=g.id) }}">
+                        <div class="game-cover">
+                            {% if g.cover_image %}
+                            <img src="{{ g.cover_image }}" alt="{{ g.title }}" loading="lazy"
+                                 onerror="this.style.display='none';var f=this.parentNode.querySelector('.game-cover-fallback');if(f){f.style.display='flex';}">
+                            <span class="game-cover-fallback" style="display:none;">{{ g.title[:1]|default('G') }}</span>
+                            {% else %}
+                            <span class="game-cover-fallback">{{ g.title[:1]|default('G') }}</span>
+                            {% endif %}
+                            {% if g.hosting_type %}
+                            <span class="game-hosting-tag">{{ g.hosting_type }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="game-card-body">
+                            <h4 class="game-title">{{ g.title|default('未命名作品') }}</h4>
+                            {% if g.tags %}
+                            {% set _tags = g.tags.split(',') %}
+                            <div class="game-tags">
+                                {% for tag in _tags[:3] %}
+                                {% if tag.strip() %}<span class="game-tag">{{ tag.strip() }}</span>{% endif %}
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="game-tags"></div>
+                            {% endif %}
+                            <div class="game-stats">
+                                <span title="下载次数">⬇ {{ g.download_count|default(0) }}</span>
+                                <span title="游玩次数">▶ {{ g.play_count|default(0) }}</span>
+                                <span title="平均评分">★ {{ '%.1f'|format(g.avg_rating|default(0, true)) }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16v16H4zM4 9h16M9 9v11"/>
+                    </svg>
+                    <div class="empty-text">
+                        还没有发布任何作品
+                        {% if is_owner %}，快去创作你的第一个游戏吧{% endif %}
+                    </div>
+                    {% if is_owner %}
+                    <a class="btn-create" href="{{ url_for('games.developer_panel') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        去创作
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            {# 最近动态预览 #}
+            <div class="section-block">
+                <div class="section-head">
+                    <h3>最近动态</h3>
+                    {% if user_posts|length > 3 %}
+                    <a class="section-link" data-jump-tab="posts" aria-label="查看全部动态">查看全部 →</a>
+                    {% endif %}
+                </div>
+                {% if user_posts %}
+                <div class="posts-preview-list">
+                    {% for p in user_posts[:3] %}
+                    <a class="post-item" href="{{ url_for('community.view_post', pid=p.id) }}"
+                       data-type="{{ p.type|default('discussion') }}">
+                        <div class="post-item-head">
+                            <span class="post-type-badge">{{ p.type|default('discussion') }}</span>
+                            <h4 class="post-title">{{ p.title|default('（无标题）') }}</h4>
+                        </div>
+                        <div class="post-stats">
+                            <span title="浏览">👁 {{ p.views|default(0) }}</span>
+                            <span title="点赞">♥ {{ p.likes|default(0) }}</span>
+                            <span title="评论">💬 {{ p.comments_count|default(0) }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <div class="empty-text">还没有发布任何动态</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- 项目 Tab ---- #}
+        <div class="tab-panel" data-panel="games" role="tabpanel">
+            {% if user_games %}
+            <div class="games-grid">
+                {% for g in user_games %}
+                <a class="game-card" href="{{ url_for('games.game_detail', gid=g.id) }}">
+                    <div class="game-cover">
+                        {% if g.cover_image %}
+                        <img src="{{ g.cover_image }}" alt="{{ g.title }}" loading="lazy"
+                             onerror="this.style.display='none';var f=this.parentNode.querySelector('.game-cover-fallback');if(f){f.style.display='flex';}">
+                        <span class="game-cover-fallback" style="display:none;">{{ g.title[:1]|default('G') }}</span>
+                        {% else %}
+                        <span class="game-cover-fallback">{{ g.title[:1]|default('G') }}</span>
+                        {% endif %}
+                        {% if g.hosting_type %}
+                        <span class="game-hosting-tag">{{ g.hosting_type }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="game-card-body">
+                        <h4 class="game-title">{{ g.title|default('未命名作品') }}</h4>
+                        {% if g.tags %}
+                        {% set _tags = g.tags.split(',') %}
+                        <div class="game-tags">
+                            {% for tag in _tags[:3] %}
+                            {% if tag.strip() %}<span class="game-tag">{{ tag.strip() }}</span>{% endif %}
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="game-tags"></div>
+                        {% endif %}
+                        <div class="game-stats">
+                            <span title="下载次数">⬇ {{ g.download_count|default(0) }}</span>
+                            <span title="游玩次数">▶ {{ g.play_count|default(0) }}</span>
+                            <span title="平均评分">★ {{ '%.1f'|format(g.avg_rating|default(0, true)) }}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16v16H4zM4 9h16M9 9v11"/>
+                </svg>
+                <div class="empty-text">
+                    还没有发布任何作品
+                    {% if is_owner %}，快去创作你的第一个游戏吧{% endif %}
+                </div>
+                {% if is_owner %}
+                <a class="btn-create" href="{{ url_for('games.developer_panel') }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    去创作
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        {# ---- 素材 Tab ---- #}
+        <div class="tab-panel" data-panel="materials" role="tabpanel">
+            {% if user_assets %}
+            <div class="games-grid">
+                {% for a in user_assets %}
+                <a class="game-card" href="{{ url_for('games.asset_detail', aid=a.id) }}" aria-label="{{ a.title }}">
+                    <div class="game-cover">
+                        {% if a.cover_image %}
+                        <img src="{{ a.cover_image }}" alt="{{ a.title }}" loading="lazy">
+                        {% else %}
+                        <div class="cover-fallback">{{ a.title[:1]|upper }}</div>
+                        {% endif %}
+                        <span class="game-badge">{{ {'character':'角色','scene':'场景','ui':'UI','audio':'音效','effect':'特效','tool':'工具','other':'其它'}.get(a.category, a.category) }}</span>
+                    </div>
+                    <div class="game-card-body">
+                        <h3 class="game-title">{{ a.title }}</h3>
+                        <p class="game-desc">{{ a.tagline|default('') }}</p>
+                        <div class="game-meta">
+                            <span>v{{ a.version }}</span>
+                            <span>·</span>
+                            <span>{{ a.download_count }} 下载</span>
+                            {% if a.price > 0 %}
+                            <span class="game-price">{{ a.price|int }} 积分</span>
+                            {% else %}
+                            <span class="game-price free">免费</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="placeholder-panel">
+                <svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                </svg>
+                <div class="ph-title">暂无素材</div>
+                <div class="ph-desc">该用户还未发布任何游戏素材</div>
+                {% if is_owner %}
+                <a class="btn-create" href="{{ url_for('games.submit_asset') }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    去发布素材
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        {# ---- 动态 Tab ---- #}
+        <div class="tab-panel" data-panel="posts" role="tabpanel">
+            {% if user_posts %}
+            <div class="posts-list">
+                {% for p in user_posts %}
+                <a class="post-item" href="{{ url_for('community.view_post', pid=p.id) }}"
+                   data-type="{{ p.type|default('discussion') }}">
+                    <div class="post-item-head">
+                        <span class="post-type-badge">{{ p.type|default('discussion') }}</span>
+                        <h4 class="post-title">{{ p.title|default('（无标题）') }}</h4>
+                    </div>
+                    <div class="post-stats">
+                        <span title="浏览">👁 {{ p.views|default(0) }}</span>
+                        <span title="点赞">♥ {{ p.likes|default(0) }}</span>
+                        <span title="评论">💬 {{ p.comments_count|default(0) }}</span>
+                        {% if p.created_at %}
+                        <span title="发布时间" style="margin-left:auto;">{{ p.created_at }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <div class="empty-text">还没有发布任何动态</div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+{# ==================== 8. Bio Editor Modal (仅本人可见) ==================== #}
+{% if is_owner %}
+<div class="modal-overlay" id="bio-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bio-modal-title" aria-hidden="true">
+    <div class="modal" id="bio-modal">
+        <div class="modal-head">
+            <h3 class="modal-title" id="bio-modal-title">编辑个人主页</h3>
+            <button type="button" class="modal-close" id="bio-modal-close" aria-label="关闭">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="modal-tabs" role="tablist">
+            <button class="modal-tab active" type="button" data-modal-tab="write" role="tab" aria-selected="true">编辑</button>
+            <button class="modal-tab" type="button" data-modal-tab="preview" role="tab" aria-selected="false">预览</button>
+        </div>
+
+        <div class="modal-body">
+            <textarea class="bio-textarea" id="bio-textarea" maxlength="2000" placeholder="介绍一下你自己吧…">{{ _bio }}</textarea>
+            <div class="bio-preview" id="bio-preview" aria-hidden="true"></div>
+            <div class="bio-hint-row">
+                <span class="md-hint">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+                    支持 Markdown 格式
+                </span>
+                <span class="bio-counter" id="bio-counter">{{ _bio|length }}/2000</span>
+            </div>
+        </div>
+
+        <div class="modal-foot">
+            <button type="button" class="btn-secondary" id="bio-cancel">取消</button>
+            <button type="button" class="btn-primary" id="bio-save">保存</button>
+        </div>
+
+        <div class="modal-divider">
+            <span>或</span>
+        </div>
+        <button type="button" class="btn-secondary" id="btn-open-custom-profile" style="width:100%;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+            管理个性化主页 HTML
+        </button>
+    </div>
+</div>
+{% endif %}
+
+{# ==================== 8b. 个性化主页 HTML 编辑弹窗 (仅本人可见) ==================== #}
+{% if is_owner %}
+<div class="modal-overlay" id="custom-profile-overlay" role="dialog" aria-modal="true" aria-labelledby="cp-modal-title" aria-hidden="true">
+    <div class="modal" id="custom-profile-modal" style="max-width:760px;">
+        <div class="modal-head">
+            <h3 class="modal-title" id="cp-modal-title">个性化主页 HTML</h3>
+            <button type="button" class="modal-close" id="cp-modal-close" aria-label="关闭">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <p style="font-size:.85rem;color:var(--fg-muted);margin-bottom:12px;">
+                在此输入完整 HTML 代码（含 &lt;style&gt; 和 &lt;script&gt;），将作为你的个性化个人主页免费托管。
+                保存后，自带主页会显示「个性化主页」入口，访客点击即可查看。留空则停用个性化主页。
+            </p>
+            <textarea id="cp-html-textarea" placeholder="<!DOCTYPE html>&#10;<html>&#10;  <head><style>body{font-family:sans-serif;padding:40px;background:#0a0e1a;color:#00ff9d}</style></head>&#10;  <body>&#10;    <h1>Hello, 我是 {{ profile_user.username }}</h1>&#10;    <p>欢迎来到我的个性化主页</p>&#10;  </body>&#10;</html>" style="width:100%;min-height:320px;font-family:var(--font-mono,monospace);font-size:.82rem;padding:12px;background:var(--bg-2);color:var(--text);border:1px solid var(--border-color);border-radius:8px;resize:vertical;"></textarea>
+            <div class="bio-hint-row" style="margin-top:8px;">
+                <span class="md-hint">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+                    单文件 HTML，最多 500KB
+                </span>
+                <span class="bio-counter" id="cp-counter">0 字符</span>
+            </div>
+        </div>
+
+        <div class="modal-foot">
+            <button type="button" class="btn-secondary" id="cp-cancel">取消</button>
+            {% if has_custom_profile %}
+            <a class="btn-secondary" href="{{ url_for('games.custom_profile', username=profile_user.username) }}" target="_blank" rel="noopener" style="text-decoration:none;">预览</a>
+            {% endif %}
+            <button type="button" class="btn-primary" id="cp-save">保存</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ==================== 9. Follow List Modal (关注/粉丝列表) ==================== #}
+<div class="modal-overlay" id="follow-list-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="follow-list-modal-title" aria-hidden="true">
+    <div class="modal" id="follow-list-modal">
+        <div class="modal-head">
+            <h3 class="modal-title" id="follow-list-modal-title">列表</h3>
+            <button type="button" class="modal-close" id="follow-list-modal-close" aria-label="关闭">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="modal-body" id="follow-list-modal-body">
+            <div class="follow-list-loading">加载中…</div>
+        </div>
+    </div>
+</div>
+
+{# Profile Toast #}
+<div class="profile-toast" id="profile-toast" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---------- Tab 切换 ---------- */
+    (function initTabs() {
+        var tabBtns = document.querySelectorAll('.tab-btn');
+        var panels = document.querySelectorAll('.tab-panel');
+
+        function activateTab(name) {
+            tabBtns.forEach(function (btn) {
+                var active = btn.dataset.tab === name;
+                btn.classList.toggle('active', active);
+                btn.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            panels.forEach(function (panel) {
+                panel.classList.toggle('active', panel.dataset.panel === name);
+            });
+            // 滚动到 tab 顶部（避免内容下方跳动）
+            var tabBar = document.querySelector('.tab-bar');
+            if (tabBar && window.innerWidth < 768) {
+                tabBar.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+            }
+        }
+
+        tabBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                activateTab(btn.dataset.tab);
+            });
+        });
+
+        // "查看全部" 跳转链接
+        document.querySelectorAll('[data-jump-tab]').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                activateTab(link.dataset.jumpTab);
+            });
+        });
+
+        // 支持 URL hash 直接定位 tab（如 #games）
+        if (location.hash) {
+            var hash = location.hash.substring(1);
+            if (['home', 'games', 'materials', 'posts'].indexOf(hash) !== -1) {
+                activateTab(hash);
+            }
+        }
+    })();
+
+    /* ---------- 统计数字 CountUp（IntersectionObserver） ---------- */
+    (function initCountUp() {
+        var nums = document.querySelectorAll('.stat-num[data-target]');
+        if (!nums.length) return;
+
+        function animate(el) {
+            var target = parseInt(el.dataset.target, 10) || 0;
+            if (target === 0) {
+                el.textContent = '0';
+                return;
+            }
+            if (prefersReducedMotion) {
+                el.textContent = String(target);
+                return;
+            }
+            var start = 0;
+            var duration = 900;
+            var startTime = null;
+            function step(ts) {
+                if (!startTime) startTime = ts;
+                var progress = Math.min((ts - startTime) / duration, 1);
+                // easeOutCubic
+                var eased = 1 - Math.pow(1 - progress, 3);
+                var value = Math.floor(start + (target - start) * eased);
+                el.textContent = String(value);
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    el.textContent = String(target);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        if (!('IntersectionObserver' in window)) {
+            nums.forEach(animate);
+            return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    animate(entry.target);
+                    io.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.4 });
+        nums.forEach(function (n) { io.observe(n); });
+    })();
+
+    /* ---------- 头像加载失败兜底 ---------- */
+    (function initAvatarFallback() {
+        var box = document.getElementById('profile-avatar-box');
+        if (!box) return;
+        var img = box.querySelector('img');
+        if (!img) return;
+        img.addEventListener('error', function () {
+            img.style.display = 'none';
+            var letter = box.querySelector('.avatar-letter');
+            if (letter) letter.style.display = 'flex';
+        });
+    })();
+
+    /* ---------- 关注按钮（接入后端 API） ---------- */
+    (function initFollow() {
+        var btn = document.getElementById('btn-follow');
+        if (!btn) return;
+        var targetId = btn.getAttribute('data-user-id');
+        if (!targetId) return;
+        var isLoggedIn = {% if current_user %}true{% else %}false{% endif %};
+
+        function setFollowState(isFollowing, followersCount) {
+            if (isFollowing) {
+                btn.classList.add('following');
+                btn.textContent = '已关注';
+                btn.setAttribute('aria-pressed', 'true');
+                btn.setAttribute('data-is-following', 'true');
+            } else {
+                btn.classList.remove('following');
+                btn.textContent = '+ 关注';
+                btn.setAttribute('aria-pressed', 'false');
+                btn.setAttribute('data-is-following', 'false');
+            }
+            if (typeof followersCount === 'number') {
+                var followersEl = document.querySelector('.stat-card[data-stat="followers"] .stat-num');
+                if (followersEl) followersEl.textContent = String(followersCount);
+            }
+        }
+
+        btn.addEventListener('click', function () {
+            if (!isLoggedIn) {
+                showToast('请先登录后再关注', 'warning');
+                setTimeout(function () {
+                    window.location.href = '{{ url_for("auth.login", next=request.path) }}';
+                }, 900);
+                return;
+            }
+            var willFollow = btn.getAttribute('data-is-following') !== 'true';
+            var endpoint = '/api/user/' + targetId + '/' + (willFollow ? 'follow' : 'unfollow');
+            var originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = willFollow ? '关注中…' : '取消中…';
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function (resp) {
+                if (resp.status === 401 || resp.status === 302 || resp.redirected) {
+                    throw new Error('未登录');
+                }
+                return resp.json();
+            }).then(function (data) {
+                if (data && data.success) {
+                    setFollowState(willFollow, data.followers);
+                    showToast(willFollow ? '已关注 ' + document.querySelector('.profile-username').textContent
+                                        : '已取消关注',
+                              willFollow ? 'success' : 'info');
+                } else {
+                    showToast((data && data.message) || '操作失败', 'error');
+                    btn.textContent = originalText;
+                }
+            }).catch(function (err) {
+                if (err && err.message === '未登录') {
+                    showToast('请先登录后再关注', 'warning');
+                    setTimeout(function () {
+                        window.location.href = '{{ url_for("auth.login", next=request.path) }}';
+                    }, 900);
+                } else {
+                    showToast('网络错误，请稍后再试', 'error');
+                }
+                btn.textContent = originalText;
+            }).finally(function () {
+                btn.disabled = false;
+            });
+        });
+    })();
+
+    /* ---------- 统计卡片点击：粉丝/关注列表 Modal ---------- */
+    (function initStatClick() {
+        var isLoggedIn = {% if current_user %}true{% else %}false{% endif %};
+        var profileUserId = '{{ profile_user.id|default("") }}';
+
+        var overlay = document.getElementById('follow-list-modal-overlay');
+        var modalTitle = document.getElementById('follow-list-modal-title');
+        var modalBody = document.getElementById('follow-list-modal-body');
+        var closeBtn = document.getElementById('follow-list-modal-close');
+        if (!overlay) return;
+
+        function closeModal() {
+            overlay.classList.remove('is-open');
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+        function openModal() {
+            overlay.classList.add('is-open');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeModal();
+        });
+
+        function renderList(items, emptyText) {
+            if (!items || items.length === 0) {
+                modalBody.innerHTML = '<div class="follow-list-empty">' + emptyText + '</div>';
+                return;
+            }
+            var html = '<ul class="follow-list">';
+            items.forEach(function (u) {
+                var uname = (u.username || '用户').replace(/[<>&"]/g, function (c) {
+                    return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c];
+                });
+                var href = '/user/' + encodeURIComponent(uname);
+                var initial = uname.substring(0, 1).toUpperCase();
+                var avatarHtml = u.avatar
+                    ? '<img src="' + u.avatar + '" alt="' + uname + '的头像" onerror="this.style.display=\'none\';this.parentNode.textContent=\'' + initial + '\';">'
+                    : initial;
+                var uidText = u.snyqt_user_id ? ('UID: ' + u.snyqt_user_id) : '';
+                html += '<li>' +
+                    '<a class="follow-list-item" href="' + href + '">' +
+                        '<span class="follow-list-avatar">' + avatarHtml + '</span>' +
+                        '<span class="follow-list-meta">' +
+                            '<span class="follow-list-name">' + uname + '</span>' +
+                            (uidText ? '<span class="follow-list-uid">' + uidText + '</span>' : '') +
+                        '</span>' +
+                    '</a>' +
+                '</li>';
+            });
+            html += '</ul>';
+            modalBody.innerHTML = html;
+        }
+
+        function loadList(type) {
+            if (!isLoggedIn) {
+                showToast('请先登录后查看列表', 'warning');
+                setTimeout(function () {
+                    window.location.href = '{{ url_for("auth.login", next=request.path) }}';
+                }, 900);
+                return;
+            }
+            modalTitle.textContent = type === 'followers' ? '粉丝列表' : '关注列表';
+            modalBody.innerHTML = '<div class="follow-list-loading">加载中…</div>';
+            openModal();
+            fetch('/api/user/' + profileUserId + '/' + type, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function (resp) {
+                if (resp.status === 401 || resp.status === 302 || resp.redirected) {
+                    throw new Error('未登录');
+                }
+                return resp.json();
+            }).then(function (data) {
+                if (data && data.success) {
+                    var list = data[type] || [];
+                    var emptyText = type === 'followers' ? '暂无粉丝' : '还未关注任何人';
+                    renderList(list, emptyText);
+                } else {
+                    modalBody.innerHTML = '<div class="follow-list-empty">' + ((data && data.message) || '加载失败') + '</div>';
+                }
+            }).catch(function (err) {
+                if (err && err.message === '未登录') {
+                    closeModal();
+                    showToast('请先登录后查看列表', 'warning');
+                    setTimeout(function () {
+                        window.location.href = '{{ url_for("auth.login", next=request.path) }}';
+                    }, 900);
+                } else {
+                    modalBody.innerHTML = '<div class="follow-list-empty">网络错误，请稍后再试</div>';
+                }
+            });
+        }
+
+        document.querySelectorAll('.stat-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                var key = card.dataset.stat;
+                if (key === 'games') {
+                    var gamesTab = document.querySelector('.tab-btn[data-tab="games"]');
+                    if (gamesTab) gamesTab.click();
+                } else if (key === 'following' || key === 'followers') {
+                    loadList(key);
+                } else if (key === 'materials') {
+                    var matTab = document.querySelector('.tab-btn[data-tab="materials"]');
+                    if (matTab) matTab.click();
+                }
+            });
+        });
+    })();
+
+    /* ---------- Toast ---------- */
+    var toastTimer = null;
+    function showToast(msg, type) {
+        var toast = document.getElementById('profile-toast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.className = 'profile-toast';
+        if (type) toast.classList.add(type);
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            toast.classList.remove('show');
+        }, 3200);
+    }
+    window.__profileToast = showToast;
+
+    /* ---------- Bio Editor Modal ---------- */
+    (function initBioModal() {
+        var overlay = document.getElementById('bio-modal-overlay');
+        if (!overlay) return;
+        var editBtn = document.getElementById('btn-edit-profile');
+        var closeBtn = document.getElementById('bio-modal-close');
+        var cancelBtn = document.getElementById('bio-cancel');
+        var saveBtn = document.getElementById('bio-save');
+        var textarea = document.getElementById('bio-textarea');
+        var preview = document.getElementById('bio-preview');
+        var counter = document.getElementById('bio-counter');
+        var modalTabs = overlay.querySelectorAll('.modal-tab');
+
+        function open() {
+            overlay.classList.add('is-open');
+            overlay.setAttribute('aria-hidden', 'false');
+            // 重置到编辑 tab
+            switchModalTab('write');
+            textarea.value = textarea.value; // 触发计数更新
+            updateCounter();
+            setTimeout(function () { textarea.focus(); }, 50);
+            document.body.style.overflow = 'hidden';
+        }
+        function close() {
+            overlay.classList.remove('is-open');
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        if (editBtn) editBtn.addEventListener('click', open);
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        if (cancelBtn) cancelBtn.addEventListener('click', close);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) close();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) close();
+        });
+
+        function updateCounter() {
+            var len = (textarea.value || '').length;
+            counter.textContent = len + '/2000';
+            counter.classList.toggle('is-over', len > 2000);
+        }
+        textarea.addEventListener('input', updateCounter);
+
+        function switchModalTab(name) {
+            modalTabs.forEach(function (t) {
+                var active = t.dataset.modalTab === name;
+                t.classList.toggle('active', active);
+                t.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            if (name === 'preview') {
+                textarea.classList.add('hidden');
+                preview.classList.add('active');
+                // 简单预览：仅按原始格式展示（不渲染完整 Markdown）
+                preview.textContent = textarea.value || '（暂无内容）';
+            } else {
+                textarea.classList.remove('hidden');
+                preview.classList.remove('active');
+            }
+        }
+        modalTabs.forEach(function (t) {
+            t.addEventListener('click', function () {
+                switchModalTab(t.dataset.modalTab);
+            });
+        });
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                var bio = textarea.value;
+                if (bio.length > 2000) {
+                    showToast('简介过长（最多 2000 字符）', 'error');
+                    return;
+                }
+                saveBtn.disabled = true;
+                saveBtn.textContent = '保存中…';
+
+                fetch('{{ url_for("games.update_profile") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bio: bio })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        // 更新页面显示
+                        var display = document.getElementById('profile-bio-display');
+                        var about = document.getElementById('about-me-card');
+                        if (display) {
+                            if (bio.trim()) {
+                                display.textContent = bio;
+                                display.classList.remove('is-empty');
+                            } else {
+                                display.textContent = '这位用户还没有填写简介';
+                                display.classList.add('is-empty');
+                            }
+                        }
+                        if (about) {
+                            if (bio.trim()) {
+                                about.textContent = bio;
+                                about.classList.remove('is-empty');
+                            } else {
+                                about.textContent = '这位用户还没有填写简介';
+                                about.classList.add('is-empty');
+                            }
+                        }
+                        showToast(data.message || '个人主页已更新', 'success');
+                        close();
+                    } else {
+                        showToast(data.message || '保存失败', 'error');
+                    }
+                })
+                .catch(function () {
+                    showToast('网络错误，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '保存';
+                });
+            });
+        }
+    })();
+
+    /* ---------- 个性化主页 HTML 编辑弹窗 ---------- */
+    (function initCustomProfileModal() {
+        var overlay = document.getElementById('custom-profile-overlay');
+        if (!overlay) return;
+        var openFromBioBtn = document.getElementById('btn-open-custom-profile');
+        var closeBtn = document.getElementById('cp-modal-close');
+        var cancelBtn = document.getElementById('cp-cancel');
+        var saveBtn = document.getElementById('cp-save');
+        var textarea = document.getElementById('cp-html-textarea');
+        var counter = document.getElementById('cp-counter');
+        var bioOverlay = document.getElementById('bio-modal-overlay');
+
+        function open() {
+            overlay.classList.add('is-open');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            // 加载当前 HTML 内容
+            fetch('{{ url_for("games.custom_profile_api") }}', { method: 'GET' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        textarea.value = data.html || '';
+                        updateCounter();
+                    }
+                })
+                .catch(function () { /* 忽略加载错误 */ });
+            setTimeout(function () { textarea.focus(); }, 50);
+        }
+        function close() {
+            overlay.classList.remove('is-open');
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        // 从 bio 弹窗切换到个性化主页弹窗
+        if (openFromBioBtn) {
+            openFromBioBtn.addEventListener('click', function () {
+                // 先关闭 bio 弹窗
+                if (bioOverlay) {
+                    bioOverlay.classList.remove('is-open');
+                    bioOverlay.setAttribute('aria-hidden', 'true');
+                }
+                open();
+            });
+        }
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        if (cancelBtn) cancelBtn.addEventListener('click', close);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) close();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) close();
+        });
+
+        function updateCounter() {
+            var len = (textarea.value || '').length;
+            counter.textContent = len + ' 字符';
+        }
+        textarea.addEventListener('input', updateCounter);
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                var html = textarea.value || '';
+                if (html.length > 500 * 1024) {
+                    showToast('HTML 内容过大（最多 500KB）', 'error');
+                    return;
+                }
+                saveBtn.disabled = true;
+                saveBtn.textContent = '保存中…';
+
+                fetch('{{ url_for("games.custom_profile_api") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: html })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        showToast(data.message || '个性化主页已保存', 'success');
+                        close();
+                        // 保存成功后刷新页面以更新「个性化主页」入口按钮
+                        setTimeout(function () { window.location.reload(); }, 600);
+                    } else {
+                        showToast(data.message || '保存失败', 'error');
+                    }
+                })
+                .catch(function () {
+                    showToast('网络错误，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '保存';
+                });
+            });
+        }
+    })();
+
+    /* ---------- Topup Modal 已移除（积分不可充值） ---------- */
+
+})();
+</script>
+{% endblock %}

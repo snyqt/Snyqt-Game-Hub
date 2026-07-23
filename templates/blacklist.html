@@ -4,7 +4,7 @@
 
 {% block head %}
 <style>
-/* 小黑屋管理页面样式 */
+/* ==================== 小黑屋管理页面样式 ==================== */
 .blacklist-section {
     margin-bottom: 32px;
 }
@@ -12,8 +12,8 @@
 .blacklist-table {
     width: 100%;
     border-collapse: collapse;
-    background: var(--card, #1a1a2e);
-    border-radius: 12px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
     overflow: hidden;
     font-size: .88rem;
 }
@@ -22,12 +22,12 @@
 .blacklist-table td {
     padding: 12px 16px;
     text-align: left;
-    border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
+    border-bottom: 1px solid var(--border-color);
 }
 
 .blacklist-table th {
-    background: rgba(255,255,255,0.04);
-    color: var(--muted, rgba(255,255,255,0.6));
+    background: var(--glass-bg);
+    color: var(--fg-secondary);
     font-weight: 600;
     font-size: .82rem;
     text-transform: uppercase;
@@ -39,13 +39,14 @@
 }
 
 .blacklist-table tr:hover td {
-    background: rgba(255,255,255,0.02);
+    background: var(--bg-card);
 }
 
+/* ---- 举报卡片 ---- */
 .report-card {
-    background: var(--card, #1a1a2e);
-    border: 1px solid var(--border, rgba(255,255,255,0.06));
-    border-radius: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
     padding: 16px 20px;
     margin-bottom: 12px;
 }
@@ -57,107 +58,507 @@
     flex-wrap: wrap;
     margin-bottom: 8px;
     font-size: .84rem;
-    color: var(--muted, rgba(255,255,255,0.6));
+    color: var(--fg-secondary);
 }
 
 .report-card-title {
     font-weight: 600;
-    color: var(--text, #fff);
+    color: var(--fg-primary);
     font-size: .95rem;
 }
 
 .report-card-reason {
-    color: var(--text, #fff);
+    color: var(--fg-primary);
     font-size: .88rem;
     line-height: 1.6;
     margin: 8px 0;
     padding: 8px 12px;
-    background: rgba(255,69,58,0.06);
-    border-left: 3px solid rgba(255,69,58,0.5);
-    border-radius: 6px;
+    background: rgba(255, 56, 96, 0.06);
+    border-left: 3px solid var(--accent-danger);
+    border-radius: var(--radius-sm);
 }
 
 .report-card-actions {
     display: flex;
     gap: 8px;
     margin-top: 12px;
+    flex-wrap: wrap;
 }
 
+/* ---- 目标类型徽章 ---- */
 .target-type-badge {
     display: inline-block;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: .72rem;
     font-weight: 600;
 }
 
 .target-type-badge.game {
-    background: rgba(0,230,118,0.15);
-    color: #00e676;
-    border: 1px solid rgba(0,230,118,0.2);
+    background: rgba(0, 255, 157, 0.15);
+    color: var(--accent-primary);
+    border: 1px solid rgba(0, 255, 157, 0.3);
 }
 
 .target-type-badge.post {
-    background: rgba(100,210,255,0.15);
-    color: #64d2ff;
-    border: 1px solid rgba(100,210,255,0.2);
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(6, 182, 212, 0.3);
 }
 
+.target-type-badge.user {
+    background: rgba(139, 92, 246, 0.15);
+    color: var(--accent-purple);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+/* ---- 按钮 ---- */
 .btn-valid {
-    background: linear-gradient(135deg, #00e676, #00b248);
-    color: #07122A;
+    background: linear-gradient(135deg, var(--accent-primary), #00b248);
+    color: #0a0e1a;
     border: none;
     padding: 6px 16px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: .82rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
 .btn-valid:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,230,118,0.3);
+    box-shadow: 0 4px 12px rgba(0, 255, 157, 0.3);
 }
 
 .btn-invalid {
-    background: rgba(255,69,58,0.15);
-    color: #ff453a;
-    border: 1px solid rgba(255,69,58,0.3);
+    background: rgba(255, 56, 96, 0.15);
+    color: var(--accent-danger);
+    border: 1px solid rgba(255, 56, 96, 0.3);
     padding: 6px 16px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: .82rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
+.btn-invalid:hover { background: rgba(255, 56, 96, 0.25); }
 
-.btn-invalid:hover {
-    background: rgba(255,69,58,0.25);
-}
-
+/* ---- 空状态 ---- */
 .empty-state-card {
     text-align: center;
     padding: 40px 20px;
-    background: var(--card, #1a1a2e);
-    border: 1px solid var(--border, rgba(255,255,255,0.06));
-    border-radius: 12px;
-    color: var(--muted, rgba(255,255,255,0.4));
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--fg-muted);
 }
 
 .back-link {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--muted, rgba(255,255,255,0.6));
+    color: var(--fg-secondary);
     text-decoration: none;
     font-size: .84rem;
     margin-bottom: 16px;
     transition: color 0.2s ease;
 }
+.back-link:hover { color: var(--fg-primary); }
 
-.back-link:hover {
-    color: var(--text, #fff);
+/* ==================== SubTask 13.1/13.2: 处罚表单 ==================== */
+.ban-form {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 24px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--fg-secondary);
+    letter-spacing: 0.02em;
+}
+
+.form-group label .req {
+    color: var(--accent-danger);
+    margin-left: 2px;
+}
+
+.form-group small {
+    font-size: .76rem;
+    color: var(--fg-muted);
+    line-height: 1.4;
+}
+
+.field {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-base);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: .9rem;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+.field::placeholder { color: var(--fg-muted); }
+.field:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+    background: var(--bg-elevated);
+}
+[data-theme="light"] .field:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+}
+textarea.field {
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* ---- 时长选择器 ---- */
+.duration-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.duration-row .field { flex: 1 1 180px; }
+.duration-row .field.days-input {
+    flex: 0 0 110px;
+    min-width: 110px;
+}
+
+/* ---- 公开处罚记录 Toggle Switch ---- */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-pill);
+    transition: background var(--transition-base), border-color var(--transition-base);
+}
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    top: 2px;
+    background: var(--fg-muted);
+    border-radius: 50%;
+    transition: transform var(--transition-base), background var(--transition-base);
+}
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+    background: #0a0e1a;
+}
+[data-theme="light"] .toggle-switch input:checked + .toggle-slider::before {
+    background: #ffffff;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.toggle-row .toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.toggle-row .toggle-text small {
+    font-size: .76rem;
+    color: var(--fg-muted);
+}
+
+/* ---- 表单操作区 ---- */
+.form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* ==================== SubTask 13.3: 评鉴员投票队列 ==================== */
+.reviewer-queue-panel {
+    margin-bottom: 32px;
+}
+
+.pending-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+}
+
+.pending-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-purple);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.pending-card:hover {
+    border-left-color: var(--accent-danger);
+    box-shadow: var(--shadow-2);
+}
+
+.pending-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pending-card-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--fg-primary);
+    margin: 0;
+}
+
+.pending-card-meta {
+    font-size: .76rem;
+    color: var(--fg-muted);
+}
+
+.voters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.voter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    font-size: .76rem;
+    color: var(--fg-secondary);
+    font-family: var(--font-mono);
+}
+.voter-chip::before {
+    content: "◈";
+    color: var(--accent-secondary);
+    font-size: .68rem;
+}
+
+.pending-card-reason {
+    font-size: .84rem;
+    color: var(--fg-primary);
+    line-height: 1.55;
+    padding: 8px 10px;
+    background: rgba(139, 92, 246, 0.06);
+    border-left: 2px solid rgba(139, 92, 246, 0.4);
+    border-radius: var(--radius-sm);
+}
+
+.pending-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.btn-confirm-ban {
+    background: var(--accent-danger);
+    color: #ffffff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-confirm-ban:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 56, 96, 0.35);
+}
+.btn-confirm-ban:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ==================== 模态框：确认封禁 / 处理举报 ==================== */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+.modal-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-4);
+    width: min(520px, 92vw);
+    max-height: 90vh;
+    overflow: auto;
+    padding: 24px;
+    transform: translateY(12px) scale(0.98);
+    transition: transform var(--transition-base);
+}
+.modal-backdrop.is-open .modal-content {
+    transform: translateY(0) scale(1);
+}
+
+.modal-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--fg-primary);
+    margin: 0 0 6px;
+}
+.modal-subtitle {
+    font-size: .82rem;
+    color: var(--fg-secondary);
+    margin: 0 0 16px;
+}
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn-cancel {
+    background: transparent;
+    color: var(--fg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: .85rem;
+    cursor: pointer;
+    transition: background var(--transition-base), color var(--transition-base);
+}
+.btn-cancel:hover {
+    background: var(--glass-bg);
+    color: var(--fg-primary);
+}
+
+.btn-submit-danger {
+    background: var(--accent-danger);
+    color: #ffffff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: .85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-submit-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 56, 96, 0.35);
+}
+.btn-submit-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.modal-target-preview {
+    padding: 10px 12px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: .84rem;
+    color: var(--fg-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 720px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .form-actions {
+        justify-content: stretch;
+    }
+    .form-actions .btn-submit-danger {
+        flex: 1;
+    }
+    .pending-list {
+        grid-template-columns: 1fr;
+    }
+    .blacklist-table {
+        font-size: .82rem;
+    }
+    .blacklist-table th,
+    .blacklist-table td {
+        padding: 8px 10px;
+    }
 }
 </style>
 {% endblock %}
@@ -179,6 +580,99 @@
             <span class="sub">小黑屋管理</span>
         </div>
 
+        {# ==================== SubTask 13.3: 评鉴员投票待确认 ==================== #}
+        <div class="blacklist-section reviewer-queue-panel">
+            <div class="section-title" style="margin-bottom:16px;">
+                <span class="accent-bar"></span>
+                <h2 style="font-size:1.1rem;">评鉴员投票待确认</h2>
+                <span class="sub" id="reviewerQueueCount">加载中…</span>
+            </div>
+            <div id="reviewerQueueContainer">
+                <div class="empty-state-card">
+                    <h3 style="margin:0 0 6px;font-size:1rem;">加载中…</h3>
+                    <p style="margin:0;font-size:.84rem;">正在获取待确认投票</p>
+                </div>
+            </div>
+        </div>
+
+        {# ==================== SubTask 13.1/13.2: 执行处罚表单 ==================== #}
+        <div class="blacklist-section">
+            <div class="section-title" style="margin-bottom:16px;">
+                <span class="accent-bar"></span>
+                <h2 style="font-size:1.1rem;">执行处罚</h2>
+                <span class="sub">手动封禁游戏 / 用户</span>
+            </div>
+
+            <form id="banForm" class="ban-form" autocomplete="off">
+                <div class="form-grid">
+                    {# 处罚类型 #}
+                    <div class="form-group">
+                        <label for="banTargetType">处罚类型<span class="req">*</span></label>
+                        <select id="banTargetType" class="field" required>
+                            <option value="game">游戏</option>
+                            <option value="user">用户</option>
+                            <option value="post">帖子（需通过举报流程）</option>
+                        </select>
+                    </div>
+
+                    {# 目标 ID #}
+                    <div class="form-group">
+                        <label for="banTargetId">目标 ID<span class="req">*</span></label>
+                        <input type="number" id="banTargetId" class="field" placeholder="例如 1234" min="1" required>
+                    </div>
+
+                    {# 处罚原因 #}
+                    <div class="form-group full">
+                        <label for="banReason">处罚原因<span class="req">*</span></label>
+                        <textarea id="banReason" class="field" placeholder="请详细填写处罚原因，将展示在处罚记录中…" required></textarea>
+                    </div>
+
+                    {# 封禁时长 #}
+                    <div class="form-group">
+                        <label for="banDuration">封禁时长</label>
+                        <div class="duration-row">
+                            <select id="banDuration" class="field">
+                                <option value="">永久封禁</option>
+                                <option value="365">1 年</option>
+                                <option value="180">6 个月</option>
+                                <option value="90">3 个月</option>
+                                <option value="30">1 个月</option>
+                                <option value="7">1 周</option>
+                                <option value="3">3 天</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                            <input type="number" id="banCustomDays" class="field days-input" placeholder="自定义天数" min="1" style="display:none;">
+                        </div>
+                        {# 隐藏字段：实际提交的 duration_days（null=永久, 整数=天数） #}
+                        <input type="hidden" id="banDurationDays" value="">
+                    </div>
+
+                    {# 公开处罚记录开关 #}
+                    <div class="form-group">
+                        <label>公开处罚记录</label>
+                        <div class="toggle-row">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="banIsPublic" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <div class="toggle-text">
+                                <small>开启后，此处罚记录将显示在公共小黑屋页面</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# 操作按钮 #}
+                    <div class="form-actions">
+                        <button type="button" class="btn-cancel" id="banFormReset">重置</button>
+                        <button type="submit" class="btn-submit-danger">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            执行处罚
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
         {# ==================== 处罚记录 ==================== #}
         <div class="blacklist-section">
             <div class="section-title" style="margin-bottom:16px;">
@@ -195,6 +689,8 @@
                             <th>类型</th>
                             <th>目标</th>
                             <th>原因</th>
+                            <th>时长</th>
+                            <th>公开</th>
                             <th>操作管理员</th>
                             <th>时间</th>
                             <th>操作</th>
@@ -205,14 +701,25 @@
                         <tr>
                             <td>
                                 <span class="target-type-badge {{ p.target_type }}">
-                                    {{ {'game': '游戏', 'post': '帖子'}.get(p.target_type, p.target_type) }}
+                                    {{ {'game': '游戏', 'post': '帖子', 'user': '用户'}.get(p.target_type, p.target_type) }}
                                 </span>
                             </td>
                             <td>
                                 <div style="font-weight:600;">{{ p.target_title|default('—') }}</div>
                                 <div class="text-muted" style="font-size:.74rem;">ID #{{ p.target_id }}</div>
                             </td>
-                            <td style="max-width:300px;">{{ p.reason|default('—') }}</td>
+                            <td style="max-width:260px;">{{ p.reason|default('—') }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">
+                                {% if p.duration_days is none %}永久{% else %}{{ p.duration_days }} 天{% endif %}
+                                {% if p.expires_at %}<div style="font-size:.72rem;">至 {{ p.expires_at }}</div>{% endif %}
+                            </td>
+                            <td>
+                                {% if p.is_public %}
+                                <span class="badge badge-success">公开</span>
+                                {% else %}
+                                <span class="badge badge-muted">不公开</span>
+                                {% endif %}
+                            </td>
                             <td>{{ p.admin_name|default('—') }}</td>
                             <td class="text-muted" style="font-size:.8rem;">{{ p.created_at|default('') }}</td>
                             <td>
@@ -250,7 +757,7 @@
                         <span class="target-type-badge {{ r.target_type }}">
                             {{ {'post': '帖子举报'}.get(r.target_type, r.target_type) }}
                         </span>
-                        <span>举报人: <strong style="color:var(--text,#fff);">{{ r.reporter_name|default('匿名') }}</strong></span>
+                        <span>举报人: <strong style="color:var(--fg-primary);">{{ r.reporter_name|default('匿名') }}</strong></span>
                         <span>·</span>
                         <span>{{ r.created_at|default('') }}</span>
                     </div>
@@ -260,11 +767,11 @@
                     </div>
                     <div class="report-card-reason">{{ r.reason|default('（未填写理由）') }}</div>
                     <div class="report-card-actions">
-                        <button class="btn-valid" onclick="handleReport({{ r.id }}, 'valid')">
+                        <button class="btn-valid" data-report-valid data-rid="{{ r.id }}" data-target-id="{{ r.target_id }}" data-target-title="{{ r.post_title|default('') }}">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M20 6L9 17l-5-5"/></svg>
                             属实
                         </button>
-                        <button class="btn-invalid" onclick="handleReport({{ r.id }}, 'invalid')">
+                        <button class="btn-invalid" data-report-invalid data-rid="{{ r.id }}">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
                             不属实
                         </button>
@@ -281,13 +788,510 @@
         </div>
     </div>
 </section>
+
+{# ==================== 模态框：确认评鉴员投票封禁 ==================== #}
+<div class="modal-backdrop" id="confirmBanModal" aria-hidden="true" role="dialog" aria-labelledby="confirmBanTitle">
+    <div class="modal-content">
+        <h3 class="modal-title" id="confirmBanTitle">确认封禁用户</h3>
+        <p class="modal-subtitle">请选择封禁时长与公开选项，确认后将执行用户封禁</p>
+        <div class="modal-body">
+            <div class="modal-target-preview" id="confirmBanTarget">
+                <span class="target-type-badge user">用户</span>
+                <span id="confirmBanTargetName">—</span>
+            </div>
+            <div class="pending-card-reason" id="confirmBanReason" style="background:rgba(255,56,96,0.06);border-left-color:var(--accent-danger);">—</div>
+
+            <div class="form-group">
+                <label for="modalDuration">封禁时长</label>
+                <div class="duration-row">
+                    <select id="modalDuration" class="field">
+                        <option value="">永久封禁</option>
+                        <option value="365">1 年</option>
+                        <option value="180">6 个月</option>
+                        <option value="90">3 个月</option>
+                        <option value="30">1 个月</option>
+                        <option value="7">1 周</option>
+                        <option value="3">3 天</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                    <input type="number" id="modalCustomDays" class="field days-input" placeholder="自定义天数" min="1" style="display:none;">
+                </div>
+                <input type="hidden" id="modalDurationDays" value="">
+            </div>
+
+            <div class="form-group">
+                <label>公开处罚记录</label>
+                <div class="toggle-row">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="modalIsPublic" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div class="toggle-text">
+                        <small>开启后，此处罚记录将显示在公共小黑屋页面</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" data-modal-close="confirmBanModal">取消</button>
+            <button type="button" class="btn-submit-danger" id="confirmBanSubmit">确认封禁</button>
+        </div>
+    </div>
+</div>
+
+{# ==================== 模态框：处理举报（属实） ==================== #}
+<div class="modal-backdrop" id="reportModal" aria-hidden="true" role="dialog" aria-labelledby="reportModalTitle">
+    <div class="modal-content">
+        <h3 class="modal-title" id="reportModalTitle">标记举报属实并封禁帖子</h3>
+        <p class="modal-subtitle">请填写封禁理由、选择时长与公开选项</p>
+        <div class="modal-body">
+            <div class="modal-target-preview" id="reportModalTarget">
+                <span class="target-type-badge post">帖子</span>
+                <span id="reportModalTargetName">—</span>
+            </div>
+
+            <div class="form-group">
+                <label for="reportReason">封禁理由<span class="req">*</span></label>
+                <textarea id="reportReason" class="field" placeholder="请填写封禁理由（必填）" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="reportDuration">封禁时长</label>
+                <div class="duration-row">
+                    <select id="reportDuration" class="field">
+                        <option value="">永久封禁</option>
+                        <option value="365">1 年</option>
+                        <option value="180">6 个月</option>
+                        <option value="90">3 个月</option>
+                        <option value="30">1 个月</option>
+                        <option value="7">1 周</option>
+                        <option value="3">3 天</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                    <input type="number" id="reportCustomDays" class="field days-input" placeholder="自定义天数" min="1" style="display:none;">
+                </div>
+                <input type="hidden" id="reportDurationDays" value="">
+            </div>
+
+            <div class="form-group">
+                <label>公开处罚记录</label>
+                <div class="toggle-row">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="reportIsPublic" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div class="toggle-text">
+                        <small>开启后，此处罚记录将显示在公共小黑屋页面</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" data-modal-close="reportModal">取消</button>
+            <button type="button" class="btn-submit-danger" id="reportModalSubmit">确认封禁</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// 解除封禁：target_type 为 'post' 或 'game'
+/* ==================== 工具函数 ==================== */
+function _toast(msg, type) {
+    if (typeof window.snyqtToast === 'function') return window.snyqtToast(msg, type);
+    if (typeof window.showToast === 'function') return window.showToast(msg, type);
+    alert(msg);
+}
+
+/* 读取时长选择器：返回 null（永久）或正整数（天数） */
+function getDurationDays(selectId, customId, hiddenId) {
+    var sel = document.getElementById(selectId);
+    var custom = document.getElementById(customId);
+    var hidden = document.getElementById(hiddenId);
+    if (!sel) return null;
+    var val = sel.value;
+    var result;
+    if (val === 'custom') {
+        var days = custom && custom.value ? parseInt(custom.value, 10) : NaN;
+        if (isNaN(days) || days <= 0) return null;  // 由调用方校验
+        result = days;
+    } else if (val === '') {
+        result = null;  // 永久
+    } else {
+        result = parseInt(val, 10);
+        if (isNaN(result) || result <= 0) result = null;
+    }
+    if (hidden) hidden.value = (result === null ? '' : result);
+    return result;
+}
+
+/* 读取 toggle 开关：返回 1 或 0 */
+function getIsPublic(toggleId) {
+    var el = document.getElementById(toggleId);
+    return el && el.checked ? 1 : 0;
+}
+
+/* 绑定时长选择器：自定义输入框的显示/隐藏 */
+function setupDurationToggle(selectId, customId) {
+    var sel = document.getElementById(selectId);
+    var custom = document.getElementById(customId);
+    if (!sel || !custom) return;
+    sel.addEventListener('change', function () {
+        custom.style.display = (sel.value === 'custom') ? 'block' : 'none';
+        if (sel.value !== 'custom') custom.value = '';
+    });
+}
+
+/* 打开/关闭模态框 */
+function openModal(id) {
+    var m = document.getElementById(id);
+    if (m) { m.classList.add('is-open'); m.setAttribute('aria-hidden', 'false'); }
+}
+function closeModal(id) {
+    var m = document.getElementById(id);
+    if (m) { m.classList.remove('is-open'); m.setAttribute('aria-hidden', 'true'); }
+}
+
+/* 校验自定义天数，返回 true=有效 */
+function validateCustomDays(selectId, customId) {
+    var sel = document.getElementById(selectId);
+    var custom = document.getElementById(customId);
+    if (!sel || sel.value !== 'custom') return true;
+    var days = custom && custom.value ? parseInt(custom.value, 10) : NaN;
+    if (isNaN(days) || days <= 0) {
+        _toast('请填写有效的自定义天数（正整数）', 'warning');
+        if (custom) custom.focus();
+        return false;
+    }
+    return true;
+}
+
+/* ==================== SubTask 13.4: 升级 JS 函数 ==================== */
+
+/* banUser：封禁用户
+ * 参数：userId, reason, durationDays(null=永久), isPublic(0/1), btn(可选) */
+function banUser(userId, reason, durationDays, isPublic, btn) {
+    if (!reason || !reason.trim()) { _toast('请填写封禁理由', 'warning'); return false; }
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    fetch('/api/admin/users/' + userId + '/ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            reason: reason.trim(),
+            duration_days: durationDays,
+            is_public: !!isPublic
+        })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok || data.success) {
+            _toast('用户已封禁', 'success');
+            setTimeout(function () { location.reload(); }, 800);
+        } else {
+            _toast(data.error || data.message || '操作失败', 'error');
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        }
+    })
+    .catch(function () {
+        _toast('网络错误，请稍后重试', 'error');
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    });
+    return true;
+}
+
+/* banGame：封禁游戏
+ * 参数：gameId, reason, durationDays(null=永久), isPublic(0/1), btn(可选) */
+function banGame(gameId, reason, durationDays, isPublic, btn) {
+    if (!reason || !reason.trim()) { _toast('请填写封禁理由', 'warning'); return false; }
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    fetch('/api/admin/games/' + gameId + '/ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            reason: reason.trim(),
+            duration_days: durationDays,
+            is_public: !!isPublic
+        })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok || data.success) {
+            _toast(data.message || '游戏已封禁', 'success');
+            setTimeout(function () { location.reload(); }, 800);
+        } else {
+            _toast(data.error || data.message || '操作失败', 'error');
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        }
+    })
+    .catch(function () {
+        _toast('网络错误，请稍后重试', 'error');
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    });
+    return true;
+}
+
+/* handleReport：处理举报
+ * action='valid' 打开模态框收集 duration_days + is_public + reason
+ * action='invalid' 直接调用 */
+function handleReport(rid, action, targetId, targetTitle) {
+    if (action === 'valid') {
+        // 打开举报处理模态框
+        var modal = document.getElementById('reportModal');
+        var nameEl = document.getElementById('reportModalTargetName');
+        var reasonEl = document.getElementById('reportReason');
+        var submitBtn = document.getElementById('reportModalSubmit');
+        if (!modal || !submitBtn) return;
+
+        if (nameEl) nameEl.textContent = targetTitle ? ('#' + targetId + ' ' + targetTitle) : ('#' + targetId);
+        if (reasonEl) reasonEl.value = '';
+        // 重置时长与开关到默认
+        document.getElementById('reportDuration').value = '';
+        document.getElementById('reportCustomDays').style.display = 'none';
+        document.getElementById('reportCustomDays').value = '';
+        document.getElementById('reportDurationDays').value = '';
+        document.getElementById('reportIsPublic').checked = true;
+
+        // 绑定提交按钮（先解绑避免重复）
+        var newBtn = submitBtn.cloneNode(true);
+        submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+        newBtn.addEventListener('click', function () {
+            var reason = reasonEl.value.trim();
+            if (!reason) { _toast('请填写封禁理由', 'warning'); reasonEl.focus(); return; }
+            if (!validateCustomDays('reportDuration', 'reportCustomDays')) return;
+            var durationDays = getDurationDays('reportDuration', 'reportCustomDays', 'reportDurationDays');
+            var isPublic = getIsPublic('reportIsPublic');
+            newBtn.disabled = true;
+            handleReportSubmit(rid, 'valid', reason, durationDays, isPublic, newBtn, function () {
+                closeModal('reportModal');
+            });
+        });
+
+        openModal('reportModal');
+        if (reasonEl) setTimeout(function () { reasonEl.focus(); }, 100);
+    } else if (action === 'invalid') {
+        if (!confirm('确认此举报不属实并驳回？')) return;
+        handleReportSubmit(rid, 'invalid', '', null, true, null, null);
+    }
+}
+
+function handleReportSubmit(rid, action, reason, durationDays, isPublic, btn, onSuccess) {
+    fetch('/api/admin/reports/' + rid, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: action,
+            reason: reason,
+            duration_days: durationDays,
+            is_public: !!isPublic
+        })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok || data.success) {
+            _toast(action === 'valid' ? '已标记属实并封禁帖子' : '已标记不属实', 'success');
+            if (onSuccess) onSuccess();
+            var card = document.getElementById('report-' + rid);
+            if (card) {
+                card.style.transition = 'opacity 0.3s ease';
+                card.style.opacity = '0';
+                setTimeout(function () {
+                    card.remove();
+                    if (!document.querySelector('.report-card')) {
+                        setTimeout(function () { location.reload(); }, 600);
+                    }
+                }, 300);
+            } else {
+                setTimeout(function () { location.reload(); }, 800);
+            }
+        } else {
+            _toast(data.error || data.message || '操作失败', 'error');
+            if (btn) btn.disabled = false;
+        }
+    })
+    .catch(function () {
+        _toast('网络错误，请稍后重试', 'error');
+        if (btn) btn.disabled = false;
+    });
+}
+
+/* confirmBan：确认评鉴员投票封禁（打开模态框） */
+function confirmBan(voteId, targetType, targetId, targetName, reason) {
+    var nameEl = document.getElementById('confirmBanTargetName');
+    var reasonEl = document.getElementById('confirmBanReason');
+    var submitBtn = document.getElementById('confirmBanSubmit');
+    if (!submitBtn) return;
+
+    if (nameEl) nameEl.textContent = targetName ? ('#' + targetId + ' ' + targetName) : ('#' + targetId);
+    if (reasonEl) reasonEl.textContent = reason || '（未填写理由）';
+
+    // 重置模态框
+    document.getElementById('modalDuration').value = '';
+    document.getElementById('modalCustomDays').style.display = 'none';
+    document.getElementById('modalCustomDays').value = '';
+    document.getElementById('modalDurationDays').value = '';
+    document.getElementById('modalIsPublic').checked = true;
+
+    // 绑定提交按钮（先解绑）
+    var newBtn = submitBtn.cloneNode(true);
+    submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+    newBtn.addEventListener('click', function () {
+        if (!validateCustomDays('modalDuration', 'modalCustomDays')) return;
+        var durationDays = getDurationDays('modalDuration', 'modalCustomDays', 'modalDurationDays');
+        var isPublic = getIsPublic('modalIsPublic');
+        newBtn.disabled = true;
+        fetch('/api/admin/reviewer-queue/' + voteId + '/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ duration_days: durationDays, is_public: !!isPublic })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok || data.success) {
+                _toast(data.message || '用户已封禁', 'success');
+                closeModal('confirmBanModal');
+                // 乐观移除同一目标的所有卡片
+                var selector = '.pending-card[data-target-type="' + targetType + '"][data-target-id="' + targetId + '"]';
+                var cards = document.querySelectorAll(selector);
+                cards.forEach(function (c) {
+                    c.style.transition = 'opacity 0.3s ease';
+                    c.style.opacity = '0';
+                    setTimeout(function () { c.remove(); }, 300);
+                });
+                // 更新计数或显示空状态
+                setTimeout(function () {
+                    var remaining = document.querySelectorAll('.pending-card').length;
+                    var countEl = document.getElementById('reviewerQueueCount');
+                    if (countEl) countEl.textContent = remaining + ' 条待确认';
+                    var container = document.getElementById('reviewerQueueContainer');
+                    if (container && remaining === 0) {
+                        container.innerHTML = '<div class="empty-state-card"><h3 style="margin:0 0 6px;font-size:1rem;">暂无待确认的评鉴员投票</h3><p style="margin:0;font-size:.84rem;">所有投票已处理完毕</p></div>';
+                    }
+                }, 350);
+            } else {
+                _toast(data.error || data.message || '操作失败', 'error');
+                newBtn.disabled = false;
+            }
+        })
+        .catch(function () {
+            _toast('网络错误，请稍后重试', 'error');
+            newBtn.disabled = false;
+        });
+    });
+
+    openModal('confirmBanModal');
+}
+
+/* ==================== SubTask 13.3: 加载评鉴员投票队列 ==================== */
+function loadReviewerQueue() {
+    var container = document.getElementById('reviewerQueueContainer');
+    var countEl = document.getElementById('reviewerQueueCount');
+    if (!container) return;
+
+    fetch('/api/admin/reviewer-queue')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (!data.ok) {
+            container.innerHTML = '<div class="empty-state-card"><h3 style="margin:0 0 6px;font-size:1rem;color:var(--accent-danger);">加载失败</h3><p style="margin:0;font-size:.84rem;">' + (data.error || '权限不足或网络错误') + '</p></div>';
+            if (countEl) countEl.textContent = '加载失败';
+            return;
+        }
+        var queue = data.queue || [];
+        if (countEl) countEl.textContent = queue.length + ' 条投票';
+
+        if (queue.length === 0) {
+            container.innerHTML = '<div class="empty-state-card"><h3 style="margin:0 0 6px;font-size:1rem;">暂无待确认的评鉴员投票</h3><p style="margin:0;font-size:.84rem;">所有评鉴员投票已处理完毕</p></div>';
+            return;
+        }
+
+        // 按 (target_type, target_id) 分组
+        var groups = {};
+        var order = [];
+        queue.forEach(function (v) {
+            var key = v.target_type + ':' + v.target_id;
+            if (!groups[key]) {
+                groups[key] = {
+                    target_type: v.target_type,
+                    target_id: v.target_id,
+                    target_username: v.target_username,
+                    target_avatar: v.target_avatar,
+                    voters: [],
+                    reasons: [],
+                    vote_ids: [],
+                    created_at: v.created_at
+                };
+                order.push(key);
+            }
+            groups[key].voters.push({ id: v.reviewer_id, vote_id: v.id });
+            groups[key].vote_ids.push(v.id);
+            if (v.reason && groups[key].reasons.indexOf(v.reason) === -1) {
+                groups[key].reasons.push(v.reason);
+            }
+        });
+
+        var typeLabel = { user: '用户', post: '帖子', game: '游戏' };
+        var html = '<div class="pending-list">';
+        order.forEach(function (key) {
+            var g = groups[key];
+            var displayName = g.target_username || ('#' + g.target_id);
+            var votersHtml = g.voters.map(function (vt) {
+                return '<span class="voter-chip">评鉴员 #' + vt.id + '</span>';
+            }).join('');
+            var reasonsHtml = g.reasons.map(function (r) {
+                return '<div class="pending-card-reason">' + escapeHtml(r) + '</div>';
+            }).join('');
+            // 用第一个 vote_id 调用确认接口（确认后乐观移除整组）
+            var firstVoteId = g.vote_ids[0];
+            html += '<div class="pending-card" data-target-type="' + g.target_type + '" data-target-id="' + g.target_id + '">';
+            html += '  <div class="pending-card-head">';
+            html += '    <span class="target-type-badge ' + g.target_type + '">' + (typeLabel[g.target_type] || g.target_type) + '</span>';
+            html += '    <h3 class="pending-card-title">' + escapeHtml(displayName) + '</h3>';
+            html += '  </div>';
+            html += '  <div class="pending-card-meta">' + g.voters.length + ' 位评鉴员一致投票 · ' + escapeHtml(g.created_at || '') + '</div>';
+            html += '  <div class="voters">' + votersHtml + '</div>';
+            html += reasonsHtml;
+            html += '  <div class="pending-card-actions">';
+            html += '    <button class="btn-confirm-ban" data-vote-id="' + firstVoteId + '" data-target-type="' + g.target_type + '" data-target-id="' + g.target_id + '" data-target-name="' + escapeHtml(displayName) + '" data-reason="' + escapeHtml(g.reasons.join('；')) + '">';
+            html += '      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+            html += '      确认封禁';
+            html += '    </button>';
+            html += '  </div>';
+            html += '</div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+
+        // 绑定"确认封禁"按钮点击事件（通过 data 属性传参，避免内联 onclick 转义问题）
+        container.querySelectorAll('.btn-confirm-ban').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                confirmBan(
+                    parseInt(btn.getAttribute('data-vote-id'), 10),
+                    btn.getAttribute('data-target-type'),
+                    parseInt(btn.getAttribute('data-target-id'), 10),
+                    btn.getAttribute('data-target-name') || '',
+                    btn.getAttribute('data-reason') || ''
+                );
+            });
+        });
+    })
+    .catch(function () {
+        container.innerHTML = '<div class="empty-state-card"><h3 style="margin:0 0 6px;font-size:1rem;color:var(--accent-danger);">加载失败</h3><p style="margin:0;font-size:.84rem;">网络错误，请刷新重试</p></div>';
+        if (countEl) countEl.textContent = '加载失败';
+    });
+}
+
+function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/* ==================== 解除封禁 ==================== */
 function unbanTarget(targetType, targetId, btn) {
-    var label = targetType === 'post' ? '帖子' : (targetType === 'game' ? '游戏' : '目标');
+    var label = targetType === 'post' ? '帖子' : (targetType === 'game' ? '游戏' : (targetType === 'user' ? '用户' : '目标'));
     if (!confirm('确认解除对该' + label + '的封禁？\n解除后该' + label + '将重新对所有用户可见。')) return;
 
     if (btn) {
@@ -303,7 +1307,6 @@ function unbanTarget(targetType, targetId, btn) {
     .then(function (r) { return r.json(); })
     .then(function (data) {
         if (data.ok || data.success) {
-            // 移除该处罚记录行
             if (btn) {
                 var tr = btn.closest('tr');
                 if (tr) {
@@ -311,7 +1314,6 @@ function unbanTarget(targetType, targetId, btn) {
                     tr.style.opacity = '0';
                     setTimeout(function () {
                         tr.remove();
-                        // 如处罚列表清空，刷新页面以显示空状态
                         var tbody = document.querySelector('.blacklist-table tbody');
                         if (tbody && !tbody.querySelector('tr')) {
                             location.reload();
@@ -319,93 +1321,116 @@ function unbanTarget(targetType, targetId, btn) {
                     }, 300);
                 }
             }
-            if (window.snyqtToast) {
-                window.snyqtToast('已解除封禁', 'success');
-            }
+            _toast('已解除封禁', 'success');
         } else {
-            if (btn) {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-            }
-            if (window.snyqtToast) {
-                window.snyqtToast(data.error || data.message || '操作失败', 'error');
-            } else {
-                alert(data.error || data.message || '操作失败');
-            }
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+            _toast(data.error || data.message || '操作失败', 'error');
         }
     })
     .catch(function () {
-        if (btn) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-        }
-        if (window.snyqtToast) {
-            window.snyqtToast('网络错误，请稍后重试', 'error');
-        } else {
-            alert('网络错误，请稍后重试');
-        }
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        _toast('网络错误，请稍后重试', 'error');
     });
 }
 
-// 处理举报：action 为 'valid' 或 'invalid'
-// 标记属实时强制要求管理员填写封禁理由
-function handleReport(rid, action) {
-    if (action === 'valid') {
-        var reason = prompt('请填写封禁理由（必填）：', '');
-        if (reason === null) return;  // 用户取消
-        reason = (reason || '').trim();
-        if (!reason) {
-            window.snyqtToast ? window.snyqtToast('封禁理由为必填项，请重新填写', 'warning') : alert('封禁理由为必填项，请重新填写');
-            return;
+/* ==================== 初始化 ==================== */
+(function () {
+    'use strict';
+
+    // 绑定三个时长选择器
+    setupDurationToggle('banDuration', 'banCustomDays');
+    setupDurationToggle('modalDuration', 'modalCustomDays');
+    setupDurationToggle('reportDuration', 'reportCustomDays');
+
+    // 模态框关闭按钮
+    document.querySelectorAll('[data-modal-close]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            closeModal(btn.getAttribute('data-modal-close'));
+        });
+    });
+
+    // 点击背景关闭模态框
+    document.querySelectorAll('.modal-backdrop').forEach(function (m) {
+        m.addEventListener('click', function (e) {
+            if (e.target === m) closeModal(m.id);
+        });
+    });
+
+    // Escape 关闭模态框
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-backdrop.is-open').forEach(function (m) {
+                closeModal(m.id);
+            });
         }
-        if (!confirm('确认标记此举报为属实并封禁对应帖子？\n理由：' + reason)) return;
-        handleReportSubmit(rid, action, reason);
-    } else {
-        // 不属实直接处理，无需理由
-        if (!confirm('确认此举报不属实并驳回？')) return;
-        handleReportSubmit(rid, action, '');
+    });
+
+    // 处罚表单提交
+    var banForm = document.getElementById('banForm');
+    if (banForm) {
+        banForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var targetType = document.getElementById('banTargetType').value;
+            var targetId = document.getElementById('banTargetId').value;
+            var reason = document.getElementById('banReason').value;
+            var submitBtn = banForm.querySelector('button[type="submit"]');
+
+            if (!targetId || parseInt(targetId, 10) <= 0) {
+                _toast('请填写有效的目标 ID', 'warning');
+                return;
+            }
+            if (!reason || !reason.trim()) {
+                _toast('请填写处罚原因', 'warning');
+                return;
+            }
+            if (!validateCustomDays('banDuration', 'banCustomDays')) return;
+
+            var durationDays = getDurationDays('banDuration', 'banCustomDays', 'banDurationDays');
+            var isPublic = getIsPublic('banIsPublic');
+            var id = parseInt(targetId, 10);
+
+            if (targetType === 'game') {
+                banGame(id, reason, durationDays, isPublic, submitBtn);
+            } else if (targetType === 'user') {
+                banUser(id, reason, durationDays, isPublic, submitBtn);
+            } else if (targetType === 'post') {
+                _toast('帖子封禁请通过下方"举报管理"流程处理（点击"属实"按钮）', 'warning');
+            }
+        });
     }
-}
 
-function handleReportSubmit(rid, action, reason) {
-    fetch('/api/admin/reports/' + rid, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action, reason: reason })
-    })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-        if (data.ok || data.success) {
-            var card = document.getElementById('report-' + rid);
-            if (card) {
-                card.style.transition = 'opacity 0.3s ease';
-                card.style.opacity = '0';
-                setTimeout(function () {
-                    card.remove();
-                    // 如举报列表清空，刷新页面以显示空状态
-                    if (!document.querySelector('.report-card')) {
-                        location.reload();
-                    }
-                }, 300);
-            }
-            if (window.snyqtToast) {
-                window.snyqtToast(action === 'valid' ? '已标记属实并封禁帖子' : '已标记不属实', 'success');
-            }
-        } else {
-            if (window.snyqtToast) {
-                window.snyqtToast(data.error || data.message || '操作失败', 'error');
-            } else {
-                alert(data.error || data.message || '操作失败');
-            }
-        }
-    })
-    .catch(function () {
-        if (window.snyqtToast) {
-            window.snyqtToast('网络错误，请稍后重试', 'error');
-        } else {
-            alert('网络错误，请稍后重试');
-        }
+    // 重置按钮
+    var resetBtn = document.getElementById('banFormReset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            banForm.reset();
+            document.getElementById('banCustomDays').style.display = 'none';
+            document.getElementById('banDurationDays').value = '';
+            document.getElementById('banIsPublic').checked = true;
+        });
+    }
+
+    // 举报"属实"按钮（通过 data 属性传参，避免内联 onclick 转义问题）
+    document.querySelectorAll('[data-report-valid]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            handleReport(
+                parseInt(btn.getAttribute('data-rid'), 10),
+                'valid',
+                parseInt(btn.getAttribute('data-target-id'), 10),
+                btn.getAttribute('data-target-title') || ''
+            );
+        });
     });
-}
+
+    // 举报"不属实"按钮
+    document.querySelectorAll('[data-report-invalid]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            handleReport(parseInt(btn.getAttribute('data-rid'), 10), 'invalid');
+        });
+    });
+
+    // 加载评鉴员投票队列
+    loadReviewerQueue();
+})();
 </script>
 {% endblock %}

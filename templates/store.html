@@ -1,0 +1,1398 @@
+{% extends "base.html" %}
+
+{% block title %}游戏库{% endblock %}
+
+{% block head %}
+<style>
+/* ==================== 游戏库页面专属样式 ==================== */
+.store-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding-bottom: var(--space-9);
+}
+
+/* ---------- 面包屑 ---------- */
+.store-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-4);
+}
+.store-breadcrumb a {
+    color: var(--fg-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.store-breadcrumb a:hover { color: var(--accent-primary); text-decoration: none; }
+.store-breadcrumb .sep { opacity: 0.5; }
+.store-breadcrumb .current { color: var(--fg-primary); font-weight: 500; }
+
+/* ---------- 页面标题 ---------- */
+.store-header {
+    margin-bottom: var(--space-6);
+}
+.store-title-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+.store-title {
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--fg-primary);
+    margin: 0;
+    line-height: 1.1;
+}
+.store-title .accent { color: var(--accent-primary); }
+.store-subtitle {
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* ---------- 顶部排序 Tab ---------- */
+.sort-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-pill);
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.sort-tabs::-webkit-scrollbar { display: none; }
+.sort-tab {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--fg-secondary);
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--transition-base), color var(--transition-base);
+}
+.sort-tab:hover { color: var(--fg-primary); background: var(--glass-bg); }
+.sort-tab.active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    font-weight: 600;
+}
+[data-theme="light"] .sort-tab.active { color: #ffffff; }
+
+/* ==================== 两栏布局 ==================== */
+.store-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-6);
+    align-items: start;
+}
+.store-main { min-width: 0; }
+.store-sidebar {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--space-4));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-height: calc(100vh - var(--topbar-h) - var(--space-8));
+    overflow-y: auto;
+    padding-right: var(--space-1);
+}
+.store-sidebar::-webkit-scrollbar { width: 4px; }
+.store-sidebar::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: var(--radius-pill); }
+
+/* ==================== Banner 轮播 ==================== */
+.store-banner {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-3);
+    margin-bottom: var(--space-6);
+}
+.banner-track {
+    display: flex;
+    transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+}
+.banner-slide {
+    flex: 0 0 100%;
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--bg-base);
+}
+.banner-slide::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(10, 14, 26, 0.92) 0%, rgba(10, 14, 26, 0.6) 40%, rgba(10, 14, 26, 0.1) 100%);
+    pointer-events: none;
+}
+[data-theme="light"] .banner-slide::after {
+    background: linear-gradient(90deg, rgba(10, 14, 26, 0.85) 0%, rgba(10, 14, 26, 0.5) 40%, rgba(10, 14, 26, 0.05) 100%);
+}
+.banner-content {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: clamp(var(--space-5), 4vw, var(--space-8));
+    color: #ffffff;
+}
+.banner-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-primary);
+    margin-bottom: var(--space-2);
+}
+.banner-eyebrow::before {
+    content: "";
+    width: 24px;
+    height: 2px;
+    background: var(--accent-primary);
+}
+.banner-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 3.2vw, 2.2rem);
+    font-weight: 900;
+    line-height: 1.15;
+    margin: 0 0 var(--space-2);
+    color: #ffffff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    max-width: 70%;
+}
+.banner-desc {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin: 0 0 var(--space-4);
+    max-width: 60%;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.banner-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-decoration: none;
+    width: fit-content;
+    transition: transform var(--transition-base), box-shadow var(--transition-base), filter var(--transition-base);
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.3);
+}
+[data-theme="light"] .banner-cta { color: #ffffff; }
+.banner-cta:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(0, 255, 157, 0.45);
+    filter: brightness(1.08);
+}
+.banner-cta svg { width: 16px; height: 16px; }
+
+/* Banner 箭头 */
+.banner-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.4);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background var(--transition-base), transform var(--transition-base);
+}
+.banner-arrow:hover { background: var(--accent-primary); color: #0a0e1a; transform: translateY(-50%) scale(1.08); }
+.banner-arrow svg { width: 18px; height: 18px; }
+.banner-arrow-prev { left: var(--space-3); }
+.banner-arrow-next { right: var(--space-3); }
+
+/* Banner 圆点 */
+.banner-dots {
+    position: absolute;
+    bottom: var(--space-4);
+    right: var(--space-5);
+    z-index: 3;
+    display: flex;
+    gap: var(--space-2);
+}
+.banner-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: background var(--transition-base), width var(--transition-base);
+    border: none;
+    padding: 0;
+}
+.banner-dot.active {
+    background: var(--accent-primary);
+    width: 24px;
+}
+
+/* Banner 空状态 */
+.banner-empty {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    background: var(--bg-elevated);
+}
+
+/* ==================== 趋势图卡片 ==================== */
+.trend-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-2);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+.trend-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+}
+.trend-card-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.trend-card-title::before {
+    content: "";
+    width: 4px;
+    height: 18px;
+    background: var(--accent-primary);
+    border-radius: var(--radius-sm);
+}
+.trend-card-meta {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.trend-chart-container {
+    position: relative;
+    width: 100%;
+}
+.trend-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.trend-axis-text {
+    fill: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+.trend-axis-line {
+    stroke: var(--border-color);
+    stroke-width: 1;
+}
+.trend-point {
+    cursor: pointer;
+    transition: r var(--transition-fast);
+}
+.trend-point:hover { r: 5; }
+.trend-grid-line {
+    stroke: var(--border-subtle);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+}
+.trend-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--bg-elevated);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+    color: var(--fg-primary);
+    box-shadow: var(--shadow-3);
+    z-index: 10;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+}
+.trend-tooltip strong { color: var(--accent-primary); }
+.trend-empty {
+    text-align: center;
+    padding: var(--space-7) var(--space-4);
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+}
+
+/* ==================== 游戏网格 ==================== */
+.games-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+}
+.games-section-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--fg-primary);
+}
+.games-count {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.games-count strong { color: var(--accent-primary); font-weight: 700; }
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+.game-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-4), 0 0 0 1px var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+.game-card-cover {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--bg-elevated);
+    overflow: hidden;
+}
+.game-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 400ms ease;
+}
+.game-card:hover .game-card-cover img { transform: scale(1.06); }
+.cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-muted);
+    background:
+        linear-gradient(135deg, var(--bg-elevated) 25%, transparent 25%) -8px 0,
+        linear-gradient(225deg, var(--bg-elevated) 25%, transparent 25%) -8px 0,
+        linear-gradient(315deg, var(--bg-elevated) 25%, transparent 25%),
+        linear-gradient(45deg, var(--bg-elevated) 25%, transparent 25%);
+    background-size: 16px 16px;
+    background-color: var(--bg-base);
+}
+.cover-placeholder svg { width: 40px; height: 40px; opacity: 0.4; }
+
+/* 类型徽章 */
+.game-type-badge {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    z-index: 2;
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #ffffff;
+}
+.game-type-badge.type-html {
+    background: rgba(0, 255, 157, 0.85);
+    color: #0a0e1a;
+}
+[data-theme="light"] .game-type-badge.type-html { color: #ffffff; background: rgba(0, 204, 122, 0.9); }
+.game-type-badge.type-python {
+    background: rgba(139, 92, 246, 0.85);
+}
+.game-type-badge.type-single_html {
+    background: rgba(6, 182, 212, 0.85);
+}
+
+/* 卡片正文 */
+.game-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    flex: 1;
+}
+.game-card-title {
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.game-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 22px;
+}
+.game-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+.game-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-top: auto;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-subtle);
+}
+.game-card-price {
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+.game-card-price.price-free { color: var(--accent-primary); }
+.game-card-price.price-paid { color: var(--accent-secondary); }
+.game-card-stats {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.game-card-stats span {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* 空状态 */
+.games-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-9) var(--space-4);
+    color: var(--fg-muted);
+}
+.games-empty-state svg {
+    width: 56px;
+    height: 56px;
+    opacity: 0.4;
+    margin: 0 auto var(--space-3);
+}
+.games-empty-state p { margin: 0; font-size: 0.95rem; }
+
+/* ==================== 侧栏卡片 ==================== */
+.sidebar-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-2);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+.sidebar-card-title {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0 0 var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.sidebar-card-title svg { width: 16px; height: 16px; color: var(--accent-primary); }
+
+/* 排行榜入口 */
+.rank-list {
+    list: none;
+    margin: 0 0 var(--space-3);
+    padding: 0;
+}
+.rank-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.rank-item:last-child { border-bottom: none; }
+.rank-num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 0.78rem;
+    background: var(--glass-bg);
+    color: var(--fg-muted);
+}
+.rank-item:nth-child(1) .rank-num { background: rgba(255, 200, 87, 0.18); color: var(--accent-secondary); }
+.rank-item:nth-child(2) .rank-num { background: rgba(160, 168, 189, 0.18); color: var(--fg-secondary); }
+.rank-item:nth-child(3) .rank-num { background: rgba(205, 127, 50, 0.18); color: #cd7f32; }
+.rank-title {
+    flex: 1;
+    min-width: 0;
+    color: var(--fg-secondary);
+    font-size: 0.86rem;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--transition-fast);
+}
+.rank-title:hover { color: var(--accent-primary); text-decoration: none; }
+.rank-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--accent-primary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: gap var(--transition-fast);
+}
+.rank-link:hover { text-decoration: none; gap: var(--space-2); }
+
+/* 筛选项 */
+.filter-group { margin-bottom: var(--space-3); }
+.filter-group:last-child { margin-bottom: 0; }
+.filter-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.filter-option {
+    padding: 4px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    color: var(--fg-secondary);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.filter-option:hover { color: var(--fg-primary); border-color: var(--border-color); }
+.filter-option.active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    border-color: var(--accent-primary);
+}
+[data-theme="light"] .filter-option.active { color: #ffffff; }
+
+/* 标签云 */
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.tag-cloud-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    color: var(--fg-secondary);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--glass-border);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.tag-cloud-item:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+.tag-cloud-item.active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    border-color: var(--accent-primary);
+    font-weight: 600;
+}
+[data-theme="light"] .tag-cloud-item.active { color: #ffffff; }
+.tag-cloud-item .tag-count {
+    font-size: 0.65rem;
+    opacity: 0.7;
+    font-family: var(--font-mono);
+}
+.tag-cloud-empty {
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    padding: var(--space-2) 0;
+}
+
+/* 交流群 */
+.community-card .btn { margin-bottom: var(--space-2); }
+.feedback-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--fg-secondary);
+    font-size: 0.82rem;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.feedback-link:hover { color: var(--accent-primary); text-decoration: none; }
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 1024px) {
+    .store-layout {
+        grid-template-columns: 1fr;
+    }
+    .store-sidebar {
+        position: static;
+        max-height: none;
+        overflow-y: visible;
+        padding-right: 0;
+    }
+    .games-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 768px) {
+    .games-grid {
+        grid-template-columns: 1fr;
+    }
+    .banner-arrow { width: 32px; height: 32px; }
+    .banner-arrow svg { width: 14px; height: 14px; }
+    .banner-title { max-width: 100%; }
+    .banner-desc { max-width: 100%; }
+    .banner-dots { bottom: var(--space-3); right: var(--space-3); }
+    .store-title-row { flex-direction: column; align-items: flex-start; }
+}
+
+/* 尊重 reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .banner-track { transition: none !important; }
+    .game-card,
+    .game-card-cover img,
+    .banner-cta,
+    .banner-arrow,
+    .filter-option,
+    .tag-cloud-item,
+    .rank-link {
+        transition: none !important;
+    }
+    .game-card:hover { transform: none !important; }
+    .game-card:hover .game-card-cover img { transform: none !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="store-page">
+
+    {# ==================== 面包屑 ==================== #}
+    <nav class="store-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <span class="current">游戏库</span>
+    </nav>
+
+    {# ==================== 页面标题 ==================== #}
+    <header class="store-header">
+        <div class="store-title-row">
+            <div>
+                <h1 class="store-title">游戏<span class="accent">库</span></h1>
+                <p class="store-subtitle">发现、游玩海量独立游戏</p>
+            </div>
+        </div>
+
+        {# 顶部排序 Tab #}
+        <div class="sort-tabs" id="sort-tabs" role="tablist" aria-label="游戏排序">
+            <button class="sort-tab active" type="button" data-sort="hot" role="tab" aria-selected="true">综合热度</button>
+            <button class="sort-tab" type="button" data-sort="new" role="tab">最新发布</button>
+            <button class="sort-tab" type="button" data-sort="downloads" role="tab">下载量</button>
+            <button class="sort-tab" type="button" data-sort="rating" role="tab">评分</button>
+            <button class="sort-tab" type="button" data-sort="plays" role="tab">游玩量</button>
+        </div>
+    </header>
+
+    {# ==================== 两栏布局 ==================== #}
+    <div class="store-layout">
+
+        {# ---------- 左栏：Banner + 趋势图 + 游戏网格 ---------- #}
+        <main class="store-main">
+
+            {# ===== 商店精选 Banner 轮播 ===== #}
+            {% if banners and banners|length > 0 %}
+            <section class="store-banner" id="store-banner" aria-label="商店精选轮播">
+                <div class="banner-track" id="banner-track">
+                    {% for b in banners %}
+                    <div class="banner-slide"
+                         style="background-image: url('{% if b.cover_image.startswith('uploads/') %}/uploads/{{ b.cover_image[8:] }}{% else %}{{ b.cover_image }}{% endif %}');">
+                        <div class="banner-content">
+                            <div class="banner-eyebrow">商店精选 · #{{ loop.index }}</div>
+                            <h2 class="banner-title">{{ b.title|default('未命名游戏') }}</h2>
+                            {% if b.description %}
+                            <p class="banner-desc">{{ b.description }}</p>
+                            {% endif %}
+                            <a class="banner-cta" href="{{ url_for('games.game_detail', gid=b.id) }}">
+                                立即试玩
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {# 导航箭头 #}
+                {% if banners|length > 1 %}
+                <button class="banner-arrow banner-arrow-prev" type="button" aria-label="上一张" id="banner-prev">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <button class="banner-arrow banner-arrow-next" type="button" aria-label="下一张" id="banner-next">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+
+                {# 圆点指示器 #}
+                <div class="banner-dots" id="banner-dots" role="tablist">
+                    {% for b in banners %}
+                    <button class="banner-dot {% if loop.index == 1 %}active{% endif %}" type="button" data-idx="{{ loop.index0 }}" aria-label="第 {{ loop.index }} 张"></button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </section>
+            {% else %}
+            <section class="store-banner" aria-label="商店精选轮播">
+                <div class="banner-empty">暂无精选内容</div>
+            </section>
+            {% endif %}
+
+            {# ===== 最近 30 天新增游戏趋势图 ===== #}
+            <section class="trend-card" aria-label="最近 30 天新增游戏趋势">
+                <div class="trend-card-header">
+                    <h2 class="trend-card-title">最近 30 天新增游戏趋势</h2>
+                    <span class="trend-card-meta">单位：款 / 天</span>
+                </div>
+                <div class="trend-chart-container" id="trend-chart">
+                    {# SVG 由 JS 渲染 #}
+                </div>
+            </section>
+
+            {# ===== 游戏网格 ===== #}
+            <section aria-label="游戏列表">
+                <div class="games-section-header">
+                    <h2 class="games-section-title">全部游戏</h2>
+                    <div class="games-count">共 <strong id="games-visible-count">{{ games|length }}</strong> 款</div>
+                </div>
+
+                <div class="games-grid" id="games-grid">
+                    {% for g in games %}
+                    {% set tag_str = g.tags|default('') %}
+                    {% set tag_list = tag_str.split(',') if tag_str else [] %}
+                    <article class="game-card"
+                             data-id="{{ g.id }}"
+                             data-hosting="{{ g.hosting_type|default('html') }}"
+                             data-price="{{ g.price|default(0) }}"
+                             data-tags="{{ tag_str }}"
+                             data-downloads="{{ g.download_count|default(0) }}"
+                             data-plays="{{ g.play_count|default(0) }}"
+                             data-rating="{{ g.avg_rating|default(0) }}"
+                             data-created="{{ g.created_at|default('') }}"
+                             role="button"
+                             tabindex="0">
+                        <div class="game-card-cover">
+                            {% if g.cover_image %}
+                                {% if g.cover_image.startswith('uploads/') %}
+                                <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                                {% else %}
+                                <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                                {% endif %}
+                            {% else %}
+                            <div class="cover-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+                            </div>
+                            {% endif %}
+                            {% set ht = g.hosting_type|default('html') %}
+                            <span class="game-type-badge type-{{ ht }}">
+                                {% if ht == 'html' %}HTML{% elif ht == 'python' %}Python{% elif ht == 'single_html' %}单HTML{% else %}{{ ht }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="game-card-body">
+                            <h3 class="game-card-title">{{ g.title|default('未命名游戏') }}</h3>
+                            <div class="game-card-tags">
+                                {% for tag_name in tag_list %}
+                                {% set t = tag_name.strip() %}
+                                {% if t and loop.index <= 3 %}
+                                <span class="game-tag-chip">{{ t }}</span>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="game-card-meta">
+                                {% set price_val = g.price|default(0) %}
+                                {% if price_val == 0 %}
+                                {% if g.access_mode == 'invite' %}
+                                <span class="game-card-price price-free">邀请码</span>
+                                {% else %}
+                                <span class="game-card-price price-free">免费</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="game-card-price price-paid">¥{{ price_val }}</span>
+                                {% endif %}
+                                <div class="game-card-stats">
+                                    <span title="下载量">⬇ {{ g.download_count|default(0) }}</span>
+                                    <span title="游玩量">▶ {{ g.play_count|default(0) }}</span>
+                                    <span title="评分">★ {{ '%.1f'|format((g.avg_rating|default(0))|float) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                    {% endfor %}
+
+                    {# 空状态（JS 控制显隐） #}
+                    <div class="games-empty-state hidden" id="games-empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+                        <p>没有符合条件的游戏</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        {# ---------- 右栏：商店侧栏 ---------- #}
+        <aside class="store-sidebar" aria-label="商店侧栏">
+
+            {# ===== 排行榜入口 ===== #}
+            <div class="sidebar-card">
+                <h3 class="sidebar-card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                    排行榜
+                </h3>
+                <ol class="rank-list">
+                    {% for g in games[:3] %}
+                    <li class="rank-item">
+                        <span class="rank-num">{{ loop.index }}</span>
+                        <a class="rank-title" href="{{ url_for('games.game_detail', gid=g.id) }}" title="{{ g.title }}">{{ g.title|default('未命名游戏') }}</a>
+                    </li>
+                    {% endfor %}
+                </ol>
+                <a class="rank-link" href="/store/rankings">
+                    查看完整榜单
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+            </div>
+
+            {# ===== 商店筛选 ===== #}
+            <div class="sidebar-card">
+                <h3 class="sidebar-card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                    商店筛选
+                </h3>
+                <div class="filter-group">
+                    <label class="filter-label">排序</label>
+                    <div class="filter-options" id="sidebar-sort">
+                        <button class="filter-option active" type="button" data-sort="hot">综合热度</button>
+                        <button class="filter-option" type="button" data-sort="new">最新发布</button>
+                        <button class="filter-option" type="button" data-sort="downloads">下载量</button>
+                        <button class="filter-option" type="button" data-sort="rating">评分</button>
+                        <button class="filter-option" type="button" data-sort="plays">游玩量</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">价格</label>
+                    <div class="filter-options" id="sidebar-price">
+                        <button class="filter-option active" type="button" data-price="all">全部</button>
+                        <button class="filter-option" type="button" data-price="free">免费</button>
+                        <button class="filter-option" type="button" data-price="paid">付费</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">托管类型</label>
+                    <div class="filter-options" id="sidebar-hosting">
+                        <button class="filter-option active" type="button" data-hosting="all">全部</button>
+                        <button class="filter-option" type="button" data-hosting="html">HTML</button>
+                        <button class="filter-option" type="button" data-hosting="python">Python</button>
+                    </div>
+                </div>
+            </div>
+
+            {# ===== 标签云 ===== #}
+            <div class="sidebar-card">
+                <h3 class="sidebar-card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    标签云
+                </h3>
+                <div class="tag-cloud" id="tag-cloud">
+                    <button class="tag-cloud-item active" type="button" data-tag="">全部</button>
+                    {% for t in all_tags %}
+                    <button class="tag-cloud-item" type="button" data-tag="{{ t.name }}">
+                        {{ t.name }}<span class="tag-count">{{ t.game_count }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+                {% if not all_tags or all_tags|length == 0 %}
+                <div class="tag-cloud-empty">暂无标签</div>
+                {% endif %}
+            </div>
+
+            {# ===== 交流群 ===== #}
+            <div class="sidebar-card community-card">
+                <h3 class="sidebar-card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    交流群
+                </h3>
+                <a class="feedback-link" href="/feedback">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    反馈与建议
+                </a>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    /* ==================== 1. Banner 轮播 ==================== */
+    (function initBanner() {
+        var banner = document.getElementById('store-banner');
+        if (!banner) return;
+        var track = document.getElementById('banner-track');
+        var dots = banner.querySelectorAll('.banner-dot');
+        var prevBtn = document.getElementById('banner-prev');
+        var nextBtn = document.getElementById('banner-next');
+        if (!track) return;
+
+        var slides = track.querySelectorAll('.banner-slide');
+        if (slides.length <= 1) return;
+
+        var current = 0;
+        var timer = null;
+        var AUTO_INTERVAL = 5000;
+
+        function go(idx) {
+            current = (idx + slides.length) % slides.length;
+            track.style.transform = 'translateX(-' + (current * 100) + '%)';
+            dots.forEach(function (d, i) {
+                d.classList.toggle('active', i === current);
+            });
+        }
+        function next() { go(current + 1); }
+        function prev() { go(current - 1); }
+        function startAuto() {
+            stopAuto();
+            // 尊重 reduced motion：不自动播放
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            timer = window.setInterval(next, AUTO_INTERVAL);
+        }
+        function stopAuto() {
+            if (timer) { window.clearInterval(timer); timer = null; }
+        }
+
+        if (nextBtn) nextBtn.addEventListener('click', function () { next(); startAuto(); });
+        if (prevBtn) prevBtn.addEventListener('click', function () { prev(); startAuto(); });
+        dots.forEach(function (d, i) {
+            d.addEventListener('click', function () { go(i); startAuto(); });
+        });
+
+        // 鼠标悬停暂停
+        banner.addEventListener('mouseenter', stopAuto);
+        banner.addEventListener('mouseleave', startAuto);
+
+        // 触摸滑动支持
+        var touchStartX = 0;
+        var touchEndX = 0;
+        track.addEventListener('touchstart', function (e) {
+            touchStartX = e.changedTouches[0].screenX;
+            stopAuto();
+        }, { passive: true });
+        track.addEventListener('touchend', function (e) {
+            touchEndX = e.changedTouches[0].screenX;
+            var diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) next(); else prev();
+            }
+            startAuto();
+        }, { passive: true });
+
+        // 键盘左右切换
+        banner.setAttribute('tabindex', '0');
+        banner.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowLeft') { prev(); startAuto(); }
+            else if (e.key === 'ArrowRight') { next(); startAuto(); }
+        });
+
+        startAuto();
+    })();
+
+    /* ==================== 2. 趋势图（纯 SVG） ==================== */
+    (function initTrendChart() {
+        var container = document.getElementById('trend-chart');
+        if (!container) return;
+
+        // 后端数据：[{date: 'YYYY-MM-DD', count: N}, ...]
+        var trendData = [
+            {% for d in trend %}
+            { date: "{{ d.date }}", count: {{ d.count|default(0) }} }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        if (!trendData || trendData.length === 0) {
+            container.innerHTML = '<div class="trend-empty">暂无数据</div>';
+            return;
+        }
+
+        // 画布尺寸（viewBox 单位，等比缩放）
+        var width = 800;
+        var height = 240;
+        var padding = { top: 16, right: 20, bottom: 36, left: 40 };
+        var innerW = width - padding.left - padding.right;
+        var innerH = height - padding.top - padding.bottom;
+
+        // 计算坐标
+        var counts = trendData.map(function (d) { return d.count; });
+        var maxCount = Math.max.apply(null, counts.concat([1]));
+        var minCount = 0;
+        var range = Math.max(maxCount - minCount, 1);
+
+        var points = trendData.map(function (d, i) {
+            var x = padding.left + (trendData.length === 1 ? innerW / 2 : (i / (trendData.length - 1)) * innerW);
+            var y = padding.top + innerH - ((d.count - minCount) / range) * innerH;
+            return { x: x, y: y, date: d.date, count: d.count };
+        });
+
+        // 折线路径
+        var linePath = points.map(function (p, i) {
+            return (i === 0 ? 'M' : 'L') + ' ' + p.x.toFixed(2) + ' ' + p.y.toFixed(2);
+        }).join(' ');
+
+        // 填充区域路径（折线 + 底部封闭）
+        var last = points[points.length - 1];
+        var first = points[0];
+        var baselineY = padding.top + innerH;
+        var areaPath = linePath +
+            ' L ' + last.x.toFixed(2) + ' ' + baselineY +
+            ' L ' + first.x.toFixed(2) + ' ' + baselineY + ' Z';
+
+        // Y 轴刻度（4 等分）
+        var yLabels = '';
+        for (var i = 0; i <= 4; i++) {
+            var value = Math.round((maxCount * i / 4));
+            var y = padding.top + innerH - (i / 4) * innerH;
+            yLabels += '<text x="' + (padding.left - 8) + '" y="' + (y + 4).toFixed(2) + '" text-anchor="end" class="trend-axis-text">' + value + '</text>';
+            // 网格线
+            if (i > 0 && i < 4) {
+                yLabels += '<line x1="' + padding.left + '" y1="' + y.toFixed(2) + '" x2="' + (padding.left + innerW) + '" y2="' + y.toFixed(2) + '" class="trend-grid-line"/>';
+            }
+        }
+
+        // X 轴刻度（最多 6 个）
+        var xStep = Math.max(Math.ceil(points.length / 6), 1);
+        var xLabels = '';
+        for (var j = 0; j < points.length; j += xStep) {
+            var p = points[j];
+            var shortDate = (p.date || '').substring(5); // MM-DD
+            xLabels += '<text x="' + p.x.toFixed(2) + '" y="' + (padding.top + innerH + 18) + '" text-anchor="middle" class="trend-axis-text">' + shortDate + '</text>';
+        }
+        // 最后一个点强制显示
+        var lastPoint = points[points.length - 1];
+        if ((points.length - 1) % xStep !== 0) {
+            xLabels += '<text x="' + lastPoint.x.toFixed(2) + '" y="' + (padding.top + innerH + 18) + '" text-anchor="middle" class="trend-axis-text">' + (lastPoint.date || '').substring(5) + '</text>';
+        }
+
+        // 坐标轴
+        var axisLine = '<line x1="' + padding.left + '" y1="' + padding.top + '" x2="' + padding.left + '" y2="' + (padding.top + innerH) + '" class="trend-axis-line"/>' +
+                       '<line x1="' + padding.left + '" y1="' + (padding.top + innerH) + '" x2="' + (padding.left + innerW) + '" y2="' + (padding.top + innerH) + '" class="trend-axis-line"/>';
+
+        // 数据点
+        var pointCircles = points.map(function (p) {
+            return '<circle cx="' + p.x.toFixed(2) + '" cy="' + p.y.toFixed(2) + '" r="3" fill="var(--accent-primary)" stroke="var(--bg-elevated)" stroke-width="1.5" class="trend-point" data-date="' + p.date + '" data-count="' + p.count + '"></circle>';
+        }).join('');
+
+        // 组装 SVG
+        var svg =
+            '<svg viewBox="0 0 ' + width + ' ' + height + '" class="trend-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="最近 30 天新增游戏趋势折线图">' +
+                '<defs>' +
+                    '<linearGradient id="trendArea" x1="0" y1="0" x2="0" y2="1">' +
+                        '<stop offset="0%" stop-color="rgba(0, 255, 157, 0.28)"/>' +
+                        '<stop offset="100%" stop-color="rgba(0, 255, 157, 0)"/>' +
+                    '</linearGradient>' +
+                    '<linearGradient id="trendLine" x1="0" y1="0" x2="1" y2="0">' +
+                        '<stop offset="0%" stop-color="var(--accent-primary)"/>' +
+                        '<stop offset="100%" stop-color="var(--accent-primary)"/>' +
+                    '</linearGradient>' +
+                '</defs>' +
+                yLabels +
+                axisLine +
+                '<path d="' + areaPath + '" fill="url(#trendArea)"/>' +
+                '<path d="' + linePath + '" fill="none" stroke="url(#trendLine)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+                pointCircles +
+                xLabels +
+            '</svg>';
+
+        container.innerHTML = svg;
+
+        // 工具提示
+        var tooltip = document.createElement('div');
+        tooltip.className = 'trend-tooltip';
+        tooltip.style.display = 'none';
+        container.appendChild(tooltip);
+
+        var pts = container.querySelectorAll('.trend-point');
+        pts.forEach(function (pt) {
+            pt.addEventListener('mouseenter', function () {
+                var date = pt.getAttribute('data-date');
+                var count = pt.getAttribute('data-count');
+                tooltip.innerHTML = '<strong>' + date + '</strong><br>新增 ' + count + ' 款';
+                tooltip.style.display = 'block';
+            });
+            pt.addEventListener('mousemove', function (e) {
+                var rect = container.getBoundingClientRect();
+                var x = e.clientX - rect.left + 12;
+                var y = e.clientY - rect.top - 40;
+                // 防止溢出
+                if (x + 120 > rect.width) x = e.clientX - rect.left - 132;
+                if (y < 0) y = e.clientY - rect.top + 16;
+                tooltip.style.left = x + 'px';
+                tooltip.style.top = y + 'px';
+            });
+            pt.addEventListener('mouseleave', function () {
+                tooltip.style.display = 'none';
+            });
+        });
+    })();
+
+    /* ==================== 3. 游戏网格：筛选 + 排序 ==================== */
+    (function initGameFilters() {
+        var grid = document.getElementById('games-grid');
+        if (!grid) return;
+
+        var cards = Array.prototype.slice.call(grid.querySelectorAll('.game-card'));
+        var emptyState = document.getElementById('games-empty-state');
+        var visibleCountEl = document.getElementById('games-visible-count');
+
+        var state = {
+            sort: 'hot',
+            price: 'all',
+            hosting: 'all',
+            tag: ''
+        };
+
+        function parseTags(card) {
+            var raw = card.getAttribute('data-tags') || '';
+            return raw.split(',').map(function (t) { return t.trim(); }).filter(function (t) { return t.length > 0; });
+        }
+
+        function applyFilters() {
+            var filtered = cards.filter(function (card) {
+                var price = parseFloat(card.getAttribute('data-price') || '0');
+                var hosting = card.getAttribute('data-hosting');
+                var tags = parseTags(card);
+
+                if (state.price === 'free' && price > 0) return false;
+                if (state.price === 'paid' && price === 0) return false;
+                if (state.hosting !== 'all' && hosting !== state.hosting) return false;
+                if (state.tag && tags.indexOf(state.tag) === -1) return false;
+                return true;
+            });
+
+            // 排序
+            filtered.sort(function (a, b) {
+                switch (state.sort) {
+                    case 'new':
+                        return new Date(b.getAttribute('data-created') || 0).getTime() - new Date(a.getAttribute('data-created') || 0).getTime();
+                    case 'downloads':
+                        return parseInt(b.getAttribute('data-downloads') || '0', 10) - parseInt(a.getAttribute('data-downloads') || '0', 10);
+                    case 'rating':
+                        return parseFloat(b.getAttribute('data-rating') || '0') - parseFloat(a.getAttribute('data-rating') || '0');
+                    case 'plays':
+                        return parseInt(b.getAttribute('data-plays') || '0', 10) - parseInt(a.getAttribute('data-plays') || '0', 10);
+                    case 'hot':
+                    default:
+                        var aHot = parseInt(a.getAttribute('data-downloads') || '0', 10) + parseInt(a.getAttribute('data-plays') || '0', 10);
+                        var bHot = parseInt(b.getAttribute('data-downloads') || '0', 10) + parseInt(b.getAttribute('data-plays') || '0', 10);
+                        return bHot - aHot;
+                }
+            });
+
+            // 隐藏全部，再按新顺序显示
+            cards.forEach(function (c) { c.style.display = 'none'; });
+            filtered.forEach(function (c) {
+                c.style.display = '';
+                grid.appendChild(c);  // 重新追加以重排顺序
+            });
+
+            // 空状态
+            if (emptyState) {
+                emptyState.classList.toggle('hidden', filtered.length > 0);
+                // 把空状态放到最后
+                if (filtered.length === 0) grid.appendChild(emptyState);
+            }
+
+            // 更新计数
+            if (visibleCountEl) visibleCountEl.textContent = filtered.length;
+        }
+
+        // 顶部排序 Tab
+        var topTabs = document.querySelectorAll('#sort-tabs .sort-tab');
+        topTabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                topTabs.forEach(function (t) {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+                state.sort = tab.getAttribute('data-sort');
+                // 同步侧栏排序
+                document.querySelectorAll('#sidebar-sort .filter-option').forEach(function (o) {
+                    o.classList.toggle('active', o.getAttribute('data-sort') === state.sort);
+                });
+                applyFilters();
+            });
+        });
+
+        // 侧栏排序
+        document.querySelectorAll('#sidebar-sort .filter-option').forEach(function (opt) {
+            opt.addEventListener('click', function () {
+                document.querySelectorAll('#sidebar-sort .filter-option').forEach(function (o) { o.classList.remove('active'); });
+                opt.classList.add('active');
+                state.sort = opt.getAttribute('data-sort');
+                // 同步顶部 Tab
+                topTabs.forEach(function (t) {
+                    var active = t.getAttribute('data-sort') === state.sort;
+                    t.classList.toggle('active', active);
+                    t.setAttribute('aria-selected', active ? 'true' : 'false');
+                });
+                applyFilters();
+            });
+        });
+
+        // 侧栏价格
+        document.querySelectorAll('#sidebar-price .filter-option').forEach(function (opt) {
+            opt.addEventListener('click', function () {
+                document.querySelectorAll('#sidebar-price .filter-option').forEach(function (o) { o.classList.remove('active'); });
+                opt.classList.add('active');
+                state.price = opt.getAttribute('data-price');
+                applyFilters();
+            });
+        });
+
+        // 侧栏托管类型
+        document.querySelectorAll('#sidebar-hosting .filter-option').forEach(function (opt) {
+            opt.addEventListener('click', function () {
+                document.querySelectorAll('#sidebar-hosting .filter-option').forEach(function (o) { o.classList.remove('active'); });
+                opt.classList.add('active');
+                state.hosting = opt.getAttribute('data-hosting');
+                applyFilters();
+            });
+        });
+
+        // 标签云
+        document.querySelectorAll('#tag-cloud .tag-cloud-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                document.querySelectorAll('#tag-cloud .tag-cloud-item').forEach(function (i) { i.classList.remove('active'); });
+                item.classList.add('active');
+                state.tag = item.getAttribute('data-tag') || '';
+                applyFilters();
+            });
+        });
+
+        // 卡片点击跳转（含键盘 Enter 触发）
+        cards.forEach(function (card) {
+            var gid = card.getAttribute('data-id');
+            if (!gid) return;
+            var url = '{{ url_for("games.game_detail", gid=0) }}'.replace('/0', '/' + gid);
+            card.addEventListener('click', function (e) {
+                // 防止内部按钮（如有）冒泡触发跳转
+                if (e.target.closest('a, button')) return;
+                window.location.href = url;
+            });
+            card.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    window.location.href = url;
+                }
+            });
+        });
+
+        applyFilters();
+    })();
+})();
+</script>
+{% endblock %}

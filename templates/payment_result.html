@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}支付结果{% endblock %}
+
+{% block content %}
+<section class="page">
+    <div class="container" style="max-width:560px;">
+        <div class="card card-noise" style="padding:48px 36px;text-align:center;">
+            {% if success %}
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:64px;height:64px;color:var(--accent-primary);margin:0 auto 16px;display:block;">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+            <h2 class="font-display" style="font-size:1.6rem;margin-bottom:10px;color:var(--accent-primary);">支付成功</h2>
+            {% else %}
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:64px;height:64px;color:var(--accent-danger);margin:0 auto 16px;display:block;">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+            <h2 class="font-display" style="font-size:1.6rem;margin-bottom:10px;color:var(--accent-danger);">支付失败</h2>
+            {% endif %}
+
+            <p class="text-muted" style="font-size:.95rem;line-height:1.7;margin-bottom:24px;">
+                {{ message }}
+            </p>
+
+            {% if order %}
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 20px;margin-bottom:28px;text-align:left;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+                    <span class="text-muted" style="font-size:.85rem;">订单号</span>
+                    <span style="font-family:var(--font-mono);font-size:.85rem;color:var(--fg-primary);word-break:break-all;">{{ order.out_trade_no }}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+                    <span class="text-muted" style="font-size:.85rem;">金额</span>
+                    <span style="font-size:.95rem;color:var(--accent-secondary);font-weight:700;">¥ {{ order.amount }}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;">
+                    <span class="text-muted" style="font-size:.85rem;">类型</span>
+                    <span style="font-size:.9rem;color:var(--fg-primary);">
+                        {% if order.target_type == 'game' %}游戏购买
+                        {% elif order.target_type == 'asset' %}素材购买
+                        {% elif order.target_type == 'topup' %}积分充值
+                        {% else %}{{ order.target_type }}{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="flex gap-12" style="justify-content:center;flex-wrap:wrap;">
+                {% if order and success %}
+                    {% if order.target_type == 'game' %}
+                    <a class="btn btn-primary" href="{{ url_for('points.library') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v4H4zm0 6h16v10H4z"/></svg>
+                        查看我的游戏库
+                    </a>
+                    {% elif order.target_type == 'asset' %}
+                    <a class="btn btn-primary" href="{{ url_for('games.assets_library') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+                        查看素材库
+                    </a>
+                    {% elif order.target_type == 'topup' and current_user %}
+                    <a class="btn btn-primary" href="{{ url_for('games.user_profile', username=current_user.username) }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg>
+                        返回个人中心
+                    </a>
+                    {% endif %}
+                {% endif %}
+                <a class="btn btn-ghost" href="{{ url_for('games.index') }}">返回首页</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,678 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ asset.title|default('未命名素材') }} · 素材 · SNYQT Game Hub{% endblock %}
+
+{% block head %}
+<style>
+/* ====================================================================
+   SNYQT Game Hub — 素材详情页（asset_detail.html）
+   依赖 theme.css 变量与组件类
+   品牌色：深空蓝 / 函数绿 #00ff9d / 积分金 #ffc857
+   ==================================================================== */
+
+.ad-page {
+    --ad-max: 1280px;
+    --ad-gap: 32px;
+    --ad-sidebar-w: 340px;
+    max-width: var(--ad-max);
+    margin: 0 auto;
+    padding: var(--space-4) var(--space-5) var(--space-10);
+}
+
+/* ==================== 面包屑 ==================== */
+.ad-breadcrumb {
+    font-size: 0.85rem;
+    color: var(--fg-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-5);
+}
+.ad-breadcrumb a {
+    color: var(--fg-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.ad-breadcrumb a:hover { color: var(--accent-primary); text-decoration: none; }
+.ad-breadcrumb .sep { color: var(--fg-muted); font-size: 0.75rem; }
+.ad-breadcrumb .current {
+    color: var(--fg-primary);
+    font-weight: 600;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==================== 主布局 ==================== */
+.ad-layout {
+    display: grid;
+    grid-template-columns: 1fr var(--ad-sidebar-w);
+    gap: var(--ad-gap);
+    align-items: start;
+}
+.ad-main { min-width: 0; display: flex; flex-direction: column; gap: var(--space-6); }
+.ad-sidebar {
+    position: sticky;
+    top: calc(var(--topbar-h, 64px) + var(--space-4));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-height: calc(100vh - var(--topbar-h, 64px) - var(--space-4));
+    overflow-y: auto;
+    padding-right: var(--space-1);
+}
+.ad-sidebar::-webkit-scrollbar { width: 6px; }
+.ad-sidebar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+@media (max-width: 980px) {
+    .ad-layout { grid-template-columns: 1fr; }
+    .ad-sidebar { position: static; max-height: none; padding-right: 0; }
+}
+
+/* ==================== Hero ==================== */
+.ad-hero {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-3);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.ad-hero-cover {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--bg-elevated);
+    overflow: hidden;
+    position: relative;
+}
+.ad-hero-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-hero-cover-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 6rem;
+    color: rgba(255, 255, 255, 0.9);
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%);
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+.ad-hero-body { padding: var(--space-6); }
+.ad-hero-cat {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px var(--space-3);
+    border-radius: var(--radius-pill);
+    background: rgba(0, 255, 157, 0.12);
+    border: 1px solid rgba(0, 255, 157, 0.3);
+    color: var(--accent-primary);
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+}
+[data-theme="light"] .ad-hero-cat {
+    background: rgba(0, 204, 122, 0.10);
+    border-color: rgba(0, 204, 122, 0.3);
+    color: var(--accent-primary);
+}
+.ad-hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--space-2);
+    color: var(--fg-primary);
+    line-height: 1.15;
+}
+.ad-hero-tagline {
+    font-size: 1rem;
+    color: var(--fg-secondary);
+    margin: 0 0 var(--space-4);
+    line-height: 1.5;
+}
+.ad-hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+.ad-hero-tags .tag-chip { font-size: 0.82rem; }
+
+/* ==================== 描述区段 ==================== */
+.ad-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-2);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.ad-section-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0 0 var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.ad-section-title::before {
+    content: "";
+    width: 4px;
+    height: 18px;
+    background: var(--accent-primary);
+    border-radius: 2px;
+}
+.ad-description {
+    color: var(--fg-primary);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.ad-description.is-empty { color: var(--fg-muted); font-style: italic; }
+
+/* ==================== 预览图网格 ==================== */
+.ad-previews {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-3);
+}
+.ad-preview-item {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    cursor: zoom-in;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+.ad-preview-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-3);
+}
+.ad-preview-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-previews-empty {
+    color: var(--fg-muted);
+    font-style: italic;
+    text-align: center;
+    padding: var(--space-6);
+}
+
+/* ==================== 侧边栏：操作卡 ==================== */
+.ad-action-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-3);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.ad-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+.ad-price {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--accent-secondary);
+    line-height: 1;
+}
+.ad-price.is-free { color: var(--accent-primary); }
+.ad-price-unit { color: var(--fg-muted); font-size: 0.85rem; }
+.ad-price-label {
+    margin-left: auto;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 200, 87, 0.15);
+    color: var(--accent-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.ad-price-label.is-free {
+    background: rgba(0, 255, 157, 0.12);
+    color: var(--accent-primary);
+}
+.ad-btn-group { display: flex; flex-direction: column; gap: var(--space-2); }
+.ad-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), filter var(--transition-base);
+}
+.ad-btn:hover { text-decoration: none; transform: translateY(-1px); }
+.ad-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.ad-btn-primary {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+}
+[data-theme="light"] .ad-btn-primary { color: #ffffff; }
+.ad-btn-primary:hover { box-shadow: 0 8px 20px rgba(0, 255, 157, 0.35); filter: brightness(1.08); }
+.ad-btn-secondary {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    color: var(--fg-primary);
+}
+.ad-btn-secondary:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.ad-btn-gold {
+    background: var(--accent-secondary);
+    color: #1a1300;
+}
+[data-theme="light"] .ad-btn-gold { color: #ffffff; }
+.ad-btn-gold:hover { box-shadow: 0 8px 20px rgba(255, 200, 87, 0.4); filter: brightness(1.05); }
+.ad-cash-form {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+.ad-cash-form .ad-btn { width: 100%; flex: 1; }
+
+/* ==================== 侧边栏：元信息卡 ==================== */
+.ad-meta-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-2);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.ad-meta-title {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0 0 var(--space-3);
+}
+.ad-meta-list { list-style: none; margin: 0; padding: 0; }
+.ad-meta-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.86rem;
+}
+.ad-meta-list li:last-child { border-bottom: none; }
+.ad-meta-list .label { color: var(--fg-muted); }
+.ad-meta-list .value {
+    color: var(--fg-primary);
+    font-weight: 600;
+    font-family: var(--font-mono);
+    text-align: right;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==================== 侧边栏：作者卡 ==================== */
+.ad-author-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.ad-author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
+    display: block;
+}
+.ad-author-avatar-fallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-purple));
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+.ad-author-info { min-width: 0; flex: 1; }
+.ad-author-name {
+    color: var(--fg-primary);
+    font-weight: 700;
+    font-size: 0.92rem;
+    text-decoration: none;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ad-author-name:hover { color: var(--accent-primary); text-decoration: none; }
+.ad-author-label {
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    margin-top: 2px;
+}
+
+/* ==================== Toast ==================== */
+.ad-toast-container {
+    position: fixed;
+    top: calc(var(--topbar-h, 64px) + var(--space-4));
+    right: var(--space-5);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    pointer-events: none;
+}
+.ad-toast {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-4);
+    color: var(--fg-primary);
+    font-size: 0.88rem;
+    font-weight: 500;
+    min-width: 240px;
+    max-width: 360px;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    pointer-events: auto;
+}
+.ad-toast.show { transform: translateX(0); opacity: 1; }
+.ad-toast.success { border-left: 4px solid var(--accent-primary); }
+.ad-toast.error { border-left: 4px solid var(--accent-danger); }
+.ad-toast.warning { border-left: 4px solid var(--accent-secondary); }
+.ad-toast.info { border-left: 4px solid var(--accent-cyan); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ad-page">
+    {# ==================== 面包屑 ==================== #}
+    <nav class="ad-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep" aria-hidden="true">/</span>
+        <a href="{{ url_for('games.assets_library') }}">游戏素材库</a>
+        <span class="sep" aria-hidden="true">/</span>
+        <span class="current">{{ asset.title }}</span>
+    </nav>
+
+    <div class="ad-layout">
+        {# ==================== 主内容 ==================== #}
+        <div class="ad-main">
+            {# Hero #}
+            <article class="ad-hero">
+                <div class="ad-hero-cover">
+                    {% if asset.cover_image %}
+                    <img src="{{ asset.cover_image }}" alt="{{ asset.title }} 封面">
+                    {% else %}
+                    <div class="ad-hero-cover-fallback">{{ asset.title[:1]|upper if asset.title else '?' }}</div>
+                    {% endif %}
+                </div>
+                <div class="ad-hero-body">
+                    {% set cat_label = {'character': '角色', 'scene': '场景', 'ui': 'UI', 'audio': '音效', 'effect': '特效', 'tool': '工具', 'other': '其它'}.get(asset.category, asset.category) %}
+                    <span class="ad-hero-cat">{{ cat_label }}</span>
+                    <h1 class="ad-hero-title">{{ asset.title }}</h1>
+                    {% if asset.tagline %}
+                    <p class="ad-hero-tagline">{{ asset.tagline }}</p>
+                    {% endif %}
+                    {% if asset.tags %}
+                    <div class="ad-hero-tags">
+                        {% for tag in asset.tags %}
+                        <span class="tag-chip">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </article>
+
+            {# 描述 #}
+            <section class="ad-section">
+                <h2 class="ad-section-title">素材描述</h2>
+                {% if asset.description %}
+                <div class="ad-description">{{ asset.description }}</div>
+                {% else %}
+                <div class="ad-description is-empty">作者未提供详细描述。</div>
+                {% endif %}
+            </section>
+
+            {# 预览图 #}
+            <section class="ad-section">
+                <h2 class="ad-section-title">预览图（{{ asset.preview_images|length }} 张）</h2>
+                {% if asset.preview_images %}
+                <div class="ad-previews">
+                    {% for img in asset.preview_images %}
+                    <a class="ad-preview-item" href="{{ img }}" target="_blank" rel="noopener">
+                        <img src="{{ img }}" alt="预览图 {{ loop.index }}" loading="lazy">
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="ad-previews-empty">暂无预览图</div>
+                {% endif %}
+            </section>
+        </div>
+
+        {# ==================== 侧边栏 ==================== #}
+        <aside class="ad-sidebar">
+            {# 操作卡 #}
+            <div class="ad-action-card">
+                <div class="ad-price-row">
+                    {% if asset.price > 0 %}
+                    <span class="ad-price">{{ asset.price|int }}</span>
+                    <span class="ad-price-unit">积分</span>
+                    <span class="ad-price-label">付费</span>
+                    {% else %}
+                    <span class="ad-price is-free">免费</span>
+                    <span class="ad-price-label is-free">FREE</span>
+                    {% endif %}
+                </div>
+                <div class="ad-btn-group">
+                    {% if asset.in_library %}
+                    <a class="ad-btn ad-btn-primary" href="{{ url_for('games.download_asset', aid=asset.id) }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        下载素材包
+                    </a>
+                    {% else %}
+                    <button class="ad-btn ad-btn-primary" type="button" id="ad-acquire-btn"
+                            data-asset-id="{{ asset.id }}"
+                            data-price="{{ asset.price }}">
+                        {% if asset.price > 0 %}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        {{ asset.price|int }} 积分获取
+                        {% else %}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+                        免费获取
+                        {% endif %}
+                    </button>
+                    {% if asset.price and asset.price|float > 0 %}
+                    <form method="POST" action="{{ url_for('payments.payment_create') }}" class="ad-cash-form" id="ad-cash-form">
+                        <input type="hidden" name="target_type" value="asset">
+                        <input type="hidden" name="target_id" value="{{ asset.id }}">
+                        <input type="hidden" name="pay_type" value="alipay">
+                        <button type="submit" class="ad-btn ad-btn-gold" id="ad-cash-btn" aria-label="现金购买 ¥{{ '%.2f'|format(asset.price|float) }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                            现金购买 ¥{{ '%.2f'|format(asset.price|float) }}
+                        </button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                    <a class="ad-btn ad-btn-secondary" href="{{ url_for('games.assets_library') }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        返回素材库
+                    </a>
+                </div>
+            </div>
+
+            {# 元信息卡 #}
+            <div class="ad-meta-card">
+                <h3 class="ad-meta-title">素材信息</h3>
+                <ul class="ad-meta-list">
+                    <li><span class="label">版本</span><span class="value">{{ asset.version }}</span></li>
+                    <li><span class="label">UID</span><span class="value">{{ asset.asset_uid }}</span></li>
+                    <li><span class="label">分类</span><span class="value">{{ cat_label }}</span></li>
+                    <li><span class="label">下载量</span><span class="value">{{ asset.download_count }}</span></li>
+                    {% if asset.asset_size %}
+                    <li><span class="label">文件大小</span><span class="value">{% if asset.asset_size > 1048576 %}{{ (asset.asset_size / 1048576)|round(1) }} MB{% else %}{{ (asset.asset_size / 1024)|round(0)|int }} KB{% endif %}</span></li>
+                    {% endif %}
+                    <li><span class="label">更新时间</span><span class="value">{{ asset.updated_at }}</span></li>
+                    <li><span class="label">授权</span><span class="value">{{ asset.license_type }}</span></li>
+                    {% if asset.license_detail %}
+                    <li><span class="label">授权详情</span><span class="value" style="max-width:60%;white-space:normal;text-align:right">{{ asset.license_detail }}</span></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            {# 作者卡 #}
+            <div class="ad-author-card">
+                {% set author_initial = (asset.author_name[:1]|upper) if asset.author_name else '?' %}
+                {% if asset.author_avatar %}
+                <img class="ad-author-avatar" src="{{ asset.author_avatar }}" alt="{{ asset.author_name }} 头像"
+                     onerror="this.style.display='none';var s=document.createElement('span');s.className='ad-author-avatar-fallback';s.textContent='{{ author_initial }}';this.parentNode.insertBefore(s,this.nextSibling);">
+                {% else %}
+                <span class="ad-author-avatar-fallback">{{ author_initial }}</span>
+                {% endif %}
+                <div class="ad-author-info">
+                    <a class="ad-author-name" href="{{ url_for('games.user_profile', username=asset.author_name) }}">{{ asset.author_name }}</a>
+                    <div class="ad-author-label">素材作者</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="ad-toast-container" id="ad-toast-container" aria-live="polite" aria-atomic="true"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var acquireBtn = document.getElementById('ad-acquire-btn');
+    var toastContainer = document.getElementById('ad-toast-container');
+
+    function showToast(message, type) {
+        type = type || 'info';
+        if (!toastContainer) return;
+        var toast = document.createElement('div');
+        toast.className = 'ad-toast ' + type;
+        toast.setAttribute('role', 'status');
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+        // 触发动画
+        setTimeout(function () { toast.classList.add('show'); }, 10);
+        setTimeout(function () {
+            toast.classList.remove('show');
+            setTimeout(function () {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    if (acquireBtn) {
+        acquireBtn.addEventListener('click', function () {
+            var aid = acquireBtn.getAttribute('data-asset-id');
+            var price = parseFloat(acquireBtn.getAttribute('data-price') || '0');
+            var originalHTML = acquireBtn.innerHTML;
+
+            // 付费素材二次确认
+            if (price > 0) {
+                if (!window.confirm('此素材需要 ' + price + ' 积分，确认获取吗？')) {
+                    return;
+                }
+            }
+
+            acquireBtn.disabled = true;
+            acquireBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14" style="animation:ad-spin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> 处理中…';
+
+            fetch('/api/assets/' + aid + '/acquire', {
+                method: 'POST',
+                credentials: 'same-origin'
+            }).then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                if (data.success) {
+                    showToast(data.message || '已加入素材库', 'success');
+                    // 刷新页面以更新按钮状态
+                    setTimeout(function () { window.location.reload(); }, 1000);
+                } else {
+                    showToast(data.message || '获取失败', 'error');
+                    acquireBtn.disabled = false;
+                    acquireBtn.innerHTML = originalHTML;
+                }
+            }).catch(function (err) {
+                showToast('网络错误：' + (err.message || '请求失败'), 'error');
+                acquireBtn.disabled = false;
+                acquireBtn.innerHTML = originalHTML;
+            });
+        });
+    }
+
+    // 现金购买表单：防止重复提交，显示 loading 状态
+    var cashForm = document.getElementById('ad-cash-form');
+    if (cashForm) {
+        var cashBtn = document.getElementById('ad-cash-btn');
+        cashForm.addEventListener('submit', function () {
+            if (cashBtn) {
+                cashBtn.disabled = true;
+                var originalHTML = cashBtn.innerHTML;
+                cashBtn.dataset.originalHtml = originalHTML;
+                cashBtn.textContent = '正在跳转支付…';
+                // 5 秒后恢复，避免卡死
+                setTimeout(function () {
+                    if (cashBtn.disabled) {
+                        cashBtn.disabled = false;
+                        if (cashBtn.dataset.originalHtml) cashBtn.innerHTML = cashBtn.dataset.originalHtml;
+                    }
+                }, 5000);
+            }
+        });
+    }
+
+    // 动态注入 spinner 动画
+    var style = document.createElement('style');
+    style.textContent = '@keyframes ad-spin { to { transform: rotate(360deg); } }' +
+        '@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }';
+    document.head.appendChild(style);
+})();
+</script>
+{% endblock %}

@@ -54,13 +54,9 @@ def index():
     else:  # new
         order_sql = 'ORDER BY cp.is_pinned DESC, cp.created_at DESC'
 
-    # 非管理员过滤掉已封禁帖子
-    if is_super_admin(session.get('user_id')):
-        ban_filter = ""
-        ban_args = []
-    else:
-        ban_filter = "AND (cp.status IS NULL OR cp.status != 'banned')"
-        ban_args = []
+    # 封禁帖子对所有用户（含管理员）不可见，仅管理面板/小黑屋可见
+    ban_filter = "AND (cp.status IS NULL OR cp.status != 'banned')"
+    ban_args = []
 
     # 标签筛选：通过 post_tags 关联表
     tag_filter = ""
@@ -512,13 +508,9 @@ def toggle_pin(pid):
 @community_bp.route('/hot')
 def hot():
     """热论排行榜 - 按热度公式排序取前 50。"""
-    # 非管理员过滤掉已封禁帖子
-    if is_super_admin(session.get('user_id')):
-        ban_filter = ""
-        ban_args = []
-    else:
-        ban_filter = "AND (cp.status IS NULL OR cp.status != 'banned')"
-        ban_args = []
+    # 封禁帖子对所有用户（含管理员）不可见，仅管理面板/小黑屋可见
+    ban_filter = "AND (cp.status IS NULL OR cp.status != 'banned')"
+    ban_args = []
     # 热度公式: comment_count * 2 + likes * 1 + (is_starred * 5)
     posts = query(
         f'''
@@ -606,11 +598,11 @@ def blacklist_public():
     per_page = 20
     offset = (page - 1) * per_page
 
-    # 构造查询
-    where_sql = ""
+    # 构造查询：仅展示公开处罚记录（is_public=1）
+    where_sql = "WHERE pr.is_public = 1"
     where_args = []
-    if target_type in ('game', 'post'):
-        where_sql = "WHERE pr.target_type = %s"
+    if target_type in ('game', 'post', 'user'):
+        where_sql += " AND pr.target_type = %s"
         where_args = [target_type]
 
     # 总数
@@ -621,12 +613,18 @@ def blacklist_public():
     total = total_row['cnt'] if total_row else 0
     total_pages = max(1, (total + per_page - 1) // per_page)
 
-    # 列表（JOIN users 拿管理员名称）
+    # 列表（JOIN 拿管理员名称 + 违规用户名称/头像，支持 user 类型）
     penalties = query(
         f'''
-        SELECT pr.*, u.username AS admin_name
+        SELECT pr.*,
+               u_admin.username AS admin_name,
+               u_target.username AS username,
+               u_target.avatar AS avatar
         FROM penalty_records pr
-        LEFT JOIN users u ON pr.admin_id = u.id
+        LEFT JOIN users u_admin ON pr.admin_id = u_admin.id
+        LEFT JOIN community_posts cp ON pr.target_type = 'post' AND pr.target_id = cp.id
+        LEFT JOIN games g ON pr.target_type = 'game' AND pr.target_id = g.id
+        LEFT JOIN users u_target ON u_target.id = COALESCE(pr.target_user_id, cp.user_id, g.developer_id)
         {where_sql}
         ORDER BY pr.created_at DESC
         LIMIT %s OFFSET %s

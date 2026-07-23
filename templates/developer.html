@@ -3,6 +3,403 @@
 
 {% block title %}开发者面板{% endblock %}
 
+{% block head %}
+<style>
+/* ==================== developer.html 局部样式 ==================== */
+/* 复用 theme.css 设计变量，补齐本页使用的所有组件类 */
+
+/* ---- 页面布局 ---- */
+.page {
+    padding: var(--space-6) 0 var(--space-8);
+}
+.container {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+}
+
+/* ---- 区块标题 ---- */
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+}
+.section-title h2 {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--fg-primary);
+    margin: 0;
+}
+.section-title .sub {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    margin-left: auto;
+}
+.accent-bar {
+    display: inline-block;
+    width: 4px;
+    height: 28px;
+    background: var(--accent-primary);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 12px rgba(0, 255, 157, 0.4);
+}
+
+/* ---- 开发者区块 ---- */
+.dev-section {
+    margin-bottom: var(--space-8);
+}
+
+/* ---- 卡片（带噪点纹理） ---- */
+.card-noise {
+    position: relative;
+    background: var(--bg-card);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+}
+.card-noise::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 3px 3px;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* ---- 表单网格 ---- */
+.form-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    flex: 1 1 240px;
+    min-width: 0;
+}
+.field.full {
+    flex: 1 1 100%;
+}
+.field > label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fg-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.field .hint {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    line-height: 1.4;
+}
+
+/* ---- 表单控件 ---- */
+.field input[type="text"],
+.field input[type="number"],
+.field input[type="url"],
+.field input[type="password"],
+.field input[type="file"],
+.field textarea,
+.field select,
+.entry-input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+.field textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: var(--font-body);
+}
+.field input:focus,
+.field textarea:focus,
+.field select:focus,
+.entry-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.12);
+    background: var(--bg-elevated);
+}
+[data-theme="light"] .field input:focus,
+[data-theme="light"] .field textarea:focus,
+[data-theme="light"] .field select:focus,
+[data-theme="light"] .entry-input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.12);
+}
+.field input[type="file"] {
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+}
+.field input[readonly] {
+    cursor: not-allowed;
+}
+
+/* ---- 标签选择器 ---- */
+.tag-selector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-height: 0;
+}
+.tag-list:empty {
+    display: none;
+}
+.tag-list .tag-chip {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+}
+.tag-input-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    flex-wrap: wrap;
+}
+.tag-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-3);
+    z-index: 50;
+}
+.tag-dropdown-item {
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--fg-primary);
+    transition: background var(--transition-fast);
+}
+.tag-dropdown-item:hover {
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+}
+.tag-dropdown-empty {
+    color: var(--fg-muted);
+    text-align: center;
+    cursor: default;
+}
+.tag-dropdown-empty:hover {
+    background: transparent;
+    color: var(--fg-muted);
+}
+
+/* ---- 预览缩略图 ---- */
+.preview-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+.preview-thumbs img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+}
+
+/* ---- 上传进度条 ---- */
+.upload-progress {
+    height: 3px;
+    background: var(--bg-base);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    margin-top: var(--space-4);
+    display: none;
+}
+.upload-progress.active {
+    display: block;
+}
+.upload-progress .bar {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    transition: width 200ms ease;
+}
+
+/* ---- 游戏列表 ---- */
+.dev-games-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.dev-game-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+.dev-game-row:hover {
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-2);
+    transform: translateY(-1px);
+}
+.dev-game-row .thumb {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dev-game-row .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.dev-game-row .thumb .fallback {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--accent-primary);
+}
+.dev-game-row .info {
+    flex: 1;
+    min-width: 0;
+}
+.dev-game-row .info .t {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--fg-primary);
+    margin-bottom: var(--space-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dev-game-row .info .m {
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+.dev-game-row .actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+/* ---- 空状态 ---- */
+.empty-state {
+    text-align: center;
+    padding: var(--space-8) var(--space-6);
+    color: var(--fg-muted);
+}
+.empty-state svg {
+    width: 56px;
+    height: 56px;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-3);
+    opacity: 0.6;
+}
+.empty-state h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--fg-secondary);
+    margin: 0 0 var(--space-2);
+}
+.empty-state p {
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+/* ---- 模态框（developer.html 自定义） ---- */
+.modal.hidden {
+    display: none !important;
+}
+
+/* ---- 邀请码列表 ---- */
+.invite-codes-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-height: 320px;
+    overflow-y: auto;
+}
+.invite-codes-list .invite-code-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+}
+.invite-codes-list .invite-code-row.used {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+/* ---- 工具类 ---- */
+.flex { display: flex; }
+.gap-8 { gap: var(--space-2); }
+.gap-12 { gap: var(--space-3); }
+.items-center { align-items: center; }
+.justify-end { justify-content: flex-end; }
+.mb-16 { margin-bottom: var(--space-4); }
+.mb-20 { margin-bottom: var(--space-5); }
+.mb-24 { margin-bottom: var(--space-6); }
+.mt-24 { margin-top: var(--space-6); }
+
+/* ---- 响应式 ---- */
+@media (max-width: 768px) {
+    .dev-game-row {
+        flex-wrap: wrap;
+    }
+    .dev-game-row .actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .field {
+        flex: 1 1 100%;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 {# 当前路由要求 developer 权限，默认即为开发者；若后端传入 is_developer 则使用后端值 #}
 {% set is_developer = is_developer|default(true) %}
@@ -49,6 +446,7 @@
                             <option value="single_html">单HTML模式（无需审核，适合简单游戏）</option>
                             <option value="html">HTML 静态托管（ZIP上传，无需审核）</option>
                             <option value="python">Python 进程托管（需审核）</option>
+                            <option value="download">不托管（仅下载，适合电脑端应用）</option>
                             {% else %}
                             <option value="single_html" selected>单HTML模式</option>
                             {% endif %}
@@ -62,20 +460,21 @@
                         <label>游戏标签 *</label>
                         <div class="tag-selector" id="tag-selector">
                             <div class="tag-list" id="selected-tags"></div>
-                            <div class="tag-input-row">
-                                <input type="text" id="tag-search" placeholder="搜索或输入新标签..." autocomplete="off">
+                            <div class="tag-input-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <input type="text" id="tag-search" readonly placeholder="点击右侧按钮选择标签…" autocomplete="off" style="flex:1;min-width:160px;cursor:pointer;">
+                                <button type="button" class="btn btn-primary btn-sm" id="tag-picker-btn" aria-label="打开标签选择弹窗">选择标签</button>
                                 <div class="tag-dropdown" id="tag-dropdown" style="display:none;"></div>
                             </div>
                         </div>
                         <input type="hidden" name="tags" id="tags-hidden">
-                        <span class="hint">点击预设标签选择，或输入新标签名后按回车创建</span>
+                        <span class="hint">点击「选择标签」按钮搜索或创建标签；已选标签以芯片形式展示，可点击 × 移除</span>
                     </div>
 
                     {# HTML 模式字段 #}
                     <div class="field html-fields">
-                        <label>入口 HTML 文件</label>
-                        <input type="text" name="entry_file" value="index.html" placeholder="index.html">
-                        <span class="hint">ZIP 解压后相对于游戏目录的入口路径</span>
+                        <label id="entry-file-label">入口 HTML 文件</label>
+                        <input type="text" name="entry_file" id="entry-file-input" value="index.html" placeholder="index.html">
+                        <span class="hint" id="entry-file-hint">ZIP 解压后相对于游戏目录的入口路径</span>
                     </div>
 
                     {# 单HTML模式：上传文件或在线编辑 #}
@@ -111,7 +510,7 @@
 
                     <div class="field">
                         <label>访问模式 *</label>
-                        <select name="access_mode">
+                        <select name="access_mode" id="access-mode">
                             <option value="public">公开模式（所有人可在线游玩）</option>
                             <option value="invite">邀请码准入（需输入邀请码方可游玩）</option>
                             <option value="private">私密模式（仅开发者本人可访问）</option>
@@ -125,8 +524,9 @@
                     </div>
 
                     <div class="field">
-                        <label>价格（元，0为免费）</label>
-                        <input type="number" name="price" value="0" min="0" step="0.01">
+                        <label>价格（SB，0 为免费）</label>
+                        <input type="number" name="price" id="price-input" value="0" min="0" step="0.01" disabled>
+                        <span class="hint" id="price-hint">仅邀请码准入模式可设置价格；价格为 0 时邀请码由你自行生成，价格 > 0 时用户支付 SB 后系统自动发放</span>
                     </div>
                     <div class="field">
                         <label>平台抽成比例</label>
@@ -134,22 +534,24 @@
                         <span class="hint">平台统一抽成 1%</span>
                     </div>
 
-                    <div class="field">
+                    <div class="field cover-field">
                         <label>封面图片</label>
                         <input type="file" name="cover" accept="image/*">
+                        <span class="hint cover-hint">建议上传封面图，展示在游戏卡片与详情页</span>
                         <div class="preview-thumbs cover-preview hidden"></div>
                     </div>
 
                     <div class="field zip-field">
                         <label>游戏文件 ZIP</label>
                         <input type="file" name="game_files" accept=".zip">
-                        <span class="hint">打包整个游戏项目为 ZIP 上传（单HTML模式可不传）</span>
+                        <span class="hint zip-hint">打包整个游戏项目为 ZIP 上传（单HTML模式可不传）</span>
                     </div>
 
                     {% if is_developer %}
-                    <div class="field full">
+                    <div class="field full shots-field">
                         <label>截图（可多选）</label>
                         <input type="file" name="screenshots" accept="image/*" multiple>
+                        <span class="hint shots-hint">可上传多张游戏截图，展示在游戏详情页</span>
                         <div class="preview-thumbs shots-preview hidden"></div>
                     </div>
                     {% endif %}
@@ -270,7 +672,7 @@
         <div id="invite-content">
             <div class="flex gap-12 items-center mb-20" style="flex-wrap:wrap;">
                 <div class="field" style="width:120px;">
-                    <input type="number" id="invite-count" value="5" min="1" max="100">
+                    <input type="number" id="invite-count" value="5" min="1" max="50">
                 </div>
                 <button class="btn btn-primary" id="invite-generate-btn">生成邀请码</button>
             </div>
@@ -298,6 +700,9 @@
         </div>
     </div>
 </div>
+
+{# ==================== 标签选择弹窗（局部模板） ==================== #}
+{% include '_tag_picker.html' %}
 {% endblock %}
 
 {% block scripts %}
@@ -337,6 +742,23 @@ window.addEventListener('message', (e) => {
     }
 });
 
+// ====== 访问模式与价格联动 ======
+// 仅邀请码准入模式可设置价格；其他模式价格强制为 0 并禁用
+var accessModeSelect = document.getElementById('access-mode');
+var priceInput = document.getElementById('price-input');
+if (accessModeSelect && priceInput) {
+    function syncPriceState() {
+        var isInvite = accessModeSelect.value === 'invite';
+        priceInput.disabled = !isInvite;
+        if (!isInvite) {
+            priceInput.value = '0';
+        }
+    }
+    accessModeSelect.addEventListener('change', syncPriceState);
+    // 初始触发
+    syncPriceState();
+}
+
 // ====== 托管类型联动 ======
 const hostingSelect = document.getElementById('hosting-type');
 if (hostingSelect) {
@@ -346,21 +768,52 @@ if (hostingSelect) {
         const pythonFields = document.querySelectorAll('.python-fields');
         const htmlFileField = document.querySelector('.html-file-field');
         const zipField = document.querySelector('.zip-field');
+        const shotsField = document.querySelector('.shots-field');
+        const entryLabel = document.getElementById('entry-file-label');
+        const entryHint = document.getElementById('entry-file-hint');
+        const entryInput = document.getElementById('entry-file-input');
 
+        // download 模式下也显示入口文件字段（但语义不同）
         htmlFields.forEach(f => f.classList.toggle('hidden', val === 'python'));
         pythonFields.forEach(f => f.classList.toggle('hidden', val !== 'python'));
 
+        // 单HTML模式：显示HTML文件字段；其他模式隐藏
         if (htmlFileField) htmlFileField.style.display = (val === 'single_html') ? '' : 'none';
+
+        // 入口文件标签与提示随模式变化
+        if (entryLabel && entryHint && entryInput) {
+            if (val === 'download') {
+                entryLabel.textContent = '入口文件 / 启动命令';
+                entryHint.textContent = '可执行文件名（如 game.exe）或启动命令（如 java -jar game.jar），由用户自行输入';
+                entryInput.placeholder = '如 game.exe 或 python main.py';
+                entryInput.value = entryInput.value === 'index.html' ? '' : entryInput.value;
+            } else {
+                entryLabel.textContent = '入口 HTML 文件';
+                entryHint.textContent = 'ZIP 解压后相对于游戏目录的入口路径';
+                entryInput.placeholder = 'index.html';
+                if (!entryInput.value) entryInput.value = 'index.html';
+            }
+        }
+
+        // 单HTML模式：隐藏ZIP上传和截图上传；download 模式可选上传安装包
         if (zipField) {
             const zipInput = zipField.querySelector('input');
-            const zipHint = zipField.querySelector('.hint');
+            const zipHint = zipField.querySelector('.zip-hint');
             if (val === 'single_html') {
+                zipField.style.display = 'none';
                 zipInput.required = false;
-                if (zipHint) zipHint.textContent = '单HTML模式可不传';
+            } else if (val === 'download') {
+                zipField.style.display = '';
+                zipInput.required = false;
+                if (zipHint) zipHint.textContent = '上传可执行文件或安装包（可选，也可后续在控制面板补充）';
             } else {
+                zipField.style.display = '';
                 zipInput.required = true;
                 if (zipHint) zipHint.textContent = '打包整个游戏项目为 ZIP 上传';
             }
+        }
+        if (shotsField) {
+            shotsField.style.display = (val === 'single_html') ? 'none' : '';
         }
     });
     // 初始触发
@@ -385,21 +838,33 @@ document.querySelectorAll('[data-push-update]').forEach(btn => {
 
         // 获取游戏信息
         const resp = await fetch('/api/games/' + gid + '/info');
-        if (!resp.ok) return;
+        if (!resp.ok) {
+            console.error('[推送更新] fetch 失败 status=', resp.status);
+            return;
+        }
         const info = await resp.json();
 
-        // 填充表单
+        // 填充表单（限定在 #upload-form 范围内，避免匹配到 head 中的 meta 标签）
+        var form = document.getElementById('upload-form');
         document.getElementById('game-uid').value = info.game_uid || uid;
         document.getElementById('game-uid').readOnly = true; // 不可改
-        document.querySelector('[name="title"]').value = info.title || '';
-        document.querySelector('[name="description"]').value = info.description || '';
-        document.querySelector('[name="version"]').value = suggestVersion(info.version || '1.0.0');
-        document.querySelector('[name="hosting_type"]').value = info.hosting_type || 'single_html';
-        document.querySelector('[name="entry_file"]').value = info.entry_file || 'index.html';
-        document.querySelector('[name="source_open"]').value = String(info.source_open || 1);
-        document.querySelector('[name="access_mode"]').value = info.access_mode || 'public';
-        document.querySelector('[name="external_url"]').value = info.external_url || '';
-        document.querySelector('[name="price"]').value = info.price || 0;
+        form.querySelector('[name="title"]').value = info.title || '';
+        form.querySelector('[name="description"]').value = info.description || '';
+        form.querySelector('[name="version"]').value = suggestVersion(info.version || '1.0.0');
+        const hostingSelectEl = form.querySelector('[name="hosting_type"]');
+        hostingSelectEl.value = info.hosting_type || 'single_html';
+        // 触发 change 事件，让托管类型联动逻辑生效（隐藏/显示 ZIP、截图等字段）
+        hostingSelectEl.dispatchEvent(new Event('change'));
+        form.querySelector('[name="entry_file"]').value = info.entry_file || 'index.html';
+        form.querySelector('[name="source_open"]').value = String(info.source_open || 1);
+        form.querySelector('[name="access_mode"]').value = info.access_mode || 'public';
+        // 触发 change，让价格联动逻辑生效（非邀请码模式会禁用并清零价格）
+        form.querySelector('[name="access_mode"]').dispatchEvent(new Event('change'));
+        form.querySelector('[name="external_url"]').value = info.external_url || '';
+        // 仅邀请码准入模式才回填价格（非邀请码模式价格已被联动清零）
+        if (info.access_mode === 'invite') {
+            form.querySelector('[name="price"]').value = info.price || 0;
+        }
 
         // 填充标签 - 使用全局 selectedTags 和 renderSelectedTags
         if (typeof selectedTags !== 'undefined' && typeof renderSelectedTags === 'function') {
@@ -421,9 +886,13 @@ document.querySelectorAll('[data-push-update]').forEach(btn => {
             showToast('已填充游戏信息，修改后点击上传即可推送更新');
         }
 
-        // ZIP和截图区域提示
-        const zipHint = document.querySelector('.zip-field .hint');
+        // 封面、ZIP、截图区域提示（推送更新场景：不上传视为不更改）
+        const coverHint = document.querySelector('.cover-hint');
+        if (coverHint) coverHint.textContent = '不上传视为不更改';
+        const zipHint = document.querySelector('.zip-hint');
         if (zipHint) zipHint.textContent = '不上传视为不更改，上传则为全部替代';
+        const shotsHint = document.querySelector('.shots-hint');
+        if (shotsHint) shotsHint.textContent = '不上传视为不更改';
     });
 });
 
@@ -560,5 +1029,156 @@ document.getElementById('crop-confirm').addEventListener('click', function () {
         if (window.showToast) window.showToast('裁剪完成', 'success');
     }, 'image/png');
 });
+
+// ====== 标签选择弹窗集成 ======
+// 将只读的 #tag-search + #tag-picker-btn 与 window.openTagPicker() 联动。
+// 已选标签的渲染与 hidden input 同步仍由 main.js 暴露的
+// window.selectedTags (Set) + window.renderSelectedTags() 负责，保证推送更新流程兼容。
+(function initTagPickerIntegration() {
+    var btn = document.getElementById('tag-picker-btn');
+    var searchInput = document.getElementById('tag-search');
+    if (!btn || !searchInput) return;
+    if (typeof window.openTagPicker !== 'function') return; // _tag_picker.html 未引入
+
+    function openPicker() {
+        // 从现有 selectedTags Set 取预选标签名
+        var preSelected = [];
+        if (window.selectedTags && typeof window.selectedTags.forEach === 'function') {
+            window.selectedTags.forEach(function (n) { preSelected.push(n); });
+        }
+        window.openTagPicker({
+            selectedTags: preSelected,
+            maxTags: 10,
+            onConfirm: function (tags, names) {
+                // 同步回 main.js 的全局 Set
+                if (window.selectedTags) {
+                    window.selectedTags.clear();
+                    names.forEach(function (n) { window.selectedTags.add(n); });
+                }
+                // 重新渲染已选标签芯片 + 更新 hidden input
+                if (typeof window.renderSelectedTags === 'function') {
+                    window.renderSelectedTags();
+                } else {
+                    var hidden = document.getElementById('tags-hidden');
+                    if (hidden) hidden.value = names.join(',');
+                }
+                if (window.showToast) {
+                    window.showToast('已选择 ' + names.length + ' 个标签', 'success');
+                }
+            }
+        });
+    }
+
+    btn.addEventListener('click', openPicker);
+    // 点击只读输入框同样打开弹窗（更好的可发现性）
+    searchInput.addEventListener('click', openPicker);
+    // 键盘可达性：聚焦输入框时按 Enter / Space 也打开
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            openPicker();
+        }
+    });
+})();
+
+// ====== 邀请码管理 ======
+(function initInviteCodes() {
+    var modal = document.getElementById('invite-modal');
+    var generateBtn = document.getElementById('invite-generate-btn');
+    var cancelBtn = document.getElementById('invite-cancel');
+    var listEl = document.getElementById('invite-list');
+    var countInput = document.getElementById('invite-count');
+    var currentGameId = null;
+    if (!modal) return;
+
+    function open(gameId) {
+        currentGameId = gameId;
+        modal.classList.remove('hidden');
+        loadInvites();
+    }
+    function close() {
+        modal.classList.add('hidden');
+        currentGameId = null;
+        listEl.innerHTML = '';
+    }
+    function loadInvites() {
+        if (!currentGameId) return;
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:12px;">加载中...</div>';
+        fetch('/api/dev/invites/' + currentGameId)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    listEl.innerHTML = '<div style="color:var(--accent-danger);font-size:.85rem;padding:12px;">' + (data.message || '加载失败') + '</div>';
+                    return;
+                }
+                renderInvites(data.invites);
+            })
+            .catch(function () {
+                listEl.innerHTML = '<div style="color:var(--accent-danger);font-size:.85rem;padding:12px;">网络错误</div>';
+            });
+    }
+    function renderInvites(invites) {
+        if (!invites || !invites.length) {
+            listEl.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:12px;">暂无邀请码，点击上方按钮生成</div>';
+            return;
+        }
+        listEl.innerHTML = invites.map(function (inv) {
+            var used = inv.is_used;
+            var isUsed = used === true || used === 1 || used === '1' || used === 'true';
+            var statusText = inv.purchased_by ? '已售出' : (isUsed ? '已使用' : '可用');
+            var cls = (isUsed || inv.purchased_by) ? ' used' : '';
+            var dateStr = inv.created_at || '';
+            return '<div class="invite-code-row' + cls + '">'
+                + '<span style="flex:1;font-weight:700;letter-spacing:.05em;">' + inv.code + '</span>'
+                + '<span style="font-size:.75rem;color:var(--muted);">' + statusText + '</span>'
+                + '<span style="font-size:.75rem;color:var(--muted);">' + dateStr + '</span>'
+                + '<button type="button" class="btn btn-ghost btn-sm" data-copy="' + inv.code + '" style="padding:2px 8px;font-size:.75rem;">复制</button>'
+                + '</div>';
+        }).join('');
+        listEl.querySelectorAll('[data-copy]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var code = this.getAttribute('data-copy');
+                navigator.clipboard.writeText(code).then(function () {
+                    if (typeof showToast === 'function') showToast('已复制: ' + code, 'success');
+                });
+            });
+        });
+    }
+
+    document.querySelectorAll('[data-invite-codes]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            open(parseInt(this.getAttribute('data-invite-codes'), 10));
+        });
+    });
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function () {
+            if (!currentGameId) return;
+            var count = Math.max(1, Math.min(50, parseInt(countInput.value, 10) || 1));
+            generateBtn.disabled = true;
+            generateBtn.textContent = '生成中...';
+            fetch('/api/dev/gen-invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game_id: currentGameId, count: count })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = '生成邀请码';
+                    if (typeof showToast === 'function') {
+                        showToast(data.message || (data.success ? '生成成功' : '生成失败'), data.success ? 'success' : 'error');
+                    }
+                    if (data.success) loadInvites();
+                })
+                .catch(function () {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = '生成邀请码';
+                    if (typeof showToast === 'function') showToast('网络错误', 'error');
+                });
+        });
+    }
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+})();
 </script>
 {% endblock %}

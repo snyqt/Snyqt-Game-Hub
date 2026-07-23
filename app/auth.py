@@ -38,8 +38,12 @@ def _normalize_avatar(avatar):
     avatar = avatar.strip()
     if not avatar:
         return None
-    # 已是绝对 URL（http/https）或 data URI，原样返回
-    if avatar.startswith(('http://', 'https://', 'data:')):
+    # 已是绝对 URL（http/https）或 data URI
+    # 替换旧域名，兼容历史数据中的旧账号地址
+    if avatar.startswith('http://') or avatar.startswith('https://'):
+        avatar = avatar.replace('account.snyqt.top', 'snyqt-account.iepose.cn')
+        return avatar
+    if avatar.startswith('data:'):
         return avatar
     # 协议相对（//xxx）补 https:
     if avatar.startswith('//'):
@@ -61,6 +65,10 @@ def current_user():
         return None
     user = query_one('SELECT * FROM users WHERE id = %s', (user_id,))
     if not user:
+        return None
+    # 被封禁用户视为未登录
+    if user.get('status') == 'banned':
+        session.pop('user_id', None)
         return None
     # 头像 URL 规范化（兼容历史数据：旧用户可能在修复前以相对路径入库）
     user['avatar'] = _normalize_avatar(user.get('avatar'))
@@ -162,18 +170,39 @@ def callback():
         return "用户信息不完整", 400
 
     # 4. upsert users 表（snyqt_user_id 唯一）
-    db_user = query_one('SELECT id FROM users WHERE snyqt_user_id = %s', (snyqt_user_id,))
+    db_user = query_one('SELECT id, status FROM users WHERE snyqt_user_id = %s', (snyqt_user_id,))
     if db_user:
         execute(
             'UPDATE users SET username=%s, avatar=%s, last_login=NOW() WHERE snyqt_user_id=%s',
             (username, avatar, snyqt_user_id),
         )
         user_id = db_user['id']
+        # 检查是否被封禁
+        if db_user.get('status') == 'banned':
+            logger.warning("被封禁用户尝试登录: user_id=%s username=%s", user_id, username)
+            return render_template(
+                'oauth_error.html',
+                reason='user_banned',
+                message='您的账号已被封禁，无法登录。如有疑问请联系管理员。',
+            ), 403
     else:
         user_id = execute(
             'INSERT INTO users (snyqt_user_id, username, avatar, last_login) VALUES (%s, %s, %s, NOW())',
             (snyqt_user_id, username, avatar),
         )
+        # 新用户注册赠送 100 SB，写入钱包与交易流水
+        execute(
+            'INSERT INTO wallets (user_id, balance, total_recharged) VALUES (%s, 100.00, 100.00) '
+            'ON DUPLICATE KEY UPDATE balance = balance + 100.00, total_recharged = total_recharged + 100.00',
+            [user_id]
+        )
+        execute(
+            'INSERT INTO wallet_transactions '
+            '(user_id, tx_type, amount, balance_after, related_type, remark) '
+            'VALUES (%s, %s, %s, %s, %s, %s)',
+            [user_id, 'recharge', 100.00, 100.00, 'register', '新用户注册赠送 100 SB']
+        )
+        logger.info("新用户注册赠送 100 SB: user_id=%s", user_id)
 
     # 5. 写入 session 登录态
     session['user_id'] = user_id

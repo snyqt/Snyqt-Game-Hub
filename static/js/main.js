@@ -27,19 +27,9 @@
     }
 
     /* ---------- 用户下拉菜单 ---------- */
-    function initUserMenu() {
-        var menu = document.querySelector('.user-menu');
-        if (!menu) return;
-        var btn = menu.querySelector('.avatar-btn');
-        if (!btn) return;
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            menu.classList.toggle('open');
-        });
-        document.addEventListener('click', function () {
-            menu.classList.remove('open');
-        });
-    }
+    /* 注：base.html 内联脚本已实现通用下拉菜单（.is-open 切换）。
+          此处保留空函数避免 DOMContentLoaded 列表引用错误。 */
+    function initUserMenu() {}
 
     /* ---------- 首页轮播 ---------- */
     function initHero() {
@@ -594,6 +584,56 @@
     window.snyqtToast = toast;
     // 别名：供开发者面板内联脚本使用
     window.showToast = function (msg, type) { toast(msg, type); };
+
+    /* ---------- 用户封禁/解封（管理面板） ---------- */
+    window.banUser = function (uid, btn) {
+        var reason = prompt('请填写封禁理由（必填）：', '');
+        if (reason === null) return;
+        reason = (reason || '').trim();
+        if (!reason) { toast('封禁理由为必填项', 'warning'); return; }
+        var durationInput = prompt('封禁时长（天，留空=永久封禁，数字=天数，如 365=1年）：', '');
+        if (durationInput === null) return;
+        var durationDays = (durationInput || '').trim() === '' ? null : parseInt(durationInput, 10);
+        if (durationDays !== null && (isNaN(durationDays) || durationDays <= 0)) {
+            toast('时长必须为正整数或留空', 'warning'); return;
+        }
+        var isPublic = confirm('点击"确定"=公开处罚记录\n点击"取消"=不公开（仅管理员可见）');
+        if (!confirm('确认封禁该用户？\n理由：' + reason + '\n时长：' + (durationDays === null ? '永久' : durationDays + '天') + '\n公开：' + (isPublic ? '是' : '否'))) return;
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+        fetch('/api/admin/users/' + uid + '/ban', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: reason, duration_days: durationDays, is_public: isPublic })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok || data.success) {
+                    toast('用户已封禁', 'success');
+                    setTimeout(function () { location.reload(); }, 700);
+                } else {
+                    toast(data.error || '操作失败', 'error');
+                    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+                }
+            })
+            .catch(function () { toast('网络错误', 'error'); if (btn) { btn.disabled = false; btn.style.opacity = '1'; } });
+    };
+
+    window.unbanUser = function (uid, btn) {
+        if (!confirm('确认解除该用户的封禁？')) return;
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+        fetch('/api/admin/users/' + uid + '/unban', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok || data.success) {
+                    toast('已解除封禁', 'success');
+                    setTimeout(function () { location.reload(); }, 700);
+                } else {
+                    toast(data.error || '操作失败', 'error');
+                    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+                }
+            })
+            .catch(function () { toast('网络错误', 'error'); if (btn) { btn.disabled = false; btn.style.opacity = '1'; } });
+    };
 
     /* ---------- 闪光数字滚动（积分） ---------- */
     function initPointsAnim() {

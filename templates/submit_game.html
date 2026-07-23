@@ -1,0 +1,2707 @@
+{# submit_game.html — 提交游戏表单页（wakudemo 风格重构）
+   依赖：
+     - base.html 提供的 blocks: title, head, content, scripts
+     - theme.css 提供的 CSS 变量与组件类（.card / .btn / .input / .tag-chip 等）
+     - _tag_picker.html 提供 window.openTagPicker(options) API
+   后端契约：
+     - POST /api/games/upload (multipart/form-data)
+     - 字段: title, description, tags, hosting_type, cover, screenshots, game_files,
+            entry_file, python_main, python_command, source_open, access_mode,
+            external_url, price, version, changelog, game_uid, html_content
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ '更新游戏' if existing_game else '提交游戏' }}{% endblock %}
+
+{% block head %}
+{# 预填数据序列化（供 JS 读取） #}
+{% set _initial = {
+  'title': existing_game.title|default(''),
+  'description': existing_game.description|default(''),
+  'tags': existing_game.tags|default(''),
+  'hosting_type': existing_game.hosting_type|default('single_html'),
+  'cover_image': existing_game.cover_image|default(''),
+  'screenshots': existing_game.screenshots|default('[]'),
+  'entry_file': existing_game.entry_file|default('index.html'),
+  'python_main': existing_game.python_main|default(''),
+  'python_command': existing_game.python_command|default(''),
+  'source_open': existing_game.source_open|default(1)|string,
+  'access_mode': existing_game.access_mode|default('public'),
+  'external_url': existing_game.external_url|default(''),
+  'price': existing_game.price|default(0),
+  'version': existing_game.version|default('1.0.0'),
+  'game_uid': existing_game.game_uid|default('')
+} %}
+
+<style>
+/* ==================== 提交游戏表单 - 页面级样式 ==================== */
+
+.sgp-page {
+    --sgp-gap: var(--space-6);
+    --sgp-radius: var(--radius-md);
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) calc(var(--space-10) + 64px);
+}
+
+/* ---------- 面包屑 ---------- */
+.sgp-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-4);
+    font-family: var(--font-body);
+    flex-wrap: wrap;
+}
+.sgp-breadcrumb a {
+    color: var(--fg-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.sgp-breadcrumb a:hover { color: var(--accent-primary); text-decoration: none; }
+.sgp-breadcrumb .sep { color: var(--fg-muted); opacity: 0.6; }
+.sgp-breadcrumb .current { color: var(--fg-primary); font-weight: 600; }
+
+/* ---------- 页头 ---------- */
+.sgp-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+}
+.sgp-header-text { flex: 1; min-width: 240px; }
+.sgp-header h1 {
+    margin: 0 0 var(--space-2);
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--fg-primary) 0%, var(--accent-primary) 120%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+.sgp-header .sgp-subtitle {
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+.sgp-header .sgp-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+}
+.sgp-header .sgp-back-btn:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    transform: translateX(-2px);
+    text-decoration: none;
+}
+.sgp-header .sgp-back-btn svg { width: 16px; height: 16px; }
+
+/* 更新模式徽章 */
+.sgp-update-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 200, 87, 0.12);
+    color: var(--accent-secondary);
+    border: 1px solid rgba(255, 200, 87, 0.3);
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
+}
+
+/* ---------- 两栏布局 ---------- */
+.sgp-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-6);
+    align-items: start;
+}
+.sgp-main { min-width: 0; }
+.sgp-sidebar {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--space-4));
+    align-self: start;
+}
+
+/* ---------- 表单卡片（区段） ---------- */
+.sgp-section {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--sgp-radius);
+    padding: var(--space-6);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-2);
+    position: relative;
+    transition: border-color var(--transition-base);
+}
+.sgp-section:focus-within {
+    border-color: rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .sgp-section:focus-within {
+    border-color: rgba(0, 204, 122, 0.25);
+}
+.sgp-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 28px;
+    background: var(--accent-primary);
+    border-radius: 0 0 var(--radius-sm) 0;
+    opacity: 0.7;
+}
+
+.sgp-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+}
+.sgp-section-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.sgp-section-title .sgp-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.sgp-section-hint {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+
+/* ---------- 表单字段 ---------- */
+.sgp-field {
+    margin-bottom: var(--space-5);
+}
+.sgp-field:last-child { margin-bottom: 0; }
+.sgp-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+}
+.sgp-label .req {
+    color: var(--accent-danger);
+    font-size: 0.78rem;
+    line-height: 1;
+}
+.sgp-label .sgp-counter {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    font-weight: 400;
+}
+.sgp-label .sgp-counter.is-warn { color: var(--accent-secondary); }
+.sgp-label .sgp-counter.is-over { color: var(--accent-danger); }
+.sgp-help {
+    margin-top: var(--space-2);
+    font-size: 0.76rem;
+    color: var(--fg-muted);
+    line-height: 1.5;
+}
+.sgp-input,
+.sgp-textarea {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+.sgp-input::placeholder,
+.sgp-textarea::placeholder { color: var(--fg-muted); }
+.sgp-input:focus,
+.sgp-textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.12);
+    background: var(--bg-base);
+}
+[data-theme="light"] .sgp-input:focus,
+[data-theme="light"] .sgp-textarea:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.12);
+}
+.sgp-textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.55;
+    font-family: var(--font-body);
+}
+.sgp-input:disabled,
+.sgp-textarea:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: var(--bg-base);
+}
+
+/* 输入框行内按钮组 */
+.sgp-input-with-btn {
+    display: flex;
+    gap: var(--space-2);
+    align-items: stretch;
+}
+.sgp-input-with-btn .sgp-input { flex: 1; min-width: 0; }
+
+/* ---------- 拖拽上传区 ---------- */
+.sgp-drop {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-7) var(--space-5);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    min-height: 160px;
+}
+.sgp-drop:hover {
+    border-color: var(--accent-primary);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+}
+.sgp-drop.is-dragover {
+    border-color: var(--accent-primary);
+    background: rgba(0, 255, 157, 0.08);
+    color: var(--accent-primary);
+    transform: scale(1.01);
+}
+[data-theme="light"] .sgp-drop.is-dragover {
+    background: rgba(0, 204, 122, 0.06);
+}
+.sgp-drop-icon {
+    width: 36px;
+    height: 36px;
+    color: var(--fg-muted);
+    transition: color var(--transition-base);
+}
+.sgp-drop:hover .sgp-drop-icon,
+.sgp-drop.is-dragover .sgp-drop-icon {
+    color: var(--accent-primary);
+}
+.sgp-drop-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg-secondary);
+}
+.sgp-drop-hint {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.sgp-drop .sgp-browse-link {
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* 封面预览（16:9） */
+.sgp-cover-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    margin-bottom: var(--space-3);
+}
+.sgp-cover-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.sgp-cover-preview .sgp-cover-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+}
+.sgp-cover-preview .sgp-cover-empty svg {
+    width: 36px;
+    height: 36px;
+    opacity: 0.5;
+}
+.sgp-cover-preview .sgp-cover-remove {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+.sgp-cover-preview:hover .sgp-cover-remove { opacity: 1; }
+.sgp-cover-preview .sgp-cover-remove:hover { background: var(--accent-danger); }
+.sgp-cover-preview .sgp-cover-remove svg { width: 14px; height: 14px; }
+
+/* 截图网格 */
+.sgp-shots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+.sgp-shot-item {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+}
+.sgp-shot-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.sgp-shot-item .sgp-shot-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+.sgp-shot-item:hover .sgp-shot-remove { opacity: 1; }
+.sgp-shot-item .sgp-shot-remove:hover { background: var(--accent-danger); }
+.sgp-shot-item .sgp-shot-remove svg { width: 12px; height: 12px; }
+.sgp-shot-item .sgp-shot-num {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* ---------- 自定义开关 ---------- */
+.sgp-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+    user-select: none;
+}
+.sgp-switch input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.sgp-switch-track {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    transition: background var(--transition-base), border-color var(--transition-base);
+    flex-shrink: 0;
+}
+.sgp-switch-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--fg-muted);
+    transition: transform var(--transition-base), background var(--transition-base);
+}
+.sgp-switch input:checked + .sgp-switch-track {
+    background: rgba(0, 255, 157, 0.2);
+    border-color: var(--accent-primary);
+}
+[data-theme="light"] .sgp-switch input:checked + .sgp-switch-track {
+    background: rgba(0, 204, 122, 0.18);
+}
+.sgp-switch input:checked + .sgp-switch-track::after {
+    transform: translateX(18px);
+    background: var(--accent-primary);
+}
+.sgp-switch input:focus-visible + .sgp-switch-track {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+.sgp-switch-label {
+    font-size: 0.88rem;
+    color: var(--fg-secondary);
+}
+
+/* ---------- 分类按钮（radio pills） ---------- */
+.sgp-category-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+.sgp-cat-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.86rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+.sgp-cat-pill:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+.sgp-cat-pill input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.sgp-cat-pill input:checked + .sgp-cat-label {
+    color: #0a0e1a;
+}
+[data-theme="light"] .sgp-cat-pill input:checked + .sgp-cat-label {
+    color: #ffffff;
+}
+.sgp-cat-pill:has(input:checked) {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #0a0e1a;
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .sgp-cat-pill:has(input:checked) {
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 204, 122, 0.25);
+}
+.sgp-cat-pill input:focus-visible + .sgp-cat-label {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-pill);
+}
+.sgp-cat-label { pointer-events: none; }
+
+/* ---------- 标签区 ---------- */
+.sgp-tags-display {
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin-bottom: var(--space-2);
+}
+.sgp-tags-display:empty::before,
+.sgp-tags-display .sgp-tags-empty {
+    color: var(--fg-muted);
+    font-size: 0.84rem;
+    font-style: italic;
+}
+.sgp-tags-display .sgp-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px var(--space-3) 3px var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.sgp-tags-display .sgp-tag-chip.is-category {
+    background: rgba(255, 200, 87, 0.12);
+    color: var(--accent-secondary);
+    border-color: rgba(255, 200, 87, 0.3);
+}
+.sgp-tags-display .sgp-tag-chip .sgp-tag-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+.sgp-tags-display .sgp-tag-chip .sgp-tag-remove:hover {
+    opacity: 1;
+    background: rgba(255, 56, 96, 0.2);
+    color: var(--accent-danger);
+}
+.sgp-tags-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+.sgp-popular-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin-top: var(--space-2);
+}
+.sgp-popular-label {
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: var(--space-1);
+}
+.sgp-popular-chip {
+    padding: 2px var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.sgp-popular-chip:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+.sgp-popular-chip.is-selected {
+    background: rgba(0, 255, 157, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* ---------- 托管类型卡片 ---------- */
+.sgp-hosting-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+.sgp-hosting-card {
+    position: relative;
+    padding: var(--space-4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    overflow: hidden;
+}
+.sgp-hosting-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2);
+}
+.sgp-hosting-card input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.sgp-hosting-card.is-selected {
+    border-color: var(--accent-primary);
+    background: rgba(0, 255, 157, 0.05);
+    box-shadow: 0 0 0 1px var(--accent-primary), var(--shadow-2);
+}
+[data-theme="light"] .sgp-hosting-card.is-selected {
+    background: rgba(0, 204, 122, 0.04);
+}
+.sgp-hosting-card.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.sgp-hosting-card .sgp-hosting-check {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: all var(--transition-fast);
+}
+.sgp-hosting-card.is-selected .sgp-hosting-check {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #0a0e1a;
+}
+[data-theme="light"] .sgp-hosting-card.is-selected .sgp-hosting-check { color: #fff; }
+.sgp-hosting-card .sgp-hosting-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--accent-primary);
+    margin-bottom: var(--space-2);
+}
+.sgp-hosting-card .sgp-hosting-title {
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin-bottom: var(--space-1);
+}
+.sgp-hosting-card .sgp-hosting-desc {
+    font-size: 0.76rem;
+    color: var(--fg-muted);
+    line-height: 1.45;
+}
+.sgp-hosting-card .sgp-hosting-badge {
+    display: inline-block;
+    margin-top: var(--space-2);
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 200, 87, 0.12);
+    color: var(--accent-secondary);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* ---------- 价格输入 ---------- */
+.sgp-price-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+.sgp-price-input {
+    flex: 1;
+    min-width: 140px;
+    position: relative;
+}
+.sgp-price-input .sgp-price-prefix {
+    position: absolute;
+    left: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    pointer-events: none;
+}
+.sgp-price-input .sgp-input { padding-left: calc(var(--space-4) + 14px); }
+.sgp-free-btn {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.86rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+.sgp-free-btn:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+.sgp-free-btn.is-active {
+    background: rgba(0, 255, 157, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+[data-theme="light"] .sgp-free-btn.is-active {
+    background: rgba(0, 204, 122, 0.08);
+}
+
+/* ---------- 合作开发者 ---------- */
+.sgp-cdev-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+.sgp-cdev-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+}
+.sgp-cdev-item .sgp-cdev-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--glass-bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-primary);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.86rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.sgp-cdev-item .sgp-cdev-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sgp-cdev-item .sgp-cdev-name {
+    flex: 1;
+    font-size: 0.88rem;
+    color: var(--fg-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sgp-cdev-item .sgp-cdev-uid {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+}
+.sgp-cdev-item .sgp-cdev-remove {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--fg-muted);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.sgp-cdev-item .sgp-cdev-remove:hover {
+    background: rgba(255, 56, 96, 0.12);
+    color: var(--accent-danger);
+}
+.sgp-cdev-add-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: stretch;
+}
+.sgp-cdev-add-row .sgp-input { flex: 1; min-width: 0; }
+.sgp-cdev-empty {
+    padding: var(--space-4);
+    text-align: center;
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+/* ---------- 折叠区（系统需求） ---------- */
+.sgp-collapse-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.sgp-collapse-trigger:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+.sgp-collapse-trigger .sgp-collapse-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--transition-base);
+}
+.sgp-collapse-trigger[aria-expanded="true"] .sgp-collapse-icon {
+    transform: rotate(180deg);
+}
+.sgp-collapse-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-slow);
+}
+.sgp-collapse-content.is-open {
+    max-height: 1200px;
+    padding-top: var(--space-4);
+}
+.sgp-req-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+}
+.sgp-req-group h4 {
+    margin: 0 0 var(--space-3);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--fg-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-display);
+}
+.sgp-req-group.is-rec h4 { color: var(--accent-primary); }
+
+/* ---------- 底部操作栏 ---------- */
+.sgp-actions-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-6);
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border-color);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+}
+.sgp-actions-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    font-family: var(--font-mono);
+}
+.sgp-actions-info .sgp-actions-mode {
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+}
+.sgp-actions-buttons {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+/* ---------- 右侧帮助侧栏 ---------- */
+.sgp-help-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+}
+.sgp-help-card h3 {
+    margin: 0 0 var(--space-3);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.sgp-help-card h3 .sgp-help-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--accent-primary);
+}
+.sgp-help-card ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.sgp-help-card li {
+    font-size: 0.82rem;
+    color: var(--fg-secondary);
+    line-height: 1.55;
+    padding-left: var(--space-3);
+    position: relative;
+}
+.sgp-help-card li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--accent-primary);
+}
+.sgp-help-card li strong { color: var(--fg-primary); }
+.sgp-help-card li code {
+    background: var(--glass-bg);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--accent-primary);
+}
+.sgp-help-card .sgp-help-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--accent-primary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: none;
+    margin-top: var(--space-3);
+    transition: gap var(--transition-fast);
+}
+.sgp-help-card .sgp-help-link:hover { gap: var(--space-2); text-decoration: none; }
+
+/* 流程步骤 */
+.sgp-help-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+.sgp-help-step {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+}
+.sgp-help-step .sgp-step-num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+.sgp-help-step .sgp-step-text {
+    font-size: 0.82rem;
+    color: var(--fg-secondary);
+    line-height: 1.5;
+}
+.sgp-help-step .sgp-step-text strong { color: var(--fg-primary); }
+
+/* ---------- 入场动画 ---------- */
+.sgp-section {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 400ms ease, transform 400ms ease, border-color var(--transition-base);
+}
+.sgp-section.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ---------- Toast ---------- */
+.sgp-toast {
+    position: fixed;
+    top: calc(var(--topbar-h) + var(--space-4));
+    right: var(--space-5);
+    z-index: 600;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--fg-muted);
+    box-shadow: var(--shadow-3);
+    color: var(--fg-primary);
+    font-size: 0.88rem;
+    max-width: 360px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity var(--transition-base), transform var(--transition-base);
+}
+.sgp-toast.show { opacity: 1; transform: translateX(0); }
+.sgp-toast.success { border-left-color: var(--accent-primary); }
+.sgp-toast.error { border-left-color: var(--accent-danger); }
+.sgp-toast.warning { border-left-color: var(--accent-secondary); }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1100px) {
+    .sgp-layout {
+        grid-template-columns: 1fr;
+    }
+    .sgp-sidebar {
+        position: static;
+        order: -1;
+    }
+}
+@media (max-width: 768px) {
+    .sgp-page { padding: var(--space-4) var(--space-3) calc(var(--space-10) + 64px); }
+    .sgp-section { padding: var(--space-4); }
+    .sgp-hosting-grid { grid-template-columns: 1fr; }
+    .sgp-req-grid { grid-template-columns: 1fr; }
+    .sgp-actions-bar {
+        padding: var(--space-2) var(--space-3);
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+    }
+    .sgp-actions-info { justify-content: center; }
+    .sgp-actions-buttons { justify-content: space-between; }
+    .sgp-actions-buttons .btn { flex: 1; }
+    .sgp-header { flex-direction: column; align-items: stretch; }
+    .sgp-header .sgp-back-btn { align-self: flex-start; }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .sgp-section,
+    .sgp-toast,
+    .sgp-hosting-card,
+    .sgp-cat-pill,
+    .sgp-drop,
+    .sgp-switch-track,
+    .sgp-switch-track::after,
+    .sgp-collapse-trigger .sgp-collapse-icon,
+    .sgp-collapse-content {
+        transition: none !important;
+        animation: none !important;
+    }
+    .sgp-section {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{# ==================== 上下文变量准备 ==================== #}
+{% set is_update = existing_game is not none %}
+{% set is_developer = is_developer|default(true) %}
+{% set popular_tags = popular_tags|default([]) %}
+{% set current_user_data = current_user_data|default(current_user) %}
+
+<div class="sgp-page" data-is-developer="{{ 'true' if is_developer else 'false' }}">
+
+    {# ==================== 面包屑 ==================== #}
+    <nav class="sgp-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <a href="{{ url_for('games.creator_center') }}">创作者中心</a>
+        <span class="sep">/</span>
+        <span class="current">{{ '更新游戏' if is_update else '提交游戏' }}</span>
+    </nav>
+
+    {# ==================== 页头 ==================== #}
+    <header class="sgp-header">
+        <div class="sgp-header-text">
+            {% if is_update %}
+            <div class="sgp-update-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                    <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                </svg>
+                更新模式 · UID {{ existing_game.game_uid }}
+            </div>
+            {% endif %}
+            <h1>{{ '更新游戏' if is_update else '提交游戏' }}</h1>
+            <p class="sgp-subtitle">分享你的作品，让玩家体验你的创意</p>
+        </div>
+        <a href="{{ url_for('games.creator_center') }}" class="sgp-back-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            返回创作者中心
+        </a>
+    </header>
+
+    {# ==================== 主体布局 ==================== #}
+    <div class="sgp-layout">
+
+        {# ============== 左侧：表单 ============== #}
+        <div class="sgp-main">
+
+            <form id="submit-game-form"
+                  action="{{ url_for('games.upload_game') }}"
+                  method="post"
+                  enctype="multipart/form-data"
+                  novalidate>
+
+                {# ==================== 1. 基本信息 ==================== #}
+                <section class="sgp-section" data-section="basic">
+                    <div class="sgp-section-header">
+                        <h2 class="sgp-section-title">
+                            <span class="sgp-num">01</span>
+                            基本信息
+                        </h2>
+                        <span class="sgp-section-hint">玩家首先看到的部分</span>
+                    </div>
+
+                    {# 游戏标题 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-title">
+                            游戏标题 <span class="req">*</span>
+                            <span class="sgp-counter" id="title-counter">0 / 100</span>
+                        </label>
+                        <input type="text"
+                               id="field-title"
+                               name="title"
+                               class="sgp-input"
+                               maxlength="100"
+                               required
+                               value="{{ _initial.title }}"
+                               placeholder="例如：星辰回响"
+                               autocomplete="off">
+                        <p class="sgp-help">2-100 个字符。建议使用简短、易记、有辨识度的名称。</p>
+                    </div>
+
+                    {# 一句话简介 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-short-desc">
+                            一句话简介
+                            <span class="sgp-counter" id="shortdesc-counter">0 / 200</span>
+                        </label>
+                        <input type="text"
+                               id="field-short-desc"
+                               class="sgp-input"
+                               maxlength="200"
+                               placeholder="一句话概括你的游戏亮点，将显示在卡片与列表中"
+                               autocomplete="off">
+                        <p class="sgp-help">最多 200 字符。用于列表卡片、推荐位、搜索结果。</p>
+                    </div>
+
+                    {# 详细介绍 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-description">
+                            详细介绍
+                        </label>
+                        <div class="sgp-input-with-btn">
+                            <textarea id="field-description"
+                                      name="description"
+                                      class="sgp-textarea"
+                                      placeholder="详细介绍你的游戏：玩法、特色、操作、剧情、技术亮点...">{{ _initial.description }}</textarea>
+                        </div>
+                        <div style="margin-top: var(--space-2);">
+                            <a href="{{ url_for('games.html_editor') }}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                </svg>
+                                打开 Markdown 编辑器
+                            </a>
+                        </div>
+                        <p class="sgp-help">支持 Markdown 语法。可在编辑器中编写后粘贴回此处。</p>
+                    </div>
+
+                    {# 动态开关 #}
+                    <div class="sgp-field">
+                        <label class="sgp-switch">
+                            <input type="checkbox" id="field-dynamic" autocomplete="off">
+                            <span class="sgp-switch-track"></span>
+                            <span class="sgp-switch-label">动态内容（实验性 · 允许游戏页面播放动态效果）</span>
+                        </label>
+                        <p class="sgp-help">开启后游戏详情页将启用动态背景与粒子效果（不影响游戏本体）。</p>
+                    </div>
+                </section>
+
+                {# ==================== 2. 宣传图与视频 ==================== #}
+                <section class="sgp-section" data-section="media">
+                    <div class="sgp-section-header">
+                        <h2 class="sgp-section-title">
+                            <span class="sgp-num">02</span>
+                            宣传图与视频
+                        </h2>
+                        <span class="sgp-section-hint">16:9 推荐 · 单文件 ≤ 3MB</span>
+                    </div>
+
+                    {# 封面图 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="cover-input">
+                            封面图 <span class="req">*</span>
+                            <span class="sgp-counter" id="cover-status">未选择</span>
+                        </label>
+                        <div class="sgp-cover-preview" id="cover-preview">
+                            <div class="sgp-cover-empty" id="cover-empty">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                                <span>16:9 · 点击下方区域上传封面</span>
+                            </div>
+                            <button type="button" class="sgp-cover-remove" id="cover-remove" hidden aria-label="移除封面">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="sgp-drop" id="cover-drop" tabindex="0" role="button" aria-label="上传封面图">
+                            <svg class="sgp-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <path d="M17 8l-5-5-5 5"/>
+                                <path d="M12 3v12"/>
+                            </svg>
+                            <div class="sgp-drop-title">拖拽图片到此处，或 <span class="sgp-browse-link">点击上传</span></div>
+                            <div class="sgp-drop-hint">支持 JPG / PNG / GIF / WEBP · 最大 10MB · 推荐 1920×1080</div>
+                            <input type="file" id="cover-input" name="cover" accept="image/*" hidden>
+                        </div>
+                        {# 当前封面路径（更新模式时显示） #}
+                        {% if _initial.cover_image %}
+                        <input type="hidden" id="existing-cover" value="{{ _initial.cover_image }}">
+                        {% endif %}
+                    </div>
+
+                    {# 截图 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="shots-input">
+                            宣传图
+                            <span class="sgp-counter" id="shots-counter">0 / 15</span>
+                        </label>
+                        <div class="sgp-shots-grid" id="shots-grid"></div>
+                        <div class="sgp-drop" id="shots-drop" tabindex="0" role="button" aria-label="上传宣传图">
+                            <svg class="sgp-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                            <div class="sgp-drop-title">拖拽多张图片到此处，或 <span class="sgp-browse-link">点击上传</span></div>
+                            <div class="sgp-drop-hint">最多 15 张 · 每张 ≤ 3MB · 4:3 推荐</div>
+                            <input type="file" id="shots-input" name="screenshots" accept="image/*" multiple hidden>
+                        </div>
+                        {# 已有截图（更新模式） #}
+                        {% if is_update and _initial.screenshots != '[]' %}
+                        <input type="hidden" id="existing-shots" value="{{ _initial.screenshots }}">
+                        {% endif %}
+                    </div>
+
+                    {# 视频链接 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-video">
+                            B站视频链接
+                            <span class="sgp-counter" id="video-status">可选</span>
+                        </label>
+                        <input type="text"
+                               id="field-video"
+                               class="sgp-input"
+                               placeholder="例如：https://www.bilibili.com/video/BV1xx411c7mD"
+                               autocomplete="off">
+                        <p class="sgp-help">支持 BV / av 格式。将在详情页展示游戏宣传视频。</p>
+                    </div>
+                </section>
+
+                {# ==================== 3. 分类与标签 ==================== #}
+                <section class="sgp-section" data-section="category">
+                    <div class="sgp-section-header">
+                        <h2 class="sgp-section-title">
+                            <span class="sgp-num">03</span>
+                            分类与标签
+                        </h2>
+                        <span class="sgp-section-hint">帮助玩家快速找到你的游戏</span>
+                    </div>
+
+                    {# 分类 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label">主分类 <span class="req">*</span></label>
+                        <div class="sgp-category-row" id="category-row">
+                            {% set _cats = ['冒险游戏', '独立开发', '休闲', 'GalGame', '工具', 'AI游戏'] %}
+                            {% for cat in _cats %}
+                            <label class="sgp-cat-pill">
+                                <input type="radio" name="sgp-category" value="{{ cat }}">
+                                <span class="sgp-cat-label">{{ cat }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <p class="sgp-help">选择一个主分类，将自动作为第一个标签写入。</p>
+                    </div>
+
+                    {# 标签 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="tags-trigger">
+                            标签 <span class="req">*</span>
+                            <span class="sgp-counter" id="tags-count">0 / 20</span>
+                        </label>
+                        <div class="sgp-tags-display" id="tags-display">
+                            <span class="sgp-tags-empty">尚未选择标签</span>
+                        </div>
+                        <div class="sgp-tags-actions">
+                            <button type="button" class="btn btn-primary btn-sm" id="tags-trigger">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                选择标签
+                            </button>
+                            <span class="sgp-help" style="margin:0;">已选标签将以芯片形式展示，点击 × 可移除</span>
+                        </div>
+                        {% if popular_tags %}
+                        <div class="sgp-popular-row">
+                            <span class="sgp-popular-label">热门:</span>
+                            {% for tag in popular_tags[:10] %}
+                            <button type="button" class="sgp-popular-chip" data-popular-tag="{{ tag }}">{{ tag }}</button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <input type="hidden" name="tags" id="tags-hidden" value="{{ _initial.tags }}">
+                    </div>
+                </section>
+
+                {# ==================== 4. 价格与发布 ==================== #}
+                <section class="sgp-section" data-section="price">
+                    <div class="sgp-section-header">
+                        <h2 class="sgp-section-title">
+                            <span class="sgp-num">04</span>
+                            价格与发布
+                        </h2>
+                        <span class="sgp-section-hint">平台统一抽成 1%</span>
+                    </div>
+
+                    {# 价格 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-price">价格（元）</label>
+                        <div class="sgp-price-row">
+                            <div class="sgp-price-input">
+                                <span class="sgp-price-prefix">¥</span>
+                                <input type="number"
+                                       id="field-price"
+                                       name="price"
+                                       class="sgp-input"
+                                       value="{{ _initial.price }}"
+                                       min="0"
+                                       step="0.01"
+                                       placeholder="0.00">
+                            </div>
+                            <button type="button" class="sgp-free-btn" id="free-btn">设为免费</button>
+                        </div>
+                        <p class="sgp-help">价格为 0 表示免费游玩。付费游戏将进入审核流程。</p>
+                    </div>
+
+                    {# 开发者显示名 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-dev-name">开发者显示名</label>
+                        <input type="text"
+                               id="field-dev-name"
+                               class="sgp-input"
+                               placeholder="留空则使用用户名"
+                               value="{{ current_user_data.username|default('') if not is_update else '' }}"
+                               autocomplete="off">
+                        <p class="sgp-help">玩家看到的作者名。不影响实际所有权。</p>
+                    </div>
+
+                    {# 发行商 UID #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-publisher">发行商 UID</label>
+                        <input type="text"
+                               id="field-publisher"
+                               class="sgp-input"
+                               placeholder="可选 · 例如：SNYQT-001"
+                               autocomplete="off">
+                        <p class="sgp-help">若由发行商代理，填写发行商 UID 以便关联。</p>
+                    </div>
+
+                    {# 合作开发者 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="cdev-input">合作开发者</label>
+                        <div class="sgp-cdev-list" id="cdev-list">
+                            <div class="sgp-cdev-empty">暂无合作开发者</div>
+                        </div>
+                        <div class="sgp-cdev-add-row">
+                            <input type="text"
+                                   id="cdev-input"
+                                   class="sgp-input"
+                                   placeholder="输入用户 UID 或用户名"
+                                   autocomplete="off">
+                            <button type="button" class="btn btn-ghost btn-sm" id="cdev-add-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                添加成员
+                            </button>
+                        </div>
+                        <input type="hidden" name="co_developers" id="cdev-hidden" value="">
+                        <p class="sgp-help">合作开发者可编辑游戏但无权删除。对方需在创作中心接受邀请。</p>
+                    </div>
+                </section>
+
+                {# ==================== 5. 游戏文件 ==================== #}
+                <section class="sgp-section" data-section="files">
+                    <div class="sgp-section-header">
+                        <h2 class="sgp-section-title">
+                            <span class="sgp-num">05</span>
+                            游戏文件
+                        </h2>
+                        <span class="sgp-section-hint" id="hosting-hint">单 HTML 模式</span>
+                    </div>
+
+                    {# 托管类型卡片 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label">托管类型 <span class="req">*</span></label>
+                        <div class="sgp-hosting-grid" id="hosting-grid">
+                            {# 单 HTML #}
+                            <label class="sgp-hosting-card{{ ' is-selected' if _initial.hosting_type == 'single_html' else '' }}" data-hosting="single_html">
+                                <input type="radio" name="hosting_type" value="single_html"{{ ' checked' if _initial.hosting_type == 'single_html' else '' }}>
+                                <span class="sgp-hosting-check">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
+                                        <path d="M5 12l5 5L20 7"/>
+                                    </svg>
+                                </span>
+                                <svg class="sgp-hosting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <path d="M14 2v6h6"/>
+                                </svg>
+                                <div class="sgp-hosting-title">单 HTML</div>
+                                <div class="sgp-hosting-desc">单个 HTML 文件即可运行，适合简单游戏。</div>
+                            </label>
+
+                            {# HTML 工程 #}
+                            <label class="sgp-hosting-card{{ ' is-selected' if _initial.hosting_type == 'html' else '' }}{{ '' if is_developer else ' is-disabled' }}" data-hosting="html">
+                                <input type="radio" name="hosting_type" value="html"{{ ' checked' if _initial.hosting_type == 'html' else '' }}{{ '' if is_developer else ' disabled' }}>
+                                <span class="sgp-hosting-check">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
+                                        <path d="M5 12l5 5L20 7"/>
+                                    </svg>
+                                </span>
+                                <svg class="sgp-hosting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                    <path d="M3.27 6.96L12 12.01l8.73-5.05"/>
+                                    <path d="M12 22.08V12"/>
+                                </svg>
+                                <div class="sgp-hosting-title">HTML 工程</div>
+                                <div class="sgp-hosting-desc">ZIP 打包多文件项目，无需审核。</div>
+                                {% if not is_developer %}<span class="sgp-hosting-badge">开发者</span>{% endif %}
+                            </label>
+
+                            {# Python 程序 #}
+                            <label class="sgp-hosting-card{{ ' is-selected' if _initial.hosting_type == 'python' else '' }}{{ '' if is_developer else ' is-disabled' }}" data-hosting="python">
+                                <input type="radio" name="hosting_type" value="python"{{ ' checked' if _initial.hosting_type == 'python' else '' }}{{ '' if is_developer else ' disabled' }}>
+                                <span class="sgp-hosting-check">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
+                                        <path d="M5 12l5 5L20 7"/>
+                                    </svg>
+                                </span>
+                                <svg class="sgp-hosting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2L2 7v10l10 5 10-5V7l-10-5z"/>
+                                    <path d="M2 7l10 5 10-5M12 22V12"/>
+                                </svg>
+                                <div class="sgp-hosting-title">Python 程序</div>
+                                <div class="sgp-hosting-desc">服务端运行，需审核通过后上线。</div>
+                                <span class="sgp-hosting-badge">{{ '需审核' if is_developer else '开发者' }}</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {# 单 HTML 模式：HTML 文件 / 在线编辑 #}
+                    <div class="sgp-field" data-hosting-section="single_html">
+                        <label class="sgp-label" for="html-file-input">HTML 文件 <span class="req">*</span></label>
+                        <div class="sgp-input-with-btn">
+                            <input type="text" id="html-file-name" class="sgp-input" placeholder="未选择文件" readonly>
+                            <input type="file" id="html-file-input" name="game_files" accept=".html,.htm" hidden>
+                            <button type="button" class="btn btn-ghost" id="btn-html-upload">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <path d="M17 8l-5-5-5 5"/>
+                                    <path d="M12 3v12"/>
+                                </svg>
+                                上传 HTML
+                            </button>
+                            <a href="{{ url_for('games.html_editor') }}" target="_blank" rel="noopener" class="btn btn-ghost">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                </svg>
+                                在线编辑
+                            </a>
+                        </div>
+                        <input type="hidden" name="html_content" id="html-content-hidden" value="">
+                        <p class="sgp-help">上传 .html 文件，或在编辑器中编写后回到此页面（系统会自动读取编辑器内容）。</p>
+                    </div>
+
+                    {# HTML 工程模式：ZIP 上传 #}
+                    <div class="sgp-field hidden" data-hosting-section="html">
+                        <label class="sgp-label" for="zip-file-input">ZIP 压缩包 <span class="req">*</span></label>
+                        <div class="sgp-drop" id="zip-drop" tabindex="0" role="button" aria-label="上传 ZIP">
+                            <svg class="sgp-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <path d="M17 8l-5-5-5 5"/>
+                                <path d="M12 3v12"/>
+                            </svg>
+                            <div class="sgp-drop-title">拖拽 ZIP 到此处，或 <span class="sgp-browse-link">点击上传</span></div>
+                            <div class="sgp-drop-hint">最大 500MB · 解压后须包含 index.html 入口</div>
+                            <input type="file" id="zip-file-input" name="game_files" accept=".zip" hidden>
+                        </div>
+                        <p class="sgp-help">ZIP 内文件路径相对于游戏根目录。请在下方指定入口文件名。</p>
+                    </div>
+
+                    {# Python 模式：主文件 + 启动命令 #}
+                    <div class="sgp-field hidden" data-hosting-section="python">
+                        <label class="sgp-label" for="python-main">Python 主文件 <span class="req">*</span></label>
+                        <input type="text"
+                               id="python-main"
+                               name="python_main"
+                               class="sgp-input"
+                               value="{{ _initial.python_main }}"
+                               placeholder="main.py">
+                    </div>
+                    <div class="sgp-field hidden" data-hosting-section="python">
+                        <label class="sgp-label" for="python-command">启动命令 <span class="req">*</span></label>
+                        <input type="text"
+                               id="python-command"
+                               name="python_command"
+                               class="sgp-input"
+                               value="{{ _initial.python_command }}"
+                               placeholder="python main.py --port {port}">
+                        <p class="sgp-help">可用 <code>{port}</code> 占位符，系统将分配端口。</p>
+                    </div>
+
+                    {# 入口文件名 #}
+                    <div class="sgp-field" data-hosting-section="entry" id="entry-field">
+                        <label class="sgp-label" for="field-entry">入口文件名</label>
+                        <input type="text"
+                               id="field-entry"
+                               name="entry_file"
+                               class="sgp-input"
+                               value="{{ _initial.entry_file }}"
+                               placeholder="index.html">
+                        <p class="sgp-help">ZIP 解压后相对于游戏目录的入口路径。单 HTML 模式可留空。</p>
+                    </div>
+
+                    {# 下载链接 #}
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-external">下载链接（可选）</label>
+                        <input type="url"
+                               id="field-external"
+                               name="external_url"
+                               class="sgp-input"
+                               value="{{ _initial.external_url }}"
+                               placeholder="https://example.com/your-game.zip">
+                        <p class="sgp-help">填写后将替代内置托管，跳转前会展示安全提示。</p>
+                    </div>
+
+                    {# 源码开放 #}
+                    <div class="sgp-field">
+                        <label class="sgp-switch">
+                            <input type="checkbox" id="field-source-open"{{ ' checked' if _initial.source_open in ('1', 1, 'true', True) else '' }}>
+                            <span class="sgp-switch-track"></span>
+                            <span class="sgp-switch-label">开放源代码（允许玩家下载）</span>
+                        </label>
+                        <input type="hidden" name="source_open" id="source-open-hidden" value="{{ '1' if _initial.source_open in ('1', 1, 'true', True) else '0' }}">
+                    </div>
+
+                    {# 访问模式（隐藏默认公开） #}
+                    <input type="hidden" name="access_mode" value="{{ _initial.access_mode }}">
+                    {# game_uid（更新模式） #}
+                    {% if is_update %}
+                    <input type="hidden" name="game_uid" value="{{ existing_game.game_uid }}">
+                    {% endif %}
+                </section>
+
+                {# ==================== 6. 系统需求（可选 / 折叠） ==================== #}
+                <section class="sgp-section" data-section="requirements">
+                    <div class="sgp-section-header">
+                        <h2 class="sgp-section-title">
+                            <span class="sgp-num">06</span>
+                            系统需求
+                            <span class="badge badge-muted" style="margin-left: var(--space-2);">可选</span>
+                        </h2>
+                        <span class="sgp-section-hint">默认折叠</span>
+                    </div>
+
+                    <button type="button" class="sgp-collapse-trigger" id="req-trigger" aria-expanded="false" aria-controls="req-content">
+                        <span>展开填写系统需求（默认隐藏，不影响提交）</span>
+                        <svg class="sgp-collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="sgp-collapse-content" id="req-content">
+                        <div class="sgp-req-grid">
+                            <div class="sgp-req-group">
+                                <h4>最低配置</h4>
+                                <div class="sgp-field">
+                                    <label class="sgp-label" for="req-min-os">操作系统</label>
+                                    <input type="text" id="req-min-os" class="sgp-input" placeholder="Windows 10 / macOS 11">
+                                </div>
+                                <div class="sgp-field">
+                                    <label class="sgp-label" for="req-min-ram">内存</label>
+                                    <input type="text" id="req-min-ram" class="sgp-input" placeholder="4 GB">
+                                </div>
+                                <div class="sgp-field">
+                                    <label class="sgp-label" for="req-min-gpu">显卡</label>
+                                    <input type="text" id="req-min-gpu" class="sgp-input" placeholder="集成显卡">
+                                </div>
+                            </div>
+                            <div class="sgp-req-group is-rec">
+                                <h4>推荐配置</h4>
+                                <div class="sgp-field">
+                                    <label class="sgp-label" for="req-rec-os">操作系统</label>
+                                    <input type="text" id="req-rec-os" class="sgp-input" placeholder="Windows 11 / macOS 14">
+                                </div>
+                                <div class="sgp-field">
+                                    <label class="sgp-label" for="req-rec-ram">内存</label>
+                                    <input type="text" id="req-rec-ram" class="sgp-input" placeholder="8 GB">
+                                </div>
+                                <div class="sgp-field">
+                                    <label class="sgp-label" for="req-rec-gpu">显卡</label>
+                                    <input type="text" id="req-rec-gpu" class="sgp-input" placeholder="GTX 1060 / RX 580">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="sgp-help">系统需求为可选字段。当前不会自动提交至后端，仅作为后续扩展预留。</p>
+                    </div>
+                </section>
+
+                {# ==================== 7. 版本与日志 ==================== #}
+                <section class="sgp-section" data-section="version">
+                    <div class="sgp-section-header">
+                        <h2 class="sgp-section-title">
+                            <span class="sgp-num">07</span>
+                            版本与更新日志
+                        </h2>
+                        <span class="sgp-section-hint">遵循语义化版本</span>
+                    </div>
+
+                    {% if is_update %}
+                    <div class="sgp-update-badge" style="margin-bottom: var(--space-4);">
+                        当前版本: {{ existing_game.version|default('1.0.0') }} · 新版本将作为更新提交
+                    </div>
+                    {% endif %}
+
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-version">
+                            版本号 <span class="req">*</span>
+                        </label>
+                        <input type="text"
+                               id="field-version"
+                               name="version"
+                               class="sgp-input"
+                               value="{{ _initial.version }}"
+                               placeholder="1.0.0"
+                               pattern="^\d+\.\d+\.\d+([\-\.][\w\.]+)?$"
+                               required>
+                        <p class="sgp-help">遵循语义化版本（<code>主.次.修订</code>），如 <code>1.0.0</code>、<code>2.1.3-beta</code>。</p>
+                    </div>
+
+                    <div class="sgp-field">
+                        <label class="sgp-label" for="field-changelog">
+                            更新日志
+                            <span class="sgp-counter" id="changelog-counter">{{ _initial.version|default('1.0.0') }}</span>
+                        </label>
+                        <textarea id="field-changelog"
+                                  name="changelog"
+                                  class="sgp-textarea"
+                                  placeholder="本次更新内容：&#10;- 新增 XX 功能&#10;- 修复 XX bug&#10;- 优化 XX 体验">{{ '' if not is_update else '更新版本' }}</textarea>
+                        <p class="sgp-help">仅在版本更新时填入。新游戏可留空。</p>
+                    </div>
+                </section>
+
+            </form>
+        </div>
+
+        {# ============== 右侧：帮助侧栏 ============== #}
+        <aside class="sgp-sidebar" aria-label="提交帮助">
+
+            {# 提交指南 #}
+            <div class="sgp-help-card">
+                <h3>
+                    <svg class="sgp-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    提交指南
+                </h3>
+                <ul>
+                    <li><strong>标题</strong>：2-100 字符，避免重复用名</li>
+                    <li><strong>封面图</strong>：16:9 比例，≤ 10MB</li>
+                    <li><strong>宣传图</strong>：最多 15 张，每张 ≤ 3MB</li>
+                    <li><strong>ZIP 包</strong>：≤ 500MB，必须包含 <code>index.html</code></li>
+                    <li><strong>Python</strong>：需提供主文件与启动命令</li>
+                </ul>
+            </div>
+
+            {# 格式要求 #}
+            <div class="sgp-help-card">
+                <h3>
+                    <svg class="sgp-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                    </svg>
+                    格式要求
+                </h3>
+                <ul>
+                    <li>封面格式：JPG / PNG / GIF / WEBP</li>
+                    <li>截图格式：JPG / PNG / WEBP</li>
+                    <li>游戏文件：单 HTML 或 ZIP</li>
+                    <li>Python 文件：<code>.py</code>（含依赖说明）</li>
+                    <li>建议在 ZIP 内放置 README 说明</li>
+                </ul>
+            </div>
+
+            {# 审核流程 #}
+            <div class="sgp-help-card">
+                <h3>
+                    <svg class="sgp-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M9 12l2 2 4-4"/>
+                        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.68.94 6.36 2.64"/>
+                    </svg>
+                    审核流程
+                </h3>
+                <div class="sgp-help-steps">
+                    <div class="sgp-help-step">
+                        <span class="sgp-step-num">1</span>
+                        <span class="sgp-step-text"><strong>提交</strong>：填写完成后点击「提交申请」</span>
+                    </div>
+                    <div class="sgp-help-step">
+                        <span class="sgp-step-num">2</span>
+                        <span class="sgp-step-text"><strong>HTML / 单HTML</strong>：直接上线，无需审核</span>
+                    </div>
+                    <div class="sgp-help-step">
+                        <span class="sgp-step-num">3</span>
+                        <span class="sgp-step-text"><strong>Python</strong>：进入审核队列，1-3 个工作日内反馈</span>
+                    </div>
+                    <div class="sgp-help-step">
+                        <span class="sgp-step-num">4</span>
+                        <span class="sgp-step-text"><strong>更新</strong>：版本号递增即可提交新版本</span>
+                    </div>
+                </div>
+            </div>
+
+            {# 文档链接 #}
+            <div class="sgp-help-card">
+                <h3>
+                    <svg class="sgp-help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                    相关文档
+                </h3>
+                <ul>
+                    <li><a href="#" class="sgp-help-link">开发者指南</a></li>
+                    <li><a href="#" class="sgp-help-link">Python 托管说明</a></li>
+                    <li><a href="{{ url_for('games.html_editor') }}" target="_blank" rel="noopener" class="sgp-help-link">在线 HTML 编辑器</a></li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    {# ==================== 底部操作栏 ==================== #}
+    <div class="sgp-actions-bar">
+        <div class="sgp-actions-info">
+            <span>当前模式:</span>
+            <span class="sgp-actions-mode" id="actions-mode">单 HTML · 提交申请</span>
+        </div>
+        <div class="sgp-actions-buttons">
+            <a href="{{ url_for('games.creator_center') }}" class="btn btn-ghost">取消</a>
+            <button type="button" class="btn btn-ghost" id="btn-draft" style="border-color: var(--accent-secondary); color: var(--accent-secondary);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <path d="M17 21v-8H7v8M7 3v5h8"/>
+                </svg>
+                保存草稿
+            </button>
+            <button type="submit" class="btn btn-primary" id="btn-submit" form="submit-game-form">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+                提交申请
+            </button>
+        </div>
+    </div>
+
+    {# Toast 容器 #}
+    <div id="sgp-toast" class="sgp-toast" role="status" aria-live="polite"></div>
+</div>
+
+{# ==================== 标签选择弹窗 ==================== #}
+{% include '_tag_picker.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    /* ============================================================
+       上下文数据 & 工具函数
+       ============================================================ */
+    var pageEl = document.querySelector('.sgp-page');
+    var isDeveloper = pageEl && pageEl.dataset.isDeveloper === 'true';
+
+    // 初始预填数据（来自 Jinja 渲染）
+    var initialTags = (document.getElementById('tags-hidden').value || '').trim();
+    var initialShots = document.getElementById('existing-shots');
+    var initialCover = document.getElementById('existing-cover');
+
+    /* ---------- Toast ---------- */
+    var toastEl = document.getElementById('sgp-toast');
+    var toastTimer = null;
+    function showToast(msg, type) {
+        type = type || 'info';
+        toastEl.textContent = msg;
+        toastEl.className = 'sgp-toast ' + type;
+        // 强制 reflow 后再 show，确保 transition 生效
+        void toastEl.offsetWidth;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3800);
+    }
+    // 暴露全局以便其它脚本复用
+    if (!window.showToast) window.showToast = showToast;
+
+    /* ---------- 文件大小 / 类型校验 ---------- */
+    var MAX = { cover: 10 * 1024 * 1024, shot: 3 * 1024 * 1024, zip: 500 * 1024 * 1024 };
+    var IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    function getExt(name) {
+        var i = (name || '').lastIndexOf('.');
+        return i >= 0 ? name.slice(i + 1).toLowerCase() : '';
+    }
+    function formatSize(bytes) {
+        if (!bytes) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    function isValidImage(file) {
+        return IMAGE_EXTS.indexOf(getExt(file.name)) >= 0 && /^image\//.test(file.type);
+    }
+
+    /* ============================================================
+       入场动画（IntersectionObserver）
+       ============================================================ */
+    var sections = document.querySelectorAll('.sgp-section');
+    if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    e.target.classList.add('is-visible');
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+        sections.forEach(function (s, i) {
+            s.style.transitionDelay = (i * 40) + 'ms';
+            io.observe(s);
+        });
+    } else {
+        sections.forEach(function (s) { s.classList.add('is-visible'); });
+    }
+
+    /* ============================================================
+       字符计数器
+       ============================================================ */
+    function bindCounter(input, counterId, max) {
+        var counter = document.getElementById(counterId);
+        if (!input || !counter) return;
+        function update() {
+            var len = (input.value || '').length;
+            counter.textContent = len + ' / ' + max;
+            counter.classList.toggle('is-warn', len > max * 0.85);
+            counter.classList.toggle('is-over', len > max);
+        }
+        input.addEventListener('input', update);
+        update();
+    }
+    bindCounter(document.getElementById('field-title'), 'title-counter', 100);
+    bindCounter(document.getElementById('field-short-desc'), 'shortdesc-counter', 200);
+
+    /* ============================================================
+       封面上传
+       ============================================================ */
+    var coverInput = document.getElementById('cover-input');
+    var coverDrop = document.getElementById('cover-drop');
+    var coverPreview = document.getElementById('cover-preview');
+    var coverEmpty = document.getElementById('cover-empty');
+    var coverRemove = document.getElementById('cover-remove');
+    var coverStatus = document.getElementById('cover-status');
+    var coverFile = null;
+
+    function setCoverPreview(url) {
+        var img = coverPreview.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            img.alt = '封面预览';
+            coverPreview.insertBefore(img, coverRemove);
+        }
+        img.src = url;
+        coverEmpty.hidden = true;
+        coverRemove.hidden = false;
+    }
+    function clearCoverPreview() {
+        var img = coverPreview.querySelector('img');
+        if (img) img.remove();
+        coverEmpty.hidden = false;
+        coverRemove.hidden = true;
+        coverStatus.textContent = '未选择';
+        coverFile = null;
+        coverInput.value = '';
+    }
+    function handleCoverFile(file) {
+        if (!file) return;
+        if (!isValidImage(file)) {
+            showToast('封面仅支持 JPG / PNG / GIF / WEBP 格式', 'error');
+            return;
+        }
+        if (file.size > MAX.cover) {
+            showToast('封面图大小不能超过 10MB（当前 ' + formatSize(file.size) + '）', 'error');
+            return;
+        }
+        coverFile = file;
+        var reader = new FileReader();
+        reader.onload = function (e) { setCoverPreview(e.target.result); };
+        reader.onerror = function () { showToast('封面图读取失败', 'error'); };
+        reader.readAsDataURL(file);
+        coverStatus.textContent = formatSize(file.size);
+    }
+    coverInput.addEventListener('change', function () {
+        if (coverInput.files && coverInput.files[0]) handleCoverFile(coverInput.files[0]);
+    });
+    coverDrop.addEventListener('click', function () { coverInput.click(); });
+    coverDrop.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); coverInput.click(); }
+    });
+    coverDrop.addEventListener('dragover', function (e) {
+        e.preventDefault(); coverDrop.classList.add('is-dragover');
+    });
+    coverDrop.addEventListener('dragleave', function () { coverDrop.classList.remove('is-dragover'); });
+    coverDrop.addEventListener('drop', function (e) {
+        e.preventDefault(); coverDrop.classList.remove('is-dragover');
+        var f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) handleCoverFile(f);
+    });
+    coverRemove.addEventListener('click', function (e) {
+        e.stopPropagation(); clearCoverPreview();
+    });
+
+    // 更新模式：显示已有封面
+    if (initialCover && initialCover.value) {
+        var url = initialCover.value;
+        if (url.charAt(0) === '/') url = url; // 保持原路径
+        setCoverPreview(url);
+        coverStatus.textContent = '使用现有封面';
+    }
+
+    /* ============================================================
+       截图上传
+       ============================================================ */
+    var shotsInput = document.getElementById('shots-input');
+    var shotsDrop = document.getElementById('shots-drop');
+    var shotsGrid = document.getElementById('shots-grid');
+    var shotsCounter = document.getElementById('shots-counter');
+    var MAX_SHOTS = 15;
+    var shotFiles = []; // 当前新增的 File 对象
+    var existingShotUrls = []; // 已存在的截图路径（更新模式）
+
+    function renderShots() {
+        shotsGrid.innerHTML = '';
+        var total = shotFiles.length + existingShotUrls.length;
+        shotsCounter.textContent = total + ' / ' + MAX_SHOTS;
+
+        // 已存在截图
+        existingShotUrls.forEach(function (url, idx) {
+            var item = document.createElement('div');
+            item.className = 'sgp-shot-item';
+            item.innerHTML = '<img src="' + url + '" alt="截图 ' + (idx + 1) + '">' +
+                '<span class="sgp-shot-num">' + (idx + 1) + '</span>';
+            var rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'sgp-shot-remove';
+            rm.setAttribute('aria-label', '移除截图 ' + (idx + 1));
+            rm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+            rm.addEventListener('click', function () {
+                existingShotUrls.splice(idx, 1);
+                renderShots();
+            });
+            item.appendChild(rm);
+            shotsGrid.appendChild(item);
+        });
+
+        // 新增截图
+        shotFiles.forEach(function (file, idx) {
+            var item = document.createElement('div');
+            item.className = 'sgp-shot-item';
+            var num = existingShotUrls.length + idx + 1;
+            var img = document.createElement('img');
+            img.alt = '截图 ' + num;
+            img.src = URL.createObjectURL(file);
+            item.appendChild(img);
+
+            var numEl = document.createElement('span');
+            numEl.className = 'sgp-shot-num';
+            numEl.textContent = num;
+            item.appendChild(numEl);
+
+            var rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'sgp-shot-remove';
+            rm.setAttribute('aria-label', '移除截图 ' + num);
+            rm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+            rm.addEventListener('click', function () {
+                URL.revokeObjectURL(img.src);
+                shotFiles.splice(idx, 1);
+                renderShots();
+            });
+            item.appendChild(rm);
+            shotsGrid.appendChild(item);
+        });
+    }
+    function addShotFiles(files) {
+        var arr = Array.prototype.slice.call(files || []);
+        var total = shotFiles.length + existingShotUrls.length;
+        if (total >= MAX_SHOTS) {
+            showToast('最多只能上传 ' + MAX_SHOTS + ' 张截图', 'warning');
+            return;
+        }
+        for (var i = 0; i < arr.length; i++) {
+            if (total >= MAX_SHOTS) break;
+            var f = arr[i];
+            if (!isValidImage(f)) {
+                showToast('截图 ' + f.name + ' 不是有效图片', 'error');
+                continue;
+            }
+            if (f.size > MAX.shot) {
+                showToast('截图 ' + f.name + ' 超过 3MB（' + formatSize(f.size) + '）', 'error');
+                continue;
+            }
+            shotFiles.push(f);
+            total++;
+        }
+        renderShots();
+    }
+    shotsInput.addEventListener('change', function () {
+        if (shotsInput.files) addShotFiles(shotsInput.files);
+        shotsInput.value = '';
+    });
+    shotsDrop.addEventListener('click', function () { shotsInput.click(); });
+    shotsDrop.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shotsInput.click(); }
+    });
+    shotsDrop.addEventListener('dragover', function (e) {
+        e.preventDefault(); shotsDrop.classList.add('is-dragover');
+    });
+    shotsDrop.addEventListener('dragleave', function () { shotsDrop.classList.remove('is-dragover'); });
+    shotsDrop.addEventListener('drop', function (e) {
+        e.preventDefault(); shotsDrop.classList.remove('is-dragover');
+        if (e.dataTransfer.files) addShotFiles(e.dataTransfer.files);
+    });
+
+    // 更新模式：解析已有截图
+    if (initialShots) {
+        try {
+            var arr = JSON.parse(initialShots.value || '[]');
+            if (Array.isArray(arr)) {
+                arr.forEach(function (p) {
+                    if (typeof p === 'string' && p) existingShotUrls.push(p);
+                });
+            }
+        } catch (e) { /* ignore */ }
+        renderShots();
+    }
+
+    /* ============================================================
+       视频链接校验
+       ============================================================ */
+    var videoInput = document.getElementById('field-video');
+    var videoStatus = document.getElementById('video-status');
+    var BV_RE = /\/(BV|av)[\w\-]+/i;
+    videoInput.addEventListener('input', function () {
+        var v = videoInput.value.trim();
+        if (!v) {
+            videoStatus.textContent = '可选';
+            videoStatus.classList.remove('is-warn');
+            return;
+        }
+        if (BV_RE.test(v)) {
+            videoStatus.textContent = '✓ 已识别';
+            videoStatus.classList.remove('is-warn');
+        } else {
+            videoStatus.textContent = '格式不符';
+            videoStatus.classList.add('is-warn');
+        }
+    });
+
+    /* ============================================================
+       分类 & 标签
+       ============================================================ */
+    var tagsHidden = document.getElementById('tags-hidden');
+    var tagsDisplay = document.getElementById('tags-display');
+    var tagsCount = document.getElementById('tags-count');
+    var tagsTrigger = document.getElementById('tags-trigger');
+    var popularChips = document.querySelectorAll('.sgp-popular-chip');
+    var MAX_TAGS = 20;
+    var selectedTags = []; // 字符串数组
+    var categoryTag = null; // 当前分类标签
+
+    function renderTags() {
+        tagsDisplay.innerHTML = '';
+        var all = (categoryTag ? [categoryTag] : []).concat(selectedTags);
+        if (!all.length) {
+            var empty = document.createElement('span');
+            empty.className = 'sgp-tags-empty';
+            empty.textContent = '尚未选择标签';
+            tagsDisplay.appendChild(empty);
+        } else {
+            all.forEach(function (name) {
+                var chip = document.createElement('span');
+                chip.className = 'sgp-tag-chip' + (name === categoryTag ? ' is-category' : '');
+                chip.textContent = name;
+                if (name !== categoryTag) {
+                    var rm = document.createElement('button');
+                    rm.type = 'button';
+                    rm.className = 'sgp-tag-remove';
+                    rm.setAttribute('aria-label', '移除标签 ' + name);
+                    rm.innerHTML = '×';
+                    rm.addEventListener('click', function () {
+                        var idx = selectedTags.indexOf(name);
+                        if (idx >= 0) selectedTags.splice(idx, 1);
+                        renderTags();
+                    });
+                    chip.appendChild(rm);
+                }
+                tagsDisplay.appendChild(chip);
+            });
+        }
+        tagsCount.textContent = all.length + ' / ' + MAX_TAGS;
+        // 同步隐藏字段
+        tagsHidden.value = all.join(',');
+        // 同步热门芯片选中态
+        popularChips.forEach(function (c) {
+            c.classList.toggle('is-selected', selectedTags.indexOf(c.dataset.popularTag) >= 0);
+        });
+    }
+    function addTag(name) {
+        name = (name || '').trim();
+        if (!name) return;
+        if (categoryTag === name) return;
+        if (selectedTags.indexOf(name) >= 0) return;
+        var total = selectedTags.length + (categoryTag ? 1 : 0);
+        if (total >= MAX_TAGS) {
+            showToast('最多选择 ' + MAX_TAGS + ' 个标签', 'warning');
+            return;
+        }
+        selectedTags.push(name);
+        renderTags();
+    }
+
+    // 标签选择弹窗
+    tagsTrigger.addEventListener('click', function () {
+        var current = (categoryTag ? [categoryTag] : []).concat(selectedTags);
+        window.openTagPicker({
+            selectedTags: current,
+            popularTags: {{ popular_tags|tojson }},
+            maxTags: MAX_TAGS,
+            onConfirm: function (tags, names) {
+                // 弹窗返回的标签里可能包含分类标签 - 过滤掉
+                selectedTags = names.filter(function (n) { return n !== categoryTag; });
+                renderTags();
+            }
+        });
+    });
+
+    // 热门标签快速点击
+    popularChips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            addTag(chip.dataset.popularTag);
+        });
+    });
+
+    // 分类单选
+    var catRadios = document.querySelectorAll('input[name="sgp-category"]');
+    catRadios.forEach(function (r) {
+        r.addEventListener('change', function () {
+            if (r.checked) categoryTag = r.value;
+            renderTags();
+        });
+    });
+
+    // 初始化标签：从 initialTags 解析
+    if (initialTags) {
+        var parsed = initialTags.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        // 如果第一个标签是预设分类，识别为 categoryTag
+        var catValues = {{ _cats|default([])|tojson }};
+        if (parsed.length && catValues.indexOf(parsed[0]) >= 0) {
+            categoryTag = parsed.shift();
+            // 同步分类按钮
+            catRadios.forEach(function (r) {
+                if (r.value === categoryTag) r.checked = true;
+            });
+        }
+        selectedTags = parsed;
+        renderTags();
+    } else {
+        renderTags();
+    }
+
+    /* ============================================================
+       价格 - 免费按钮
+       ============================================================ */
+    var priceInput = document.getElementById('field-price');
+    var freeBtn = document.getElementById('free-btn');
+    function syncFreeBtn() {
+        var v = parseFloat(priceInput.value);
+        freeBtn.classList.toggle('is-active', !isNaN(v) && v === 0);
+    }
+    priceInput.addEventListener('input', syncFreeBtn);
+    freeBtn.addEventListener('click', function () {
+        priceInput.value = '0';
+        syncFreeBtn();
+        showToast('已设为免费', 'success');
+    });
+    syncFreeBtn();
+
+    /* ============================================================
+       合作开发者
+       ============================================================ */
+    var cdevList = document.getElementById('cdev-list');
+    var cdevInput = document.getElementById('cdev-input');
+    var cdevAddBtn = document.getElementById('cdev-add-btn');
+    var cdevHidden = document.getElementById('cdev-hidden');
+    var cdevMembers = []; // {uid, username, avatar}
+
+    function renderCdevList() {
+        cdevList.innerHTML = '';
+        if (!cdevMembers.length) {
+            var empty = document.createElement('div');
+            empty.className = 'sgp-cdev-empty';
+            empty.textContent = '暂无合作开发者';
+            cdevList.appendChild(empty);
+        } else {
+            cdevMembers.forEach(function (m, idx) {
+                var item = document.createElement('div');
+                item.className = 'sgp-cdev-item';
+
+                var av = document.createElement('div');
+                av.className = 'sgp-cdev-avatar';
+                if (m.avatar) {
+                    var img = document.createElement('img');
+                    img.src = m.avatar; img.alt = m.username;
+                    av.appendChild(img);
+                } else {
+                    av.textContent = (m.username || 'U').slice(0, 1).toUpperCase();
+                }
+                item.appendChild(av);
+
+                var name = document.createElement('div');
+                name.className = 'sgp-cdev-name';
+                name.textContent = m.username || '未命名';
+                item.appendChild(name);
+
+                var uid = document.createElement('div');
+                uid.className = 'sgp-cdev-uid';
+                uid.textContent = '#' + m.uid;
+                item.appendChild(uid);
+
+                var rm = document.createElement('button');
+                rm.type = 'button';
+                rm.className = 'sgp-cdev-remove';
+                rm.setAttribute('aria-label', '移除成员 ' + m.username);
+                rm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+                rm.addEventListener('click', function () {
+                    cdevMembers.splice(idx, 1);
+                    renderCdevList();
+                });
+                item.appendChild(rm);
+
+                cdevList.appendChild(item);
+            });
+        }
+        cdevHidden.value = cdevMembers.map(function (m) { return m.uid; }).join(',');
+    }
+    cdevAddBtn.addEventListener('click', function () {
+        var v = (cdevInput.value || '').trim();
+        if (!v) {
+            showToast('请输入用户 UID 或用户名', 'warning');
+            return;
+        }
+        // 简单查重：以输入值作为 uid 标识
+        for (var i = 0; i < cdevMembers.length; i++) {
+            if (cdevMembers[i].uid === v) {
+                showToast('该成员已添加', 'warning');
+                return;
+            }
+        }
+        // TODO: 后端可增加 /api/users/lookup?q=xxx 返回真实用户信息
+        cdevMembers.push({ uid: v, username: v, avatar: '' });
+        cdevInput.value = '';
+        renderCdevList();
+        showToast('已添加合作开发者', 'success');
+    });
+    cdevInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); cdevAddBtn.click(); }
+    });
+    renderCdevList();
+
+    /* ============================================================
+       系统需求折叠
+       ============================================================ */
+    var reqTrigger = document.getElementById('req-trigger');
+    var reqContent = document.getElementById('req-content');
+    reqTrigger.addEventListener('click', function () {
+        var isOpen = reqTrigger.getAttribute('aria-expanded') === 'true';
+        reqTrigger.setAttribute('aria-expanded', String(!isOpen));
+        reqContent.classList.toggle('is-open', isOpen);
+        reqTrigger.querySelector('span').textContent = isOpen
+            ? '展开填写系统需求（默认隐藏，不影响提交）'
+            : '收起系统需求';
+    });
+
+    /* ============================================================
+       托管类型切换
+       ============================================================ */
+    var hostingCards = document.querySelectorAll('.sgp-hosting-card');
+    var hostingHint = document.getElementById('hosting-hint');
+    var entryField = document.getElementById('entry-field');
+    var actionsMode = document.getElementById('actions-mode');
+    var HOSTING_HINTS = {
+        'single_html': '单 HTML · 直接上线',
+        'html': 'HTML 工程 · 直接上线',
+        'python': 'Python · 需审核'
+    };
+    function selectHosting(type) {
+        // 非开发者强制 single_html
+        if (!isDeveloper && type !== 'single_html') {
+            showToast('普通用户仅支持单 HTML 模式', 'warning');
+            type = 'single_html';
+        }
+        hostingCards.forEach(function (card) {
+            var cardType = card.dataset.hosting;
+            var input = card.querySelector('input[type="radio"]');
+            var isSel = cardType === type;
+            card.classList.toggle('is-selected', isSel);
+            if (input) input.checked = isSel;
+            // 显示/隐藏对应字段区
+            var sections = document.querySelectorAll('[data-hosting-section]');
+            sections.forEach(function (sec) {
+                var secType = sec.dataset.hostingSection;
+                var shouldShow = (secType === type) || (secType === 'entry' && (type === 'html' || type === 'single_html'));
+                sec.classList.toggle('hidden', !shouldShow);
+            });
+        });
+        if (hostingHint) hostingHint.textContent = HOSTING_HINTS[type] || type;
+        if (actionsMode) actionsMode.textContent = HOSTING_HINTS[type] || type;
+        // Python 模式不需要入口文件
+        if (entryField) entryField.classList.toggle('hidden', type === 'python');
+    }
+    hostingCards.forEach(function (card) {
+        if (card.classList.contains('is-disabled')) return;
+        card.addEventListener('click', function () {
+            selectHosting(card.dataset.hosting);
+        });
+    });
+    // 初始化：根据预填值选中
+    var checkedCard = document.querySelector('.sgp-hosting-card.is-selected');
+    if (checkedCard) {
+        selectHosting(checkedCard.dataset.hosting);
+    } else {
+        selectHosting('single_html');
+    }
+
+    /* ============================================================
+       源码开放开关
+       ============================================================ */
+    var sourceCheckbox = document.getElementById('field-source-open');
+    var sourceHidden = document.getElementById('source-open-hidden');
+    function syncSourceOpen() {
+        sourceHidden.value = sourceCheckbox.checked ? '1' : '0';
+    }
+    sourceCheckbox.addEventListener('change', syncSourceOpen);
+    syncSourceOpen();
+
+    /* ============================================================
+       单 HTML：文件选择 / 在线编辑器内容读取
+       ============================================================ */
+    var htmlFileInput = document.getElementById('html-file-input');
+    var htmlFileName = document.getElementById('html-file-name');
+    var htmlContentHidden = document.getElementById('html-content-hidden');
+    var btnHtmlUpload = document.getElementById('btn-html-upload');
+    if (btnHtmlUpload) {
+        btnHtmlUpload.addEventListener('click', function () { htmlFileInput.click(); });
+    }
+    if (htmlFileInput) {
+        htmlFileInput.addEventListener('change', function () {
+            if (htmlFileInput.files && htmlFileInput.files[0]) {
+                var f = htmlFileInput.files[0];
+                htmlFileName.value = f.name + ' (' + formatSize(f.size) + ')';
+                // 读取文件内容到 html_content（单 HTML 模式可选双轨提交）
+                var reader = new FileReader();
+                reader.onload = function (e) { htmlContentHidden.value = e.target.result; };
+                reader.readAsText(f);
+            }
+        });
+    }
+    // 从编辑器返回时，自动读取 localStorage['html_editor_content']
+    try {
+        var edited = localStorage.getItem('html_editor_content');
+        if (edited) {
+            htmlContentHidden.value = edited;
+            htmlFileName.value = '来自在线编辑器 (' + edited.length + ' 字符)';
+            // 用完即清，避免下次重复提示
+            // localStorage.removeItem('html_editor_content'); // 保留以便用户多次提交
+        }
+    } catch (e) { /* ignore */ }
+
+    /* ============================================================
+       ZIP 文件拖拽
+       ============================================================ */
+    var zipInput = document.getElementById('zip-file-input');
+    var zipDrop = document.getElementById('zip-drop');
+    if (zipDrop) {
+        zipDrop.addEventListener('click', function () { zipInput.click(); });
+        zipDrop.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); zipInput.click(); }
+        });
+        zipDrop.addEventListener('dragover', function (e) {
+            e.preventDefault(); zipDrop.classList.add('is-dragover');
+        });
+        zipDrop.addEventListener('dragleave', function () { zipDrop.classList.remove('is-dragover'); });
+        zipDrop.addEventListener('drop', function (e) {
+            e.preventDefault(); zipDrop.classList.remove('is-dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                var f = e.dataTransfer.files[0];
+                if (getExt(f.name) !== 'zip') {
+                    showToast('仅支持 ZIP 格式', 'error');
+                    return;
+                }
+                if (f.size > MAX.zip) {
+                    showToast('ZIP 文件超过 500MB（' + formatSize(f.size) + '）', 'error');
+                    return;
+                }
+                // 通过 DataTransfer 赋值给 input 以便表单提交
+                var dt = new DataTransfer();
+                dt.items.add(f);
+                zipInput.files = dt.files;
+                showToast('已选择: ' + f.name, 'success');
+            }
+        });
+        if (zipInput) {
+            zipInput.addEventListener('change', function () {
+                if (zipInput.files && zipInput.files[0]) {
+                    var f = zipInput.files[0];
+                    if (f.size > MAX.zip) {
+                        showToast('ZIP 文件超过 500MB（' + formatSize(f.size) + '）', 'error');
+                        zipInput.value = '';
+                        return;
+                    }
+                    showToast('已选择: ' + f.name, 'success');
+                }
+            });
+        }
+    }
+
+    /* ============================================================
+       表单提交校验
+       ============================================================ */
+    var form = document.getElementById('submit-game-form');
+    var btnSubmit = document.getElementById('btn-submit');
+    var btnDraft = document.getElementById('btn-draft');
+
+    // 在提交前同步 screenshots：使用 DataTransfer 把所有 File 合并到 input
+    function syncShotsInput() {
+        var shotsInputEl = document.getElementById('shots-input');
+        if (!shotsInputEl) return;
+        var dt = new DataTransfer();
+        shotFiles.forEach(function (f) { dt.items.add(f); });
+        shotsInputEl.files = dt.files;
+    }
+
+    function validate() {
+        var title = document.getElementById('field-title').value.trim();
+        if (!title) {
+            showToast('请填写游戏标题', 'error');
+            document.getElementById('field-title').focus();
+            return false;
+        }
+        if (title.length < 2) {
+            showToast('标题至少 2 个字符', 'error');
+            return false;
+        }
+        if (!tagsHidden.value) {
+            showToast('请至少选择一个标签', 'error');
+            return false;
+        }
+        // 分类必选
+        var catChecked = document.querySelector('input[name="sgp-category"]:checked');
+        if (!catChecked) {
+            showToast('请选择主分类', 'error');
+            return false;
+        }
+        // 封面：新游戏必须上传；更新模式可使用现有
+        if (!coverFile && !initialCover) {
+            showToast('请上传封面图', 'error');
+            return false;
+        }
+        // 版本号格式
+        var version = document.getElementById('field-version').value.trim();
+        if (!version) {
+            showToast('请填写版本号', 'error');
+            return false;
+        }
+        if (!/^\d+\.\d+\.\d+([\-\.][\w\.]+)?$/.test(version)) {
+            showToast('版本号格式无效，应为 X.Y.Z', 'error');
+            return false;
+        }
+        // 托管类型相关字段
+        var hostingType = (document.querySelector('input[name="hosting_type"]:checked') || {}).value;
+        if (hostingType === 'python') {
+            var pm = document.getElementById('python-main').value.trim();
+            var pc = document.getElementById('python-command').value.trim();
+            if (!pm) { showToast('请填写 Python 主文件', 'error'); return false; }
+            if (!pc) { showToast('请填写启动命令', 'error'); return false; }
+        }
+        if (hostingType === 'html') {
+            if (!zipInput.files || !zipInput.files.length) {
+                showToast('请上传 ZIP 文件', 'error');
+                return false;
+            }
+        }
+        if (hostingType === 'single_html') {
+            // 允许 html_content 或 html_file 二选一
+            if (!htmlContentHidden.value && (!htmlFileInput.files || !htmlFileInput.files.length)) {
+                showToast('请上传 HTML 文件或使用在线编辑器', 'error');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    btnSubmit.addEventListener('click', function (e) {
+        // submit 按钮 type="submit" 会自动触发 form 提交，这里做提交前校验
+        if (!validate()) {
+            e.preventDefault();
+            return;
+        }
+        syncShotsInput();
+        // 显示提交中状态
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14" class="sgp-spinner"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> 提交中…';
+        showToast('正在提交…', 'info');
+    });
+
+    // 草稿按钮：通过设置 form 的自定义字段实现（后端如支持则生效，否则前端阻止）
+    btnDraft.addEventListener('click', function () {
+        // 当前后端 /api/games/upload 不支持 status=draft，这里仅做前端模拟（不实际提交）
+        // 若未来后端支持，可改为在 form 中追加 <input type="hidden" name="status" value="draft">
+        var draftInput = document.createElement('input');
+        draftInput.type = 'hidden';
+        draftInput.name = 'status';
+        draftInput.value = 'draft';
+        form.appendChild(draftInput);
+        if (!validate()) {
+            form.removeChild(draftInput);
+            return;
+        }
+        syncShotsInput();
+        showToast('正在保存草稿…', 'info');
+        // 实际提交
+        form.submit();
+    });
+
+    // 拦截表单原生 submit 以做最终校验
+    form.addEventListener('submit', function (e) {
+        if (!validate()) {
+            e.preventDefault();
+            return;
+        }
+        syncShotsInput();
+    });
+
+    /* ============================================================
+       Spinner 样式（动态注入）
+       ============================================================ */
+    var spinnerStyle = document.createElement('style');
+    spinnerStyle.textContent = '.sgp-spinner { animation: sgp-spin 0.8s linear infinite; }' +
+        '@keyframes sgp-spin { to { transform: rotate(360deg); } }' +
+        '@media (prefers-reduced-motion: reduce) { .sgp-spinner { animation: none !important; } }';
+    document.head.appendChild(spinnerStyle);
+
+})();
+</script>
+{% endblock %}

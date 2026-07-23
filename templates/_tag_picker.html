@@ -1,0 +1,835 @@
+{# _tag_picker.html — 标签选择弹窗（局部模板，由其它模板 {% include %} 引入）
+   使用方式：
+     1. 在父模板末尾 {% include '_tag_picker.html' %}
+     2. 调用 window.openTagPicker({
+          selectedTags: ['标签1','标签2'],   // 可选：预选标签名数组
+          popularTags: ['热门1','热门2'],     // 可选：热门标签名数组
+          maxTags: 10,                       // 可选：最大数量
+          onConfirm: function(tags, names) { // 必填：确认回调
+            // tags: [{name, is_verified, is_new, game_count}, ...]
+            // names: ['标签1','标签2', ...]
+          }
+        });
+   依赖：
+     - theme.css 提供的 .modal-backdrop / .modal-content / .input / .input-group / .btn / .tag-chip / .badge 等组件类
+     - 后端 GET /api/tags/search?q=xxx 返回 [{id, name, is_verified, game_count}]（无匹配时回退到 GET /api/tags 客户端过滤）
+#}
+
+<!-- Modal (hidden by default) -->
+<div class="modal-backdrop tag-picker-modal" id="tagPickerModal" role="dialog" aria-modal="true" aria-labelledby="tagPickerTitle" hidden>
+  <div class="modal-content tag-picker-content" role="document">
+    <!-- Header -->
+    <div class="tag-picker-header">
+      <h3 id="tagPickerTitle">选择标签</h3>
+      <button type="button" class="tag-picker-close" aria-label="关闭">×</button>
+    </div>
+
+    <!-- Body -->
+    <div class="tag-picker-body">
+      <!-- 搜索框 -->
+      <div class="input-group tag-picker-search-group">
+        <span class="input-prefix" aria-hidden="true">🔍</span>
+        <input type="text" class="input tag-picker-search" id="tagPickerSearch" placeholder="搜索或创建标签…" autocomplete="off" aria-label="搜索标签">
+      </div>
+
+      <!-- 搜索结果（默认隐藏） -->
+      <div class="tag-picker-results" id="tagPickerResults" hidden aria-live="polite"></div>
+
+      <!-- 热门标签（无搜索时显示） -->
+      <div class="tag-picker-popular" id="tagPickerPopular">
+        <h4>热门标签</h4>
+        <div class="tag-picker-popular-list" id="tagPickerPopularList"></div>
+      </div>
+
+      <!-- 已选标签 -->
+      <div class="tag-picker-selected">
+        <h4>已选标签 <span class="tag-picker-count" id="tagPickerCount">(0)</span></h4>
+        <div class="tag-picker-selected-list" id="tagPickerSelectedList"></div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="tag-picker-footer">
+      <button type="button" class="btn btn-ghost tag-picker-cancel">取消</button>
+      <button type="button" class="btn btn-primary tag-picker-confirm">确认</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ==================== 标签选择弹窗 - 组件级样式 ==================== */
+  .tag-picker-modal .modal-content {
+    width: min(640px, 94vw);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .tag-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  .tag-picker-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .tag-picker-close {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--fg-secondary);
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+  .tag-picker-close:hover {
+    background: var(--glass-bg);
+    color: var(--accent-danger);
+  }
+  .tag-picker-close:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+
+  .tag-picker-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .tag-picker-search-group {
+    flex-shrink: 0;
+  }
+
+  /* ==================== 搜索结果 ==================== */
+  .tag-picker-results {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
+  }
+  .tag-picker-result-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--fg-primary);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+  .tag-picker-result-row:last-child { border-bottom: none; }
+  .tag-picker-result-row:hover {
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+  }
+  .tag-picker-result-row:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: -2px;
+  }
+  .tag-picker-result-name {
+    flex: 1;
+    font-weight: 500;
+  }
+  .tag-picker-result-count {
+    color: var(--fg-muted);
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+  }
+
+  /* 创建新标签行 */
+  .tag-picker-create-row {
+    color: var(--accent-primary);
+    font-weight: 600;
+    border-top: 1px dashed var(--glass-border);
+  }
+  .tag-picker-create-row:hover {
+    background: rgba(0, 255, 157, 0.08);
+  }
+  [data-theme="light"] .tag-picker-create-row:hover {
+    background: rgba(0, 204, 122, 0.08);
+  }
+  .tag-picker-create-plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-pill);
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  [data-theme="light"] .tag-picker-create-plus { color: #ffffff; }
+  .tag-picker-create-row strong {
+    color: var(--accent-primary);
+    font-weight: 700;
+  }
+
+  /* 加载 / 空态 / 错误 */
+  .tag-picker-loading,
+  .tag-picker-results-empty,
+  .tag-picker-error {
+    padding: var(--space-4);
+    text-align: center;
+    color: var(--fg-muted);
+    font-size: 0.88rem;
+  }
+  .tag-picker-error { color: var(--accent-danger); }
+  .tag-picker-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: tag-picker-spin 0.6s linear infinite;
+    vertical-align: -2px;
+    margin-right: 6px;
+  }
+  @keyframes tag-picker-spin { to { transform: rotate(360deg); } }
+
+  /* ==================== 热门 / 已选 标签区 ==================== */
+  .tag-picker-popular h4,
+  .tag-picker-selected h4 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    font-family: var(--font-display);
+  }
+  .tag-picker-popular-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .tag-picker-popular-list .tag-picker-empty-inline {
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    padding: var(--space-2) 0;
+  }
+
+  /* 可点击的热门标签 */
+  .tag-chip-clickable {
+    cursor: pointer;
+    border: 1px solid var(--glass-border);
+    transition: background var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+  }
+  .tag-chip-clickable:hover {
+    transform: translateY(-1px);
+    background: rgba(0, 255, 157, 0.12);
+    border-color: var(--accent-primary);
+  }
+  [data-theme="light"] .tag-chip-clickable:hover {
+    background: rgba(0, 204, 122, 0.1);
+  }
+
+  .tag-picker-selected-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-height: 36px;
+    padding: var(--space-2);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
+  }
+  .tag-picker-selected-list:empty::before {
+    content: "尚未选择任何标签";
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    align-self: center;
+  }
+  .tag-picker-empty {
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    padding: var(--space-2) 0;
+  }
+
+  /* 已选标签 chip（覆写 .tag-chip 默认内边距，给 × 按钮留位置） */
+  .tag-picker-selected-list .tag-chip {
+    padding: 3px 6px 3px var(--space-3);
+    gap: 6px;
+  }
+  .tag-picker-selected-list .tag-chip.is-new-tag {
+    background: rgba(255, 200, 87, 0.12);
+    color: var(--accent-secondary);
+    border-color: rgba(255, 200, 87, 0.35);
+  }
+  .tag-picker-new-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 200, 87, 0.2);
+    color: var(--accent-secondary);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border: 1px solid rgba(255, 200, 87, 0.4);
+  }
+  .tag-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: 1rem;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+  .tag-chip-remove:hover {
+    background: var(--accent-danger);
+    color: #fff;
+  }
+  .tag-chip-remove:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 1px;
+  }
+
+  /* ==================== 底部 ==================== */
+  .tag-picker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-base);
+    flex-shrink: 0;
+  }
+
+  /* ==================== 响应式：移动端 ==================== */
+  @media (max-width: 560px) {
+    .tag-picker-modal .modal-content {
+      width: 96vw;
+      max-height: 94vh;
+      border-radius: var(--radius-md);
+    }
+    .tag-picker-header,
+    .tag-picker-body,
+    .tag-picker-footer {
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+    .tag-picker-header { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+    .tag-picker-footer { padding-top: var(--space-3); padding-bottom: var(--space-3); }
+  }
+
+  /* 尊重 reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .tag-picker-spinner { animation-duration: 1.5s; }
+    .tag-chip-clickable:hover { transform: none; }
+  }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  var modal = document.getElementById('tagPickerModal');
+  if (!modal) return;
+
+  var content = modal.querySelector('.tag-picker-content');
+  var searchInput = document.getElementById('tagPickerSearch');
+  var resultsEl = document.getElementById('tagPickerResults');
+  var popularEl = document.getElementById('tagPickerPopular');
+  var popularListEl = document.getElementById('tagPickerPopularList');
+  var selectedListEl = document.getElementById('tagPickerSelectedList');
+  var countEl = document.getElementById('tagPickerCount');
+  var closeBtn = modal.querySelector('.tag-picker-close');
+  var cancelBtn = modal.querySelector('.tag-picker-cancel');
+  var confirmBtn = modal.querySelector('.tag-picker-confirm');
+
+  // 选项可在主题切换或重复打开时复用
+  var DEFAULT_MAX_TAGS = 20;
+  var state = {
+    selectedTags: [],     // [{name, is_verified, is_new, game_count}]
+    popularTags: [],      // [{name, is_verified, game_count}]
+    options: {},
+    lastFocused: null,
+    debounceTimer: null,
+    abortController: null,
+    popularLoaded: false
+  };
+
+  /* ---------- 工具函数 ---------- */
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function debounce(fn, delay) {
+    return function () {
+      var ctx = this, args = arguments;
+      clearTimeout(state.debounceTimer);
+      state.debounceTimer = setTimeout(function () { fn.apply(ctx, args); }, delay);
+    };
+  }
+
+  function findSelectedByName(name) {
+    var q = String(name).trim().toLowerCase();
+    return state.selectedTags.filter(function (t) {
+      return t.name.trim().toLowerCase() === q;
+    })[0];
+  }
+
+  function isExactMatchInResults(results, query) {
+    if (!results || !results.length) return false;
+    var q = query.trim().toLowerCase();
+    return results.some(function (t) {
+      return String(t.name || '').trim().toLowerCase() === q;
+    });
+  }
+
+  /* ---------- 渲染：已选标签 ---------- */
+  function renderSelected() {
+    selectedListEl.innerHTML = '';
+    if (!state.selectedTags.length) {
+      var empty = document.createElement('span');
+      empty.className = 'tag-picker-empty';
+      empty.textContent = '尚未选择任何标签';
+      selectedListEl.appendChild(empty);
+      countEl.textContent = '(0)';
+      return;
+    }
+    state.selectedTags.forEach(function (t) {
+      var chip = document.createElement('span');
+      chip.className = 'tag-chip' + (t.is_verified ? ' tag-chip-verified' : '') + (t.is_new ? ' is-new-tag' : '');
+      var name = document.createElement('span');
+      name.textContent = t.name;
+      chip.appendChild(name);
+
+      if (t.is_new) {
+        var newBadge = document.createElement('span');
+        newBadge.className = 'tag-picker-new-badge';
+        newBadge.textContent = '新';
+        chip.appendChild(newBadge);
+      }
+
+      var x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'tag-chip-remove';
+      x.setAttribute('aria-label', '移除标签 ' + t.name);
+      x.textContent = '×';
+      x.addEventListener('click', function () { removeTag(t.name); });
+      chip.appendChild(x);
+
+      selectedListEl.appendChild(chip);
+    });
+    countEl.textContent = '(' + state.selectedTags.length + ')';
+  }
+
+  /* ---------- 渲染：热门标签 ---------- */
+  function renderPopular() {
+    if (!state.popularTags.length) {
+      popularEl.hidden = true;
+      popularListEl.innerHTML = '';
+      return;
+    }
+    popularEl.hidden = false;
+    popularListEl.innerHTML = '';
+
+    var shown = 0;
+    state.popularTags.forEach(function (t) {
+      if (findSelectedByName(t.name)) return; // 已选的不再展示在热门里
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'tag-chip tag-chip-clickable' + (t.is_verified ? ' tag-chip-verified' : '');
+      chip.textContent = t.name;
+      chip.setAttribute('aria-label', '添加标签 ' + t.name);
+      chip.addEventListener('click', function () { addTag(t); });
+      popularListEl.appendChild(chip);
+      shown++;
+    });
+
+    if (!shown) {
+      var done = document.createElement('span');
+      done.className = 'tag-picker-empty-inline';
+      done.textContent = '热门标签已全部选择';
+      popularListEl.appendChild(done);
+    }
+  }
+
+  /* ---------- 渲染：搜索结果 ---------- */
+  function renderResults(results, query) {
+    resultsEl.innerHTML = '';
+    resultsEl.hidden = false;
+    popularEl.hidden = true;
+
+    var visibleCount = 0;
+    if (results && results.length) {
+      results.forEach(function (t) {
+        if (findSelectedByName(t.name)) return; // 已选的不再展示
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'tag-picker-result-row';
+        var name = document.createElement('span');
+        name.className = 'tag-picker-result-name';
+        name.textContent = t.name;
+        row.appendChild(name);
+
+        if (t.is_verified) {
+          var v = document.createElement('span');
+          v.className = 'badge badge-success';
+          v.style.cssText = 'padding:1px 5px;font-size:.62rem;';
+          v.textContent = '认证';
+          row.appendChild(v);
+        }
+        if (typeof t.game_count === 'number') {
+          var gc = document.createElement('span');
+          gc.className = 'tag-picker-result-count';
+          gc.textContent = t.game_count + ' 个游戏';
+          row.appendChild(gc);
+        }
+        row.addEventListener('click', function () {
+          addTag(t);
+          searchInput.value = '';
+          resultsEl.hidden = true;
+          resultsEl.innerHTML = '';
+          popularEl.hidden = !state.popularTags.length;
+        });
+        resultsEl.appendChild(row);
+        visibleCount++;
+      });
+    }
+
+    if (!visibleCount && results && results.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'tag-picker-results-empty';
+      empty.textContent = '未找到匹配的标签';
+      resultsEl.appendChild(empty);
+    }
+
+    // 创建新标签选项：搜索词非空 且 无精确匹配 且 未在已选中
+    var q = (query || '').trim();
+    if (q && !isExactMatchInResults(results, q) && !findSelectedByName(q)) {
+      var createRow = document.createElement('button');
+      createRow.type = 'button';
+      createRow.className = 'tag-picker-result-row tag-picker-create-row';
+      var plus = document.createElement('span');
+      plus.className = 'tag-picker-create-plus';
+      plus.textContent = '+';
+      createRow.appendChild(plus);
+      var label = document.createElement('span');
+      label.innerHTML = '创建新标签 <strong>「' + escapeHtml(q) + '」</strong>';
+      createRow.appendChild(label);
+      createRow.setAttribute('aria-label', '创建新标签 ' + q);
+      createRow.addEventListener('click', function () {
+        addTag({ name: q, is_verified: 0, is_new: true, game_count: 0 });
+        searchInput.value = '';
+        resultsEl.hidden = true;
+        resultsEl.innerHTML = '';
+        popularEl.hidden = !state.popularTags.length;
+      });
+      resultsEl.appendChild(createRow);
+    }
+  }
+
+  /* ---------- 加载 / 错误态 ---------- */
+  function showLoading() {
+    resultsEl.hidden = false;
+    popularEl.hidden = true;
+    resultsEl.innerHTML = '<div class="tag-picker-loading"><span class="tag-picker-spinner" aria-hidden="true"></span>搜索中…</div>';
+  }
+  function showError(msg) {
+    resultsEl.hidden = false;
+    popularEl.hidden = true;
+    resultsEl.innerHTML = '<div class="tag-picker-error">' + escapeHtml(msg || '搜索失败，请稍后重试') + '</div>';
+  }
+
+  /* ---------- 添加 / 移除标签 ---------- */
+  function addTag(tag) {
+    if (!tag || !tag.name) return;
+    var name = String(tag.name).trim();
+    if (!name) return;
+    if (findSelectedByName(name)) return; // 去重
+    var max = state.options.maxTags || DEFAULT_MAX_TAGS;
+    if (state.selectedTags.length >= max) {
+      if (typeof window.showToast === 'function') {
+        window.showToast('最多选择 ' + max + ' 个标签', 'warning');
+      }
+      return;
+    }
+    state.selectedTags.push({
+      name: name,
+      is_verified: tag.is_verified ? 1 : 0,
+      is_new: !!tag.is_new,
+      game_count: tag.game_count || 0
+    });
+    renderSelected();
+    renderPopular();
+    // 如当前有搜索词，重新渲染结果以隐藏刚加入的标签
+    if (searchInput.value.trim()) {
+      doSearch(searchInput.value);
+    }
+  }
+
+  function removeTag(name) {
+    var q = String(name).trim().toLowerCase();
+    state.selectedTags = state.selectedTags.filter(function (t) {
+      return t.name.trim().toLowerCase() !== q;
+    });
+    renderSelected();
+    renderPopular();
+  }
+
+  /* ---------- 搜索 ---------- */
+  function doSearch(query) {
+    var q = (query || '').trim();
+    if (!q) {
+      resultsEl.hidden = true;
+      resultsEl.innerHTML = '';
+      popularEl.hidden = !state.popularTags.length;
+      return;
+    }
+    showLoading();
+    // 取消上一个进行中的请求
+    if (state.abortController) {
+      try { state.abortController.abort(); } catch (_) {}
+    }
+    state.abortController = (window.AbortController) ? new AbortController() : null;
+    var opts = state.abortController ? { signal: state.abortController.signal } : {};
+
+    fetch('/api/tags/search?q=' + encodeURIComponent(q), opts)
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        // 兼容两种返回格式：纯数组 或 {success, tags}
+        var list = Array.isArray(data) ? data : (data && data.tags) ? data.tags : [];
+        renderResults(list, q);
+      })
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') return; // 被新请求取消
+        // 回退到 GET /api/tags 客户端过滤
+        fetch('/api/tags')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var list = Array.isArray(data) ? data : (data && data.tags) ? data.tags : [];
+            var ql = q.toLowerCase();
+            var filtered = list.filter(function (t) {
+              return String(t.name || '').toLowerCase().indexOf(ql) !== -1;
+            });
+            renderResults(filtered, q);
+          })
+          .catch(function () { showError(); });
+      });
+  }
+
+  var debouncedSearch = debounce(doSearch, 300);
+
+  /* ---------- 热门标签拉取（未传入时） ---------- */
+  function fetchPopularTags() {
+    if (state.popularLoaded) {
+      renderPopular();
+      return;
+    }
+    fetch('/api/tags')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var list = Array.isArray(data) ? data : (data && data.tags) ? data.tags : [];
+        // 取前 12 个作为热门展示
+        state.popularTags = list.slice(0, 12).map(function (t) {
+          return {
+            name: t.name,
+            is_verified: t.is_verified || 0,
+            game_count: t.game_count || 0
+          };
+        });
+        state.popularLoaded = true;
+        if (!searchInput.value.trim()) renderPopular();
+      })
+      .catch(function () {
+        state.popularLoaded = true;
+        if (!searchInput.value.trim()) renderPopular();
+      });
+  }
+
+  /* ---------- 打开 / 关闭 ---------- */
+  function openModal(options) {
+    options = options || {};
+    state.options = options;
+    state.lastFocused = document.activeElement;
+
+    // 初始化已选
+    state.selectedTags = [];
+    if (Array.isArray(options.selectedTags)) {
+      options.selectedTags.forEach(function (n) {
+        if (typeof n === 'string' && n.trim()) {
+          state.selectedTags.push({
+            name: n.trim(),
+            is_verified: 0,
+            is_new: false,
+            game_count: 0
+          });
+        } else if (n && typeof n === 'object' && n.name) {
+          state.selectedTags.push({
+            name: String(n.name).trim(),
+            is_verified: n.is_verified || 0,
+            is_new: !!n.is_new,
+            game_count: n.game_count || 0
+          });
+        }
+      });
+    }
+
+    // 初始化热门
+    state.popularTags = [];
+    state.popularLoaded = false;
+    if (Array.isArray(options.popularTags)) {
+      options.popularTags.forEach(function (n) {
+        if (typeof n === 'string' && n.trim()) {
+          state.popularTags.push({ name: n.trim(), is_verified: 0, game_count: 0 });
+        } else if (n && typeof n === 'object' && n.name) {
+          state.popularTags.push({
+            name: String(n.name).trim(),
+            is_verified: n.is_verified || 0,
+            game_count: n.game_count || 0
+          });
+        }
+      });
+      state.popularLoaded = true;
+    }
+
+    searchInput.value = '';
+    resultsEl.hidden = true;
+    resultsEl.innerHTML = '';
+
+    renderSelected();
+    if (state.popularTags.length) {
+      renderPopular();
+    } else {
+      fetchPopularTags();
+    }
+
+    // 打开动画：先移除 hidden，强制 reflow，再加 is-open
+    modal.hidden = false;
+    void modal.offsetWidth;
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+
+    // 延迟聚焦，等待 transition
+    setTimeout(function () { searchInput.focus(); }, 60);
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    if (state.abortController) {
+      try { state.abortController.abort(); } catch (_) {}
+      state.abortController = null;
+    }
+    clearTimeout(state.debounceTimer);
+
+    // 过渡结束后再 hidden，避免动画被打断
+    setTimeout(function () { modal.hidden = true; }, 250);
+
+    // 恢复焦点
+    if (state.lastFocused && typeof state.lastFocused.focus === 'function') {
+      setTimeout(function () {
+        try { state.lastFocused.focus(); } catch (_) {}
+      }, 100);
+    }
+  }
+
+  function confirmSelection() {
+    var tagsArray = state.selectedTags.map(function (t) {
+      return {
+        name: t.name,
+        is_verified: !!t.is_verified,
+        is_new: !!t.is_new,
+        game_count: t.game_count || 0
+      };
+    });
+    var names = state.selectedTags.map(function (t) { return t.name; });
+    if (typeof state.options.onConfirm === 'function') {
+      try { state.options.onConfirm(tagsArray, names); } catch (e) { console.error('[tagPicker] onConfirm error:', e); }
+    }
+    closeModal();
+  }
+
+  /* ---------- 事件绑定 ---------- */
+  searchInput.addEventListener('input', function () {
+    debouncedSearch(searchInput.value);
+  });
+
+  closeBtn.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+  confirmBtn.addEventListener('click', confirmSelection);
+
+  // 点击遮罩关闭（点击内容区不关闭）
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();
+  });
+
+  // Escape 关闭
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+      e.preventDefault();
+      closeModal();
+    }
+  });
+
+  // 焦点陷阱
+  modal.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab' || !modal.classList.contains('is-open')) return;
+    var focusable = modal.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  /* ---------- 暴露全局 API ---------- */
+  /**
+   * 打开标签选择弹窗
+   * @param {Object} options
+   * @param {Array<string|{name:string,is_verified?:number|boolean,is_new?:boolean,game_count?:number}>} [options.selectedTags]  预选标签
+   * @param {Array<string|{name:string,is_verified?:number|boolean,game_count?:number}>} [options.popularTags]  热门标签
+   * @param {number} [options.maxTags=20]  最大可选数量
+   * @param {function(Array<{name:string,is_verified:boolean,is_new:boolean,game_count:number}>, Array<string>):void} [options.onConfirm]  确认回调
+   */
+  window.openTagPicker = function (options) {
+    openModal(options || {});
+  };
+})();
+</script>

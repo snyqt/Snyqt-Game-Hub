@@ -1,739 +1,2337 @@
 {% extends 'base.html' %}
 {% import '_macros.html' as m %}
 
-{% block title %}发现{% endblock %}
+{# 预计算平台统计：独立开发者数与总游玩次数 #}
+{% set ns_devs = namespace(seen=[], count=0) %}
+{% for g in games %}
+    {% if g.developer_id not in ns_devs.seen %}
+        {% set ns_devs.seen = ns_devs.seen + [g.developer_id] %}
+        {% set ns_devs.count = ns_devs.count + 1 %}
+    {% endif %}
+{% endfor %}
+{% set ns_plays = namespace(total=0) %}
+{% for g in games %}
+    {% set ns_plays.total = ns_plays.total + (g.play_count|default(0)|int) %}
+{% endfor %}
+
+{% block title %}发现 · SN YQT Game Hub{% endblock %}
 
 {% block head %}
 <style>
-/* ========================================
-   SNYQT Game Hub — 发现页面
-   Design: GameVault 暗黑游戏美学
-   ======================================== */
+/* ====================================================================
+   SNYQT Game Hub — 发现首页（index.html）页面专属样式
+   依赖 theme.css 的变量与组件类
+   ==================================================================== */
 
-/* --- CSS Variables --- */
-:root {
-    --gv-bg-deep: #0a0a0a;
-    --gv-bg-card: #1a1a2e;
-    --gv-bg-card-hover: #222244;
-    --gv-accent: #00e676;
-    --gv-accent-dim: rgba(0, 230, 118, 0.15);
-    --gv-gold: #ffd740;
-    --gv-gold-dim: rgba(255, 215, 64, 0.15);
-    --gv-text-primary: #ffffff;
-    --gv-text-secondary: rgba(255, 255, 255, 0.6);
-    --gv-text-muted: rgba(255, 255, 255, 0.4);
-    --gv-border: rgba(255, 255, 255, 0.06);
-    --gv-border-hover: rgba(255, 255, 255, 0.12);
-    --gv-radius: 16px;
-    --gv-radius-sm: 12px;
-    --gv-radius-xs: 8px;
-    --gv-font-display: 'Outfit', 'Noto Sans SC', sans-serif;
-}
-
-/* --- Discover Hero --- */
-.discover-hero {
-    position: relative;
-    /* 顶部留白 = 固定头部高度 + 30px 呼吸空间 */
-    padding: calc(var(--header-h) + 30px) 0 60px;
-    text-align: center;
-    background: linear-gradient(180deg, #0d0d1a 0%, var(--gv-bg-deep) 100%);
-    overflow: hidden;
-}
-
-.discover-hero::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 800px;
-    height: 800px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(0, 230, 118, 0.06) 0%, transparent 70%);
+/* ==================== Three.js 星空画布 ==================== */
+#starfield-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
     pointer-events: none;
 }
 
-.discover-hero-inner {
+/* ==================== Hero 区域 ==================== */
+.hero {
     position: relative;
-    z-index: 1;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 0 24px;
+    padding: var(--space-9) 0 var(--space-8);
+    text-align: center;
+    overflow: hidden;
 }
 
-.discover-hero-title {
-    font-family: var(--gv-font-display);
-    font-size: clamp(36px, 5vw, 56px);
+.hero-inner {
+    position: relative;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+}
+
+.hero-brand {
+    font-family: var(--font-display);
+    font-size: clamp(48px, 9vw, 104px);
     font-weight: 900;
-    letter-spacing: -0.03em;
-    color: var(--gv-text-primary);
-    margin-bottom: 12px;
-    animation: fadeInUp 0.6s ease forwards;
-}
-
-.discover-hero-sub {
-    font-size: 16px;
-    color: var(--gv-text-secondary);
-    margin-bottom: 36px;
-    animation: fadeInUp 0.6s 0.1s ease forwards;
-    opacity: 0;
-}
-
-.discover-search {
+    letter-spacing: 0.02em;
+    line-height: 1;
+    margin: 0 0 var(--space-4);
     display: flex;
-    gap: 12px;
-    max-width: 640px;
-    margin: 0 auto;
-    animation: fadeInUp 0.6s 0.2s ease forwards;
-    opacity: 0;
-}
-
-.discover-search-input {
-    flex: 1;
-    height: 52px;
-    padding: 0 20px;
-    background: rgba(26, 26, 46, 0.8);
-    border: 1px solid var(--gv-border);
-    border-radius: var(--gv-radius-sm);
-    color: var(--gv-text-primary);
-    font-size: 15px;
-    font-family: inherit;
-    outline: none;
-    transition: all 0.3s ease;
-}
-
-.discover-search-input::placeholder {
-    color: var(--gv-text-muted);
-}
-
-.discover-search-input:focus {
-    border-color: var(--gv-accent);
-    box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.1);
-    background: rgba(26, 26, 46, 1);
-}
-
-.discover-search-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    height: 52px;
-    padding: 0 28px;
-    background: var(--gv-accent);
-    color: #0a0a0a;
-    font-weight: 700;
-    font-size: 15px;
-    border: none;
-    border-radius: var(--gv-radius-sm);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    font-family: inherit;
-}
-
-.discover-search-btn:hover {
-    background: #00ff83;
-    box-shadow: 0 4px 20px rgba(0, 230, 118, 0.3);
-    transform: translateY(-1px);
-}
-
-.discover-search-clear {
-    display: inline-flex;
-    align-items: center;
-    height: 52px;
-    padding: 0 20px;
-    background: transparent;
-    color: var(--gv-text-secondary);
-    border: 1px solid var(--gv-border);
-    border-radius: var(--gv-radius-sm);
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    text-decoration: none;
-    font-family: inherit;
-}
-
-.discover-search-clear:hover {
-    border-color: var(--gv-border-hover);
-    color: var(--gv-text-primary);
-    background: rgba(255, 255, 255, 0.04);
-}
-
-/* --- Tag Filters --- */
-.tag-filters {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
     justify-content: center;
-    padding: 32px 24px 0;
-    max-width: 960px;
-    margin: 0 auto;
+    gap: 0.08em;
+    color: var(--fg-primary);
+    text-shadow: 0 0 12px rgba(0, 255, 157, 0.18);
+    animation: hero-fade-in 1.2s ease-out both;
+    will-change: transform, opacity;
 }
 
-.tag-filter-chip {
-    display: inline-flex;
+@keyframes hero-fade-in {
+    0%   { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.hero-subtitle {
+    font-family: var(--font-display);
+    font-size: clamp(13px, 1.8vw, 17px);
+    color: var(--fg-secondary);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    margin: 0 0 var(--space-8);
+}
+
+.hero-stats {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: clamp(var(--space-5), 4vw, var(--space-9));
+    flex-wrap: wrap;
+}
+
+.hero-stat {
+    text-align: center;
+    min-width: 100px;
+}
+
+.hero-stat-value {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 4.5vw, 48px);
+    font-weight: 900;
+    color: var(--accent-secondary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 16px rgba(255, 200, 87, 0.25);
+}
+
+.hero-stat-label {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-top: var(--space-2);
+}
+
+/* ==================== 认证标签栏 ==================== */
+.tags-bar {
+    display: flex;
     align-items: center;
-    padding: 8px 18px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--gv-text-secondary);
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--gv-border);
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-5) var(--space-2);
+}
+
+.tags-bar-label {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-right: var(--space-2);
+}
+
+/* 标签按钮基础重置：作为 button 元素使用 */
+.tags-bar button.tag-chip,
+.all-tags-list button.tag-chip,
+.category-grid button.tag-chip {
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
     cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
     font-family: inherit;
+    font-size: 0.85rem;
+    padding: var(--space-2) var(--space-4);
 }
 
-.tag-filter-chip:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--gv-border-hover);
-    color: var(--gv-text-primary);
+.tags-bar button.tag-chip:hover,
+.all-tags-list button.tag-chip:hover,
+.category-grid button.tag-chip:hover {
+    background: rgba(0, 255, 157, 0.12);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
 }
 
-.tag-filter-chip.active {
-    background: var(--gv-accent-dim);
-    border-color: rgba(0, 230, 118, 0.3);
-    color: var(--gv-accent);
-    font-weight: 600;
+.tags-bar button.tag-chip.is-active,
+.all-tags-list button.tag-chip.is-active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-5);
+}
+[data-theme="light"] .tags-bar button.tag-chip.is-active,
+[data-theme="light"] .all-tags-list button.tag-chip.is-active {
+    color: #ffffff;
 }
 
-/* --- Section Header --- */
+/* 让认证标签的对勾使用积分金 */
+.tag-chip-verified::before {
+    color: var(--accent-secondary);
+}
+
+/* "更多标签" 按钮 */
+.tags-more-btn {
+    margin-left: auto;
+    border-style: dashed !important;
+    color: var(--fg-secondary) !important;
+}
+.tags-more-btn:hover {
+    border-style: solid !important;
+    color: var(--accent-primary) !important;
+}
+
+/* ==================== 全量标签 Modal ==================== */
+.all-tags-modal .modal-content {
+    width: min(720px, 92vw);
+}
+
+.all-tags-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-color);
+}
+.all-tags-modal .modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--fg-muted);
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+.modal-close:hover {
+    background: var(--glass-bg);
+    color: var(--accent-danger);
+}
+
+.all-tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: var(--space-2);
+}
+
+.all-tags-list .tag-chip .tag-count {
+    background: var(--glass-bg);
+    color: var(--fg-muted);
+    padding: 1px 8px;
+    border-radius: var(--radius-pill);
+    font-size: 0.72rem;
+    margin-left: var(--space-1);
+    font-family: var(--font-mono);
+}
+
+/* ==================== 通用区块 ==================== */
+.section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--space-7) var(--space-5);
+}
+
 .section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 0 24px;
-    max-width: 1280px;
-    margin: 0 auto 28px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
     flex-wrap: wrap;
 }
 
-.section-header-title {
-    font-family: var(--gv-font-display);
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--gv-text-primary);
+.section-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
 }
 
-.section-header-count {
-    font-size: 14px;
-    color: var(--gv-text-muted);
-    font-weight: 400;
+.section-title::before {
+    content: "";
+    width: 4px;
+    height: 24px;
+    background: var(--accent-primary);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0 8px rgba(0, 255, 157, 0.5);
 }
 
-/* --- Game Grid --- */
-.game-grid-container {
-    padding: 0 24px 60px;
-    max-width: 1280px;
-    margin: 0 auto;
+.section-count {
+    font-size: 0.88rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
 }
 
+/* ==================== 编辑精选轮播 ==================== */
+.carousel {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.carousel-track {
+    display: flex;
+    gap: var(--space-4);
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    padding: var(--space-2) 0 var(--space-4);
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.carousel-track::-webkit-scrollbar { display: none; }
+.carousel-track:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
+}
+
+.carousel-card {
+    flex: 0 0 auto;
+    width: clamp(260px, 32vw, 380px);
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+    scroll-snap-align: start;
+    text-decoration: none;
+    color: #fff;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-3);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+    background: var(--bg-elevated);
+}
+
+.carousel-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-4);
+    border-color: var(--accent-primary);
+    color: #fff;
+    text-decoration: none;
+}
+
+.carousel-card-cover {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+.carousel-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+.carousel-card:hover .carousel-card-cover img {
+    transform: scale(1.05);
+}
+.carousel-card-cover .cover-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 900;
+    color: var(--accent-primary);
+    opacity: 0.25;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
+}
+
+.carousel-card-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--space-5);
+    background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.85) 100%);
+}
+.carousel-card-overlay h3 {
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.carousel-card-overlay p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--accent-primary);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.carousel-card-badge {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    z-index: 2;
+}
+
+.carousel-nav {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--fg-primary);
+    font-size: 1.5rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-base);
+    box-shadow: var(--shadow-2);
+}
+.carousel-nav:hover {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    border-color: var(--accent-primary);
+    transform: scale(1.08);
+}
+[data-theme="light"] .carousel-nav:hover { color: #fff; }
+.carousel-nav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* ==================== 游戏卡片网格 ==================== */
 .game-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-auto-rows: minmax(320px, auto);
+    gap: var(--space-5);
 }
 
-/* --- Game Card --- */
 .game-card {
-    background: var(--gv-bg-card);
-    border: 1px solid var(--gv-border);
-    border-radius: var(--gv-radius);
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
     overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     text-decoration: none;
-    display: block;
-    animation: fadeInUp 0.5s ease forwards;
-    opacity: 0;
+    color: inherit;
+    grid-column: span 1;
+    grid-row: span 1;
+}
+.game-card:hover {
+    text-decoration: none;
+    color: inherit;
 }
 
-.game-card:hover {
-    transform: translateY(-6px);
-    background: var(--gv-bg-card-hover);
-    border-color: var(--gv-border-hover);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+.game-card.featured {
+    grid-column: span 2;
+    grid-row: span 2;
 }
 
 .game-card-cover {
     position: relative;
     aspect-ratio: 16 / 9;
     overflow: hidden;
-    background: #111122;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
+}
+.game-card.featured .game-card-cover {
+    aspect-ratio: auto;
+    flex: 1 1 auto;
+    min-height: 280px;
 }
 
 .game-card-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform var(--transition-slow);
 }
-
 .game-card:hover .game-card-cover img {
     transform: scale(1.06);
 }
 
-.game-card-cover .cover-fallback {
+.cover-fallback {
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--gv-font-display);
-    font-size: 48px;
+    font-family: var(--font-display);
+    font-size: 56px;
     font-weight: 900;
-    color: rgba(255, 255, 255, 0.1);
-    background: linear-gradient(135deg, #1a1a2e, #222244);
+    color: var(--accent-primary);
+    opacity: 0.25;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
+}
+
+.game-card-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.75) 100%);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+.game-card:hover .game-card-overlay {
+    opacity: 1;
+}
+.game-card-overlay-text {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-pill);
+    background: rgba(0, 255, 157, 0.15);
+    border: 1px solid var(--accent-primary);
+    color: var(--accent-primary);
+    font-weight: 600;
+    font-size: 0.92rem;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .game-card-badges {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: var(--space-3);
+    left: var(--space-3);
     display: flex;
-    gap: 6px;
+    gap: var(--space-1);
     flex-wrap: wrap;
-}
-
-.game-card-badge {
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    backdrop-filter: blur(8px);
-}
-
-.game-card-badge.html {
-    background: rgba(0, 230, 118, 0.15);
-    color: var(--gv-accent);
-    border: 1px solid rgba(0, 230, 118, 0.2);
-}
-
-.game-card-badge.python {
-    background: rgba(100, 210, 255, 0.15);
-    color: #64d2ff;
-    border: 1px solid rgba(100, 210, 255, 0.2);
-}
-
-.game-card-badge.banned {
-    background: rgba(255, 69, 58, 0.15);
-    color: #ff453a;
-    border: 1px solid rgba(255, 69, 58, 0.2);
+    z-index: 1;
 }
 
 .game-card-body {
-    padding: 16px 18px 18px;
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
 }
 
 .game-card-title {
-    font-family: var(--gv-font-display);
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--gv-text-primary);
-    margin-bottom: 8px;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+    margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
+.game-card-dev {
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.game-card-dev svg { width: 12px; height: 12px; }
 
 .game-card-meta {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-    font-size: 13px;
-    color: var(--gv-text-secondary);
+    gap: var(--space-3);
+    font-size: 0.8rem;
+    color: var(--fg-secondary);
+    flex-wrap: wrap;
 }
-
-.game-card-stars {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    color: var(--gv-gold);
-}
-
-.game-card-stars svg {
-    width: 14px;
-    height: 14px;
-}
-
-.game-card-stars .star-empty {
-    color: rgba(255, 255, 255, 0.2);
-}
-
-.game-card-downloads {
-    display: flex;
+.game-card-meta-item {
+    display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: var(--gv-text-muted);
+}
+.game-card-meta-item svg { width: 13px; height: 13px; }
+
+.game-card-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    color: var(--accent-secondary);
+}
+.game-card-stars svg { width: 13px; height: 13px; }
+.game-card-stars .star-empty { color: var(--fg-muted); }
+.game-card-stars .count {
+    margin-left: 4px;
+    color: var(--fg-muted);
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
 }
 
-.game-card-downloads svg {
+/* stars_svg 宏输出样式（style.css 未被 base.html 加载，需在此补全） */
+.stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    color: var(--fg-muted);
+    line-height: 1;
+}
+.stars svg {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+}
+.stars .filled {
+    color: var(--accent-secondary);
+}
+.stars .text-muted {
+    margin-left: 4px;
+    color: var(--fg-muted);
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+}
+
+.game-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-subtle);
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.game-card-price {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+.game-card-price.free { color: var(--accent-primary); }
+.game-card-price.paid { color: var(--accent-secondary); }
+
+.game-card.hidden-by-filter {
+    display: none !important;
+}
+
+/* ==================== 空状态 ==================== */
+.empty-state {
+    text-align: center;
+    padding: var(--space-10) var(--space-5);
+    background: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+}
+.empty-state svg {
+    width: 72px;
+    height: 72px;
+    color: var(--fg-muted);
+    margin: 0 auto var(--space-4);
+    opacity: 0.4;
+    display: block;
+}
+.empty-state h3 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: var(--fg-primary);
+    margin: 0 0 var(--space-2);
+}
+.empty-state p {
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* ==================== 公告 + 分类浏览 双栏 ==================== */
+.section-two-col {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--space-7);
+    align-items: start;
+}
+
+.announcements-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.announcement-item {
+    padding: var(--space-4) var(--space-5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-base), transform var(--transition-base);
+}
+.announcement-item:hover {
+    transform: translateX(4px);
+    border-left-color: var(--accent-secondary);
+}
+.announcement-item .ann-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+}
+.announcement-item .ann-tag {
+    padding: 1px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.announcement-item h4 {
+    margin: 0 0 var(--space-1);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+}
+.announcement-item p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--fg-secondary);
+    line-height: 1.5;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--space-3);
+}
+
+.category-card {
+    padding: var(--space-4);
+    text-align: left;
+    cursor: pointer;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: inherit;
+    font-family: inherit;
+    transition: transform var(--transition-base), border-color var(--transition-base), background var(--transition-base);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    position: relative;
+    overflow: hidden;
+}
+.category-card::after {
+    content: "→";
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    color: var(--fg-muted);
+    transition: transform var(--transition-base), color var(--transition-base);
+}
+.category-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-primary);
+    background: rgba(0, 255, 157, 0.05);
+    color: inherit;
+}
+.category-card:hover::after {
+    transform: translateX(4px);
+    color: var(--accent-primary);
+}
+.category-name {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+}
+.category-count {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+
+/* ==================== GAMEJAM 横幅 ==================== */
+.gamejam-banner {
+    position: relative;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--space-2) var(--space-5);
+}
+.gamejam-banner-inner {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    padding: var(--space-8) var(--space-7);
+    background:
+        radial-gradient(circle at 12% 20%, rgba(139, 92, 246, 0.45) 0%, transparent 45%),
+        radial-gradient(circle at 88% 80%, rgba(0, 255, 157, 0.35) 0%, transparent 50%),
+        linear-gradient(135deg, rgba(139, 92, 246, 0.55) 0%, rgba(0, 255, 157, 0.45) 100%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-4);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-6);
+    align-items: center;
+}
+.gamejam-banner-content {
+    position: relative;
+    z-index: 2;
+}
+.gamejam-banner-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-pill);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+}
+.gamejam-banner-eyebrow::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    background: var(--accent-secondary);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0 10px var(--accent-secondary);
+    animation: jam-pulse 1.6s ease-in-out infinite;
+}
+@keyframes jam-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.4); opacity: 0.5; }
+}
+.gamejam-banner h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+    font-weight: 900;
+    color: #fff;
+    margin: 0 0 var(--space-2);
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+.gamejam-banner p {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1rem;
+    margin: 0 0 var(--space-4);
+    line-height: 1.55;
+}
+.gamejam-banner-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+.gamejam-countdown {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: var(--space-2) var(--space-4);
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.gamejam-countdown-num {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.6rem;
+    color: var(--accent-secondary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.gamejam-countdown-label {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.08em;
+}
+.gamejam-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: #0a0e1a;
+    color: var(--accent-primary);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-decoration: none;
+    border: 2px solid var(--accent-primary);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), color var(--transition-base);
+    box-shadow: 0 0 24px rgba(0, 255, 157, 0.4);
+}
+.gamejam-cta:hover {
+    transform: translateY(-2px);
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    box-shadow: 0 0 32px rgba(0, 255, 157, 0.6);
+    text-decoration: none;
+}
+[data-theme="light"] .gamejam-cta:hover { color: #ffffff; }
+
+.gamejam-decor {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+.gamejam-decor .hex {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    animation: jam-float 8s ease-in-out infinite;
+}
+.gamejam-decor .hex:nth-child(1) { top: 18%; right: 8%; animation-delay: 0s; }
+.gamejam-decor .hex:nth-child(2) { top: 60%; right: 22%; width: 24px; height: 24px; animation-delay: 1.2s; }
+.gamejam-decor .hex:nth-child(3) { top: 35%; right: 38%; width: 18px; height: 18px; animation-delay: 2.4s; }
+.gamejam-decor .hex:nth-child(4) { top: 75%; right: 6%; width: 28px; height: 28px; animation-delay: 0.6s; }
+@keyframes jam-float {
+    0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
+    50%      { transform: translateY(-14px) rotate(180deg); opacity: 0.9; }
+}
+
+/* ==================== 最新公告横向滚动 ==================== */
+.announcements-row {
+    display: flex;
+    gap: var(--space-3);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: var(--space-2) 0 var(--space-4);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.announcements-row::-webkit-scrollbar { display: none; }
+.announcements-row:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
+}
+.announcement-card {
+    flex: 0 0 auto;
+    width: clamp(260px, 28vw, 340px);
+    padding: var(--space-4) var(--space-5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: var(--radius-md);
+    scroll-snap-align: start;
+    transition: transform var(--transition-base), border-color var(--transition-base);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.announcement-card:hover {
+    transform: translateY(-2px);
+    border-left-color: var(--accent-secondary);
+}
+.announcement-card.type-info    { border-left-color: var(--accent-cyan); }
+.announcement-card.type-feature { border-left-color: var(--accent-primary); }
+.announcement-card.type-update  { border-left-color: var(--accent-secondary); }
+.announcement-card .ann-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+}
+.announcement-card .ann-tag {
+    padding: 1px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.announcement-card.type-info    .ann-tag { color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4); }
+.announcement-card.type-feature .ann-tag { color: var(--accent-primary); border-color: rgba(0, 255, 157, 0.4); }
+.announcement-card.type-update  .ann-tag { color: var(--accent-secondary); border-color: rgba(255, 200, 87, 0.4); }
+.announcement-card h4 {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+    line-height: 1.45;
+}
+
+/* ==================== 多维度排序条 ==================== */
+.sort-bar {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--space-3) var(--space-5) var(--space-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+.sort-bar-label {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-right: var(--space-1);
+}
+.sort-pills {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+.sort-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--fg-secondary);
+    border-radius: var(--radius-pill);
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.sort-pill:hover {
+    background: rgba(0, 255, 157, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+.sort-pill.is-active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 14px rgba(0, 255, 157, 0.35);
+}
+[data-theme="light"] .sort-pill.is-active { color: #ffffff; }
+.sort-pill svg {
     width: 12px;
     height: 12px;
 }
 
-.game-card-tags {
+/* ==================== 个性化推荐 / 最近更新 横向滚动 ==================== */
+.game-scroll {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    gap: var(--space-4);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: var(--space-2) 0 var(--space-4);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
-
-.game-card-tag {
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--gv-text-muted);
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.game-scroll::-webkit-scrollbar { display: none; }
+.game-scroll:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
 }
-
-/* --- Empty State --- */
-.empty-state {
-    text-align: center;
-    padding: 80px 24px;
-    background: var(--gv-bg-card);
-    border: 1px solid var(--gv-border);
-    border-radius: var(--gv-radius);
-}
-
-.empty-state svg {
-    width: 64px;
-    height: 64px;
-    color: var(--gv-text-muted);
-    margin-bottom: 20px;
-    opacity: 0.4;
-}
-
-.empty-state h3 {
-    font-family: var(--gv-font-display);
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--gv-text-primary);
-    margin-bottom: 8px;
-}
-
-.empty-state p {
-    font-size: 14px;
-    color: var(--gv-text-muted);
-    margin-bottom: 24px;
-}
-
-.empty-state .btn-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: var(--gv-gold);
-    color: #0a0a0a;
-    font-weight: 700;
-    font-size: 14px;
-    border: none;
-    border-radius: var(--gv-radius-sm);
-    cursor: pointer;
+.game-scroll-card {
+    flex: 0 0 auto;
+    width: clamp(220px, 26vw, 280px);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
     text-decoration: none;
-    transition: all 0.3s ease;
-    font-family: inherit;
-}
-
-.empty-state .btn-action:hover {
-    background: #ffe066;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(255, 215, 64, 0.3);
-}
-
-/* --- Invite Redeem Bar --- */
-.invite-redeem-bar {
+    color: inherit;
+    scroll-snap-align: start;
+    transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
     display: flex;
-    gap: 10px;
+    flex-direction: column;
+}
+.game-scroll-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-4);
+    text-decoration: none;
+    color: inherit;
+}
+.game-scroll-cover {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
+}
+.game-scroll-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+.game-scroll-card:hover .game-scroll-cover img { transform: scale(1.06); }
+.game-scroll-cover .cover-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    padding: 16px 20px;
-    background: var(--gv-bg-card);
-    border: 1px solid var(--gv-border);
-    border-radius: var(--gv-radius-sm);
-    margin-bottom: 24px;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-weight: 900;
+    color: var(--accent-primary);
+    opacity: 0.25;
 }
-
-.invite-redeem-input {
+.game-scroll-body {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
     flex: 1;
-    min-width: 180px;
-    height: 42px;
-    padding: 0 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--gv-border);
-    border-radius: var(--gv-radius-xs);
-    color: var(--gv-text-primary);
-    font-size: 14px;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.3s ease;
 }
-
-.invite-redeem-input:focus {
-    border-color: var(--gv-gold);
+.game-scroll-title {
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-
-.invite-redeem-btn {
+.game-scroll-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    flex-wrap: wrap;
+}
+/* 浅色模式：列表项装饰点/分隔符对比度修复 */
+[data-theme="light"] .game-scroll-meta {
+    color: var(--fg-secondary);
+}
+.game-scroll-version {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 42px;
-    padding: 0 20px;
-    background: var(--gv-gold);
-    color: #0a0a0a;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    color: var(--accent-purple);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
     font-weight: 700;
-    font-size: 14px;
-    border: none;
-    border-radius: var(--gv-radius-xs);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: inherit;
+}
+.game-scroll-version::before {
+    content: "v";
+    opacity: 0.6;
 }
 
-.invite-redeem-btn:hover {
-    background: #ffe066;
-    transform: translateY(-1px);
+/* ==================== 社区热帖列表 ==================== */
+.hot-posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-4);
+}
+.hot-post-card {
+    padding: var(--space-4) var(--space-5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--transition-base), border-color var(--transition-base), background var(--transition-base);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.hot-post-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent-primary);
+    background: rgba(0, 255, 157, 0.04);
+    text-decoration: none;
+    color: inherit;
+}
+.hot-post-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.hot-post-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+.hot-post-avatar-fallback {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+    color: #0a0e1a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.92rem;
+    flex: 0 0 auto;
+}
+[data-theme="light"] .hot-post-avatar-fallback { color: #ffffff; }
+.hot-post-author {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.hot-post-username {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hot-post-time {
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+.hot-post-type {
+    padding: 2px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+}
+.hot-post-type.type-discussion   { background: rgba(0, 255, 157, 0.12); color: var(--accent-primary); border-color: rgba(0, 255, 157, 0.4); }
+.hot-post-type.type-question     { background: rgba(6, 182, 212, 0.12); color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4); }
+.hot-post-type.type-suggestion   { background: rgba(255, 200, 87, 0.12); color: var(--accent-secondary); border-color: rgba(255, 200, 87, 0.4); }
+.hot-post-type.type-default      { background: var(--glass-bg); color: var(--fg-secondary); border-color: var(--glass-border); }
+.hot-post-title {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.hot-post-stats {
+    display: flex;
+    gap: var(--space-4);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--space-2);
+}
+.hot-post-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+}
+.hot-post-stat svg { width: 13px; height: 13px; }
+
+/* ==================== 玩家最新评价列表 ==================== */
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-4);
+}
+.review-card {
+    padding: var(--space-4) var(--space-5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: transform var(--transition-base), border-color var(--transition-base);
+}
+.review-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-secondary);
+}
+.review-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.review-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+.review-avatar-fallback {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--accent-secondary), var(--accent-purple));
+    color: #0a0e1a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+[data-theme="light"] .review-avatar-fallback { color: #ffffff; }
+.review-author {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.review-username {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--fg-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.review-game {
+    font-size: 0.78rem;
+    color: var(--accent-primary);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.review-game:hover { text-decoration: underline; }
+.review-stars {
+    color: var(--accent-secondary);
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+.review-stars .star-empty { color: var(--fg-muted); }
+.review-excerpt {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--fg-secondary);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.review-time {
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--space-2);
 }
 
-.invite-redeem-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* --- Animations --- */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(24px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* --- Responsive --- */
+/* ==================== 响应式 ==================== */
 @media (max-width: 1024px) {
-    .game-grid {
-        grid-template-columns: repeat(2, 1fr);
+    .section-two-col {
+        grid-template-columns: 1fr;
+    }
+    .gamejam-banner-inner {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+        padding: var(--space-6) var(--space-5);
+    }
+    .gamejam-banner-meta {
+        justify-content: flex-start;
     }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .game-grid {
         grid-template-columns: 1fr;
     }
-
-    .discover-hero {
-        padding: calc(var(--header-h) + 30px) 0 40px;
+    .game-card.featured {
+        grid-column: span 1;
+        grid-row: span 1;
     }
-
-    .discover-search {
-        flex-direction: column;
+    .game-card.featured .game-card-cover {
+        min-height: 200px;
     }
-
-    .discover-search-btn,
-    .discover-search-clear {
-        justify-content: center;
+    .hero {
+        padding: var(--space-7) 0 var(--space-6);
     }
-
-    .tag-filters {
-        justify-content: flex-start;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 8px;
-        -webkit-overflow-scrolling: touch;
+    .tags-bar {
+        padding: var(--space-4) var(--space-4) var(--space-2);
     }
-
-    .tag-filter-chip {
-        flex-shrink: 0;
+    .tags-more-btn {
+        margin-left: 0;
     }
-
-    .tag-filters::-webkit-scrollbar {
-        display: none;
+    .section {
+        padding: var(--space-6) var(--space-4);
     }
-
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
+    .gamejam-banner {
+        padding: var(--space-1) var(--space-4);
     }
+    .gamejam-banner-inner {
+        padding: var(--space-5) var(--space-4);
+    }
+    .sort-bar {
+        padding: var(--space-2) var(--space-4);
+    }
+    .hot-posts-grid,
+    .reviews-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-stats {
+        gap: var(--space-4);
+    }
+    .hero-stat {
+        min-width: 80px;
+    }
+    .carousel-card {
+        width: 280px;
+    }
+    .announcement-card {
+        width: 260px;
+    }
+    .game-scroll-card {
+        width: 220px;
+    }
+}
+
+/* ==================== 尊重 reduced-motion ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .hero-brand { animation: none !important; }
+    .game-card:hover .game-card-cover img,
+    .carousel-card:hover .carousel-card-cover img,
+    .game-scroll-card:hover .game-scroll-cover img { transform: none !important; }
+    .carousel-track,
+    .game-scroll,
+    .announcements-row { scroll-behavior: auto !important; }
+    .gamejam-banner-eyebrow::before,
+    .gamejam-decor .hex { animation: none !important; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-{# ==================== Hero 区域 ==================== #}
-<section class="discover-hero">
-    <div class="discover-hero-inner">
-        <h1 class="discover-hero-title">发现游戏</h1>
-        <p class="discover-hero-sub">浏览、探索并获取你喜爱的游戏作品</p>
+{# ==================== Three.js 星空画布（固定背景） ==================== #}
+<canvas id="starfield-canvas" aria-hidden="true"></canvas>
 
-        <form class="discover-search" method="get" action="{{ url_for('games.index') }}">
-            <input
-                type="text"
-                name="q"
-                class="discover-search-input"
-                value="{{ request.args.get('q', '') }}"
-                placeholder="搜索游戏标题或描述..."
-            >
-            <input
-                type="text"
-                name="tag"
-                class="discover-search-input"
-                value="{{ request.args.get('tag', '') }}"
-                placeholder="标签筛选"
-                style="max-width:200px;"
-            >
-            <button type="submit" class="discover-search-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
-                    <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                搜索
-            </button>
-            {% if request.args.get('q') or request.args.get('tag') %}
-            <a href="{{ url_for('games.index') }}" class="discover-search-clear">清空</a>
-            {% endif %}
-        </form>
+{# ==================== Hero 区域 ==================== #}
+<section class="hero" aria-labelledby="hero-brand-text">
+    <div class="hero-inner">
+        <h1 class="hero-brand" id="hero-brand-text" aria-label="SNYQT Game HUB">SNYQT Game HUB</h1>
+        <p class="hero-subtitle">游戏 · 创作 · 社区 · 平台</p>
+        <div class="hero-stats" role="list">
+            <div class="hero-stat" role="listitem">
+                <div class="hero-stat-value" data-count="{{ games|length }}" aria-label="{{ games|length }} 款游戏">0</div>
+                <div class="hero-stat-label">游戏作品</div>
+            </div>
+            <div class="hero-stat" role="listitem">
+                <div class="hero-stat-value" data-count="{{ ns_devs.count }}" aria-label="{{ ns_devs.count }} 位创作者">0</div>
+                <div class="hero-stat-label">创作者</div>
+            </div>
+            <div class="hero-stat" role="listitem">
+                <div class="hero-stat-value" data-count="{{ ns_plays.total }}" aria-label="{{ ns_plays.total }} 次游玩">0</div>
+                <div class="hero-stat-label">总游玩次数</div>
+            </div>
+        </div>
     </div>
 </section>
 
-{# ==================== 标签筛选导航 ==================== #}
-<div class="tag-filters" id="tag-filters">
-    <a href="{{ url_for('games.index') }}" class="tag-filter-chip {{ 'active' if not request.args.get('tag') else '' }}">全部</a>
-    <!-- JS 动态加载标签 -->
-</div>
-
-{# ==================== 标题栏 + 邀请码兑换 ==================== #}
-<div class="game-grid-container" style="padding-top:32px;">
-    {# 标题栏：无游戏时整段隐藏 #}
-    {% if games and games|length > 0 %}
+{# ==================== 最新公告 ==================== #}
+{% if announcements %}
+<section class="section reveal" aria-labelledby="announcements-title">
     <div class="section-header">
-        <div>
-            <span class="section-header-title">全部游戏</span>
-            <span class="section-header-count"> · {{ games|length }} 款游戏</span>
+        <h2 class="section-title" id="announcements-title">最新公告</h2>
+        <a class="section-count" href="{{ url_for('community.index') }}" style="text-decoration:none;">查看全部 →</a>
+    </div>
+    <div class="announcements-row" id="announcements-row" tabindex="0" aria-label="横向滚动公告">
+        {% for a in announcements %}
+        <article class="announcement-card type-{{ a.type|default('info') }}">
+            <div class="ann-meta">
+                <span class="ann-tag">{{ {'info':'公告','feature':'新功能','update':'更新'}.get(a.type|default('info'), '公告') }}</span>
+                <time>{{ a.date|default('') }}</time>
+            </div>
+            <h4>{{ a.title|default('') }}</h4>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ==================== 认证标签精选栏 ==================== #}
+{% if verified_tags %}
+<nav class="tags-bar" aria-label="认证标签筛选">
+    <span class="tags-bar-label">认证标签</span>
+    <button type="button" class="tag-chip is-active" data-tag="" aria-pressed="true">全部</button>
+    {% for t in verified_tags %}
+    <button type="button" class="tag-chip tag-chip-verified" data-tag="{{ t.name }}" title="{{ t.game_count }} 款游戏" aria-pressed="false">{{ t.name }}</button>
+    {% endfor %}
+    <button type="button" class="tag-chip tags-more-btn" id="tags-more-btn" aria-haspopup="dialog" aria-expanded="false">
+        更多标签
+        <span aria-hidden="true">→</span>
+    </button>
+</nav>
+{% endif %}
+
+{# ==================== 全量标签 Modal ==================== #}
+<div class="modal-backdrop all-tags-modal" id="all-tags-modal" role="dialog" aria-modal="true" aria-labelledby="all-tags-title">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="all-tags-title">全量标签</h3>
+            <button type="button" class="modal-close" id="all-tags-close" aria-label="关闭标签抽屉">×</button>
+        </div>
+        <div class="all-tags-list">
+            {% if all_tags %}
+                {% for t in all_tags %}
+                <button type="button" class="tag-chip {{ 'tag-chip-verified' if t.is_verified }}" data-tag="{{ t.name }}" title="{{ t.game_count }} 款游戏">
+                    {{ t.name }}<span class="tag-count">{{ t.game_count }}</span>
+                </button>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted" style="padding: var(--space-4);">暂无可用标签</p>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
+</div>
 
-    {# 邀请码兑换入口 #}
-    {% if current_user %}
-    <div class="invite-redeem-bar">
-        <input
-            type="text"
-            id="invite-redeem-input"
-            class="invite-redeem-input"
-            placeholder="输入邀请码兑换"
-        >
-        <button class="invite-redeem-btn" id="invite-redeem-btn">兑换</button>
+{# ==================== 多维度排序条 ==================== #}
+{% if games and games|length > 0 %}
+<div class="sort-bar" role="toolbar" aria-label="游戏排序" id="sort-bar">
+    <span class="sort-bar-label">排序</span>
+    <div class="sort-pills">
+        <button type="button" class="sort-pill is-active" data-sort="heat" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            综合热度
+        </button>
+        <button type="button" class="sort-pill" data-sort="newest" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+            新品飙升
+        </button>
+        <button type="button" class="sort-pill" data-sort="rating" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
+            点击率
+        </button>
+        <button type="button" class="sort-pill" data-sort="clicks" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            点击量
+        </button>
+        <button type="button" class="sort-pill" data-sort="views" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            浏览量
+        </button>
+        <button type="button" class="sort-pill" data-sort="library" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            入库数
+        </button>
     </div>
-    {% endif %}
+</div>
+{% endif %}
 
-    {# ==================== 游戏卡片网格 ==================== #}
+{# ==================== 全部游戏网格 ==================== #}
+<section class="section reveal" aria-labelledby="grid-title">
+    <div class="section-header">
+        <h2 class="section-title" id="grid-title">全部游戏</h2>
+        <span class="section-count"><span id="visible-count">{{ games|length if games else 0 }}</span> / {{ games|length if games else 0 }} 款</span>
+    </div>
+
     {% if games and games|length > 0 %}
-    <div class="game-grid">
+    <div class="game-grid" id="game-grid">
         {% for g in games %}
-        <a class="game-card" href="{{ url_for('games.game_detail', gid=g.id) }}" style="animation-delay:{{ loop.index0 * 0.05 }}s;">
+        <a class="game-card card card-hover {{ 'featured' if loop.index0 % 7 == 0 }}"
+           href="{{ url_for('games.game_detail', gid=g.id) }}"
+           data-tags="{{ g.tags|default('') }}"
+           data-category="{{ g.category|default('') }}"
+           data-sort-heat="{{ (g.play_count|default(0)|int) * 2 + (g.download_count|default(0)|int) + (g.rating_count|default(0)|int) * 3 + ((g.avg_rating|default(0)|float) * 10)|int }}"
+           data-sort-newest="{{ g.created_at|default('') }}"
+           data-sort-rating="{{ g.avg_rating|default(0)|float }}"
+           data-sort-clicks="{{ g.play_count|default(0)|int }}"
+           data-sort-views="{{ g.download_count|default(0)|int }}"
+           data-sort-library="{{ g.rating_count|default(0)|int }}"
+           aria-label="{{ g.title|default('未命名游戏') }} - 查看详情">
+
             <div class="game-card-cover">
                 {% if g.cover_image %}
                     {% if g.cover_image.startswith('uploads/') %}
-                    <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}" loading="lazy">
+                    <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
                     {% else %}
-                    <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}" loading="lazy">
+                    <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
                     {% endif %}
                 {% else %}
                 <div class="cover-fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
                 {% endif %}
+
                 <div class="game-card-badges">
-                    {% if g.hosting_type == 'python' %}
-                    <span class="game-card-badge python">PYTHON</span>
+                    {% if g.hosting_type|default('html') == 'python' %}
+                    <span class="badge badge-info">PYTHON</span>
                     {% else %}
-                    <span class="game-card-badge html">HTML</span>
+                    <span class="badge badge-success">HTML</span>
                     {% endif %}
                     {% if g.is_banned %}
-                    <span class="game-card-badge banned">已封禁</span>
+                    <span class="badge badge-danger">已封禁</span>
                     {% endif %}
                 </div>
+
+                <div class="game-card-overlay">
+                    <span class="game-card-overlay-text">
+                        查看详情
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                </div>
             </div>
+
             <div class="game-card-body">
                 <h3 class="game-card-title" title="{{ g.title|default('未命名游戏') }}">{{ g.title|default('未命名游戏') }}</h3>
+
+                <span class="game-card-dev">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg>
+                    {{ g.developer_name|default('开发者 #' ~ g.developer_id|string) }}
+                </span>
+
                 <div class="game-card-meta">
-                    {% set r = (g.avg_rating|default(0))|float %}
-                    <span class="game-card-stars">
-                        {% for i in range(5) %}
-                            {% if i < r|int %}
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
-                            {% elif i == r|int and (r - r|int) >= 0.5 %}
-                            <svg viewBox="0 0 24 24"><defs><linearGradient id="hs{{ g.id }}{{ i }}"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="rgba(255,255,255,0.2)"/></linearGradient></defs><path fill="url(#hs{{ g.id }}{{ i }})" d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
-                            {% else %}
-                            <svg viewBox="0 0 24 24" fill="currentColor" class="star-empty"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.4-6.3-4.6-6.3 4.6 2.3-7.4-6-4.4h7.6z"/></svg>
-                            {% endif %}
-                        {% endfor %}
+                    <span class="game-card-meta-item game-card-stars" title="评分 {{ '%.1f'|format(g.avg_rating|default(0)|float) }} / 5">
+                        {{ m.stars_svg(g.avg_rating|default(0), g.rating_count|default(0)) }}
                     </span>
-                    <span class="game-card-downloads">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
-                        {{ m.fmt_num(g.download_count) }}
+                    <span class="game-card-meta-item" title="下载次数">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        {{ m.fmt_num(g.download_count|default(0)) }}
+                    </span>
+                    <span class="game-card-meta-item" title="游玩次数">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        {{ m.fmt_num(g.play_count|default(0)) }}
                     </span>
                 </div>
-                {% if g.tags %}
-                <div class="game-card-tags">
-                    {% set tag_items = g.tags.split(',') %}
-                    {% for t in tag_items if t.strip() %}
-                    <span class="game-card-tag">{{ t.strip() }}</span>
-                    {% endfor %}
+
+                <div class="game-card-footer">
+                    {% if g.category %}
+                    <span class="badge badge-purple">{{ g.category }}</span>
+                    {% else %}
+                    <span class="badge badge-muted">未分类</span>
+                    {% endif %}
+
+                    {% if g.price and g.price|float > 0 %}
+                    <span class="game-card-price paid">¥{{ '%.2f'|format(g.price|float) }}</span>
+                    {% elif g.access_mode == 'invite' %}
+                    <span class="game-card-price free">邀请码</span>
+                    {% else %}
+                    <span class="game-card-price free">免费</span>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </a>
         {% endfor %}
     </div>
+    {% else %}
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M4 4h16v16H4zM4 9h16M9 9v11"/>
+        </svg>
+        <h3>暂无游戏</h3>
+        <p>平台尚未收录任何游戏，成为第一位创作者吧。</p>
+    </div>
     {% endif %}
-</div>
+</section>
+
+{# ==================== 个性化推荐 ==================== #}
+{% if games and games|length > 0 %}
+<section class="section reveal" aria-labelledby="recs-title">
+    <div class="section-header">
+        <h2 class="section-title" id="recs-title">为你推荐</h2>
+        <span class="section-count">基于你的兴趣和游玩历史</span>
+    </div>
+    <div class="game-scroll" id="recs-scroll" tabindex="0" aria-label="横向滚动推荐游戏">
+        {% for g in games[4:12] %}
+        <a class="game-scroll-card" href="{{ url_for('games.game_detail', gid=g.id) }}" aria-label="{{ g.title|default('未命名游戏') }}">
+            <div class="game-scroll-cover">
+                {% if g.cover_image %}
+                    {% if g.cover_image.startswith('uploads/') %}
+                    <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                    {% else %}
+                    <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                    {% endif %}
+                {% else %}
+                <div class="cover-fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
+                {% endif %}
+            </div>
+            <div class="game-scroll-body">
+                <h3 class="game-scroll-title" title="{{ g.title|default('未命名游戏') }}">{{ g.title|default('未命名游戏') }}</h3>
+                <div class="game-scroll-meta">
+                    <span>{{ g.category|default('未分类') }}</span>
+                    <span>·</span>
+                    <span>{{ m.fmt_num(g.play_count|default(0)) }} 次游玩</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ==================== 最近更新 ==================== #}
+{% if games and games|length > 0 %}
+<section class="section reveal" aria-labelledby="recent-title">
+    <div class="section-header">
+        <h2 class="section-title" id="recent-title">最近更新</h2>
+        <span class="section-count">查看最新版本的游戏</span>
+    </div>
+    <div class="game-scroll" id="recent-scroll" tabindex="0" aria-label="横向滚动最近更新游戏">
+        {% for g in games[:8] %}
+        <a class="game-scroll-card" href="{{ url_for('games.game_detail', gid=g.id) }}" aria-label="{{ g.title|default('未命名游戏') }}">
+            <div class="game-scroll-cover">
+                {% if g.cover_image %}
+                    {% if g.cover_image.startswith('uploads/') %}
+                    <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                    {% else %}
+                    <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                    {% endif %}
+                {% else %}
+                <div class="cover-fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
+                {% endif %}
+            </div>
+            <div class="game-scroll-body">
+                <h3 class="game-scroll-title" title="{{ g.title|default('未命名游戏') }}">{{ g.title|default('未命名游戏') }}</h3>
+                <div class="game-scroll-meta">
+                    {% if g.version %}
+                    <span class="game-scroll-version">{{ g.version|default('1.0.0') }}</span>
+                    {% endif %}
+                    <span>{{ g.developer_name|default('开发者 #' ~ g.developer_id|string) }}</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ==================== 编辑精选轮播（仅展示评鉴员推荐的游戏） ==================== #}
+{% if editor_picks and editor_picks|length > 0 %}
+<section class="section reveal" aria-labelledby="picks-title">
+    <div class="section-header">
+        <h2 class="section-title" id="picks-title">编辑精选</h2>
+        <span class="section-count">{{ editor_picks|length }} 款推荐</span>
+    </div>
+    <div class="carousel" id="picks-carousel" aria-roledescription="carousel" aria-label="编辑精选游戏">
+        <button type="button" class="carousel-nav carousel-nav-prev" aria-label="上一个" id="picks-prev">‹</button>
+        <div class="carousel-track" id="picks-track" tabindex="0" aria-label="横向滚动精选游戏">
+            {% for g in editor_picks %}
+            <a class="carousel-card" href="{{ url_for('games.game_detail', gid=g.id) }}" data-tags="{{ g.tags|default('') }}" aria-label="{{ g.title|default('未命名游戏') }}">
+                <div class="carousel-card-cover">
+                    {% if g.cover_image %}
+                        {% if g.cover_image.startswith('uploads/') %}
+                        <img src="/uploads/{{ g.cover_image[8:] }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                        {% else %}
+                        <img src="{{ g.cover_image }}" alt="{{ g.title|default('游戏') }}封面" loading="lazy">
+                        {% endif %}
+                    {% else %}
+                    <div class="cover-fallback">{{ (g.title|default('?'))[:1]|upper }}</div>
+                    {% endif %}
+                </div>
+                <span class="badge badge-success carousel-card-badge">
+                    {% if g.hosting_type|default('html') == 'python' %}PYTHON{% else %}HTML{% endif %}
+                </span>
+                <div class="carousel-card-overlay">
+                    <h3>{{ g.title|default('未命名游戏') }}</h3>
+                    <p>{{ g.category|default('未分类') }} · {{ m.fmt_num(g.play_count|default(0)) }} 次游玩</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        <button type="button" class="carousel-nav carousel-nav-next" aria-label="下一个" id="picks-next">›</button>
+    </div>
+</section>
+{% endif %}
+
+{# ==================== 社区热帖 ==================== #}
+{% if hot_posts %}
+<section class="section reveal" aria-labelledby="hot-posts-title">
+    <div class="section-header">
+        <h2 class="section-title" id="hot-posts-title">社区热帖</h2>
+        <a class="section-count" href="{{ url_for('community.index') }}" style="text-decoration:none;">查看更多 →</a>
+    </div>
+    <div class="hot-posts-grid">
+        {% for p in hot_posts %}
+        <a class="hot-post-card" href="{{ url_for('community.post_detail', pid=p.id) }}" aria-label="{{ p.title|default('社区帖子') }}">
+            <div class="hot-post-head">
+                {% if p.avatar %}
+                <img class="hot-post-avatar" src="{{ p.avatar }}" alt="{{ p.username|default('用户') }}头像" loading="lazy">
+                {% else %}
+                <span class="hot-post-avatar-fallback" aria-hidden="true">{{ (p.username|default('?'))[:1]|upper }}</span>
+                {% endif %}
+                <div class="hot-post-author">
+                    <span class="hot-post-username">{{ p.username|default('匿名用户') }}</span>
+                    <span class="hot-post-time">{{ p.created_at|default('') }}</span>
+                </div>
+                <span class="hot-post-type type-{{ {'discussion':'discussion','question':'question','suggestion':'suggestion'}.get(p.type|default('discussion'), 'default') }}">{{ {'discussion':'讨论','question':'提问','suggestion':'建议'}.get(p.type|default('discussion'), '帖子') }}</span>
+            </div>
+            <h3 class="hot-post-title">{{ p.title|default('无标题') }}</h3>
+            <div class="hot-post-stats">
+                <span class="hot-post-stat" title="浏览数">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    {{ m.fmt_num(p.views|default(0)) }}
+                </span>
+                <span class="hot-post-stat" title="点赞数">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                    {{ m.fmt_num(p.likes|default(0)) }}
+                </span>
+                <span class="hot-post-stat" title="评论数">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    {{ m.fmt_num(p.comment_count|default(0)) }}
+                </span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ==================== 玩家最新评价 ==================== #}
+{% if recent_reviews %}
+<section class="section reveal" aria-labelledby="reviews-title">
+    <div class="section-header">
+        <h2 class="section-title" id="reviews-title">玩家评价</h2>
+        <span class="section-count">听听玩家怎么说</span>
+    </div>
+    <div class="reviews-grid">
+        {% for r in recent_reviews %}
+        <article class="review-card">
+            <div class="review-head">
+                {% if r.avatar %}
+                <img class="review-avatar" src="{{ r.avatar }}" alt="{{ r.username|default('用户') }}头像" loading="lazy">
+                {% else %}
+                <span class="review-avatar-fallback" aria-hidden="true">{{ (r.username|default('?'))[:1]|upper }}</span>
+                {% endif %}
+                <div class="review-author">
+                    <span class="review-username">{{ r.username|default('匿名用户') }}</span>
+                    <a class="review-game" href="{{ url_for('games.game_detail', gid=r.game_id) }}">{{ r.game_title|default('未知游戏') }}</a>
+                </div>
+                <span class="review-stars" aria-label="评分 {{ r.rating|default(0) }} / 5">
+                    {% for i in range(5) %}
+                        {% if i < (r.rating|default(0)|int) %}★{% else %}<span class="star-empty">☆</span>{% endif %}
+                    {% endfor %}
+                </span>
+            </div>
+            {% if r.comment %}
+            <p class="review-excerpt">{{ r.comment|default('') }}</p>
+            {% endif %}
+            <span class="review-time">{{ r.created_at|default('') }}</span>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ==================== 分类浏览 ==================== #}
+{% if verified_tags %}
+<section class="section reveal" aria-labelledby="category-title">
+    <div class="section-header">
+        <h2 class="section-title" id="category-title">分类浏览</h2>
+        <span class="section-count">{{ verified_tags|length }} 个分类</span>
+    </div>
+    <div class="category-grid">
+        {% for t in verified_tags %}
+        <button type="button" class="category-card" data-tag="{{ t.name }}" aria-label="浏览 {{ t.name }} 分类">
+            <span class="category-name">{{ t.name }}</span>
+            <span class="category-count">{{ t.game_count }} 款游戏</span>
+        </button>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{# ==================== Three.js 星空背景 ==================== #}
+<script src="{{ url_for('static', filename='vendor/three.min.js') }}"></script>
 <script>
-// 首页邀请码兑换
 (function () {
-    var btn = document.getElementById('invite-redeem-btn');
-    var input = document.getElementById('invite-redeem-input');
-    if (!btn || !input) return;
-    btn.addEventListener('click', function () {
-        var code = input.value.trim();
-        if (!code) { window.snyqtToast && window.snyqtToast('请输入邀请码', 'warning'); return; }
-        btn.disabled = true;
-        fetch('/api/invite/redeem', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: code })
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.success) {
-                window.snyqtToast && window.snyqtToast(data.message, 'success');
-                setTimeout(function () { window.location.reload(); }, 800);
-            } else {
-                window.snyqtToast && window.snyqtToast(data.message || '兑换失败', 'error');
-                btn.disabled = false;
+    'use strict';
+
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ==================== SubTask 7.1: Three.js 星空背景 ==================== */
+    function initStarfield() {
+        var canvas = document.getElementById('starfield-canvas');
+        if (!canvas || typeof THREE === 'undefined') return;
+
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
+        camera.position.z = 600;
+
+        var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0);
+
+        var STAR_COUNT = 800;
+        var HALF = STAR_COUNT / 2;
+        var sphereGeo = new THREE.SphereGeometry(1.4, 8, 8);
+        var greenMat = new THREE.MeshBasicMaterial({ color: 0x00ff9d });
+        var whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        var greenStars = new THREE.InstancedMesh(sphereGeo, greenMat, HALF);
+        var whiteStars = new THREE.InstancedMesh(sphereGeo, whiteMat, HALF);
+        var dummy = new THREE.Object3D();
+
+        function distribute(mesh, count) {
+            for (var i = 0; i < count; i++) {
+                // 球面均匀分布
+                var r = 250 + Math.random() * 750;
+                var theta = 2 * Math.PI * Math.random();
+                var phi = Math.acos(2 * Math.random() - 1);
+                dummy.position.set(
+                    r * Math.sin(phi) * Math.cos(theta),
+                    r * Math.sin(phi) * Math.sin(theta),
+                    r * Math.cos(phi)
+                );
+                var s = 0.5 + Math.random() * 1.6;
+                dummy.scale.set(s, s, s);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
             }
-        })
-        .catch(function () {
-            window.snyqtToast && window.snyqtToast('网络错误', 'error');
-            btn.disabled = false;
+            mesh.instanceMatrix.needsUpdate = true;
+        }
+
+        distribute(greenStars, HALF);
+        distribute(whiteStars, HALF);
+
+        var starGroup = new THREE.Group();
+        starGroup.add(greenStars);
+        starGroup.add(whiteStars);
+        scene.add(starGroup);
+
+        var isVisible = true;
+        document.addEventListener('visibilitychange', function () {
+            isVisible = !document.hidden;
         });
-    });
-    input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { btn.click(); }
-    });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!isVisible || prefersReducedMotion) return;
+            starGroup.rotation.y += 0.0005;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }, 150);
+        });
+    }
+
+    /* ==================== SubTask 7.2: CountUp 数字滚动 ==================== */
+    function initCountUp() {
+        var els = document.querySelectorAll('[data-count]');
+        if (!els.length) return;
+
+        var easeOutQuad = function (t) { return t * (2 - t); };
+
+        function animateCount(el) {
+            var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+            if (target === 0) { el.textContent = '0'; return; }
+            var duration = 1600;
+            var start = null;
+            function step(ts) {
+                if (!start) start = ts;
+                var progress = Math.min((ts - start) / duration, 1);
+                var eased = easeOutQuad(progress);
+                var val = Math.floor(eased * target);
+                el.textContent = val >= 10000
+                    ? (val / 10000).toFixed(1) + 'w'
+                    : (val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val);
+                if (progress < 1) requestAnimationFrame(step);
+                else el.textContent = target >= 10000
+                    ? (target / 10000).toFixed(1) + 'w'
+                    : (target >= 1000 ? (target / 1000).toFixed(1) + 'k' : target);
+            }
+            requestAnimationFrame(step);
+        }
+
+        if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+            els.forEach(function (el) {
+                var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+                el.textContent = target >= 10000
+                    ? (target / 10000).toFixed(1) + 'w'
+                    : (target >= 1000 ? (target / 1000).toFixed(1) + 'k' : target);
+            });
+            return;
+        }
+
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    animateCount(e.target);
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.4 });
+
+        els.forEach(function (el) { io.observe(el); });
+    }
+
+    /* ==================== Reveal 入场动画（IntersectionObserver） ==================== */
+    function initRevealAnimations() {
+        var reveals = document.querySelectorAll('.reveal');
+        if (!reveals.length) return;
+
+        if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+            reveals.forEach(function (el) { el.classList.add('is-visible'); });
+            return;
+        }
+
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    e.target.classList.add('is-visible');
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+        reveals.forEach(function (el) { io.observe(el); });
+    }
+
+    /* ==================== SubTask 7.3 + 7.4: 标签筛选 + 全量标签 Modal ==================== */
+    function initTagFiltering() {
+        var gameGrid = document.getElementById('game-grid');
+        var visibleCountEl = document.getElementById('visible-count');
+        var totalCards = gameGrid ? gameGrid.querySelectorAll('.game-card') : [];
+
+        function applyFilter(tagName) {
+            if (!totalCards.length) return;
+            var visible = 0;
+            totalCards.forEach(function (card) {
+                var cardTags = (card.getAttribute('data-tags') || '').toLowerCase();
+                var tagList = cardTags.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+                var match = !tagName || tagList.indexOf(tagName.toLowerCase()) !== -1;
+                card.classList.toggle('hidden-by-filter', !match);
+                if (match) visible++;
+            });
+            if (visibleCountEl) visibleCountEl.textContent = visible;
+        }
+
+        function setActiveTag(tagName) {
+            // 同步 tags-bar 与 category-grid 与 modal 内的按钮状态
+            var allTagBtns = document.querySelectorAll('[data-tag]');
+            allTagBtns.forEach(function (btn) {
+                var btnTag = btn.getAttribute('data-tag') || '';
+                var isActive = (!tagName && !btnTag) || (btnTag && btnTag.toLowerCase() === (tagName || '').toLowerCase());
+                btn.classList.toggle('is-active', isActive);
+                if (btn.tagName === 'BUTTON' && btn.hasAttribute('aria-pressed')) {
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                }
+            });
+        }
+
+        // 绑定所有带 data-tag 的按钮（tags-bar、modal、category-card）
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-tag]');
+            if (!btn) return;
+            // 跳过 carousel-card（它们是 <a> 链接，不应触发筛选）
+            if (btn.classList.contains('carousel-card')) return;
+            // 跳过 <a> 元素（链接类）
+            if (btn.tagName === 'A') return;
+            e.preventDefault();
+            var tagName = btn.getAttribute('data-tag') || '';
+            applyFilter(tagName);
+            setActiveTag(tagName);
+            // 关闭 modal（如果点击发生在 modal 内）
+            closeModal();
+            // 滚动到游戏网格
+            var gridSection = document.getElementById('grid-title');
+            if (gridSection) {
+                gridSection.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+            }
+        });
+
+        return { applyFilter: applyFilter, setActiveTag: setActiveTag };
+    }
+
+    function initTagsModal() {
+        var moreBtn = document.getElementById('tags-more-btn');
+        var modal = document.getElementById('all-tags-modal');
+        var closeBtn = document.getElementById('all-tags-close');
+        if (!moreBtn || !modal) return;
+
+        var lastFocused = null;
+
+        function openModal() {
+            lastFocused = document.activeElement;
+            modal.classList.add('is-open');
+            moreBtn.setAttribute('aria-expanded', 'true');
+            // 聚焦关闭按钮
+            setTimeout(function () {
+                if (closeBtn) closeBtn.focus();
+            }, 100);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('is-open');
+            moreBtn.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+            if (lastFocused) lastFocused.focus();
+        }
+        // 暴露给 initTagFiltering 使用
+        window.__closeTagsModal = closeModal;
+
+        moreBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (modal.classList.contains('is-open')) closeModal();
+            else openModal();
+        });
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeModal);
+        }
+
+        // 点击背景关闭
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeModal();
+        });
+
+        // Escape 关闭
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+                closeModal();
+            }
+        });
+
+        // 简单焦点陷阱：Tab 在 modal 内循环
+        modal.addEventListener('keydown', function (e) {
+            if (e.key !== 'Tab') return;
+            var focusable = modal.querySelectorAll('button, a, input, [tabindex]:not([tabindex="-1"])');
+            if (!focusable.length) return;
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        });
+    }
+
+    function closeModal() {
+        if (typeof window.__closeTagsModal === 'function') {
+            window.__closeTagsModal();
+        }
+    }
+
+    /* ==================== SubTask 7.6: 编辑精选轮播 ==================== */
+    function initPicksCarousel() {
+        var track = document.getElementById('picks-track');
+        var prevBtn = document.getElementById('picks-prev');
+        var nextBtn = document.getElementById('picks-next');
+        if (!track) return;
+
+        var cards = track.querySelectorAll('.carousel-card');
+        if (!cards.length) {
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            return;
+        }
+
+        function getStep() {
+            if (!cards.length) return 300;
+            var card = cards[0];
+            var style = getComputedStyle(track);
+            var gap = parseInt(style.columnGap || style.gap || '16', 10) || 16;
+            return card.offsetWidth + gap;
+        }
+
+        function updateNavState() {
+            if (!prevBtn || !nextBtn) return;
+            var maxScroll = track.scrollWidth - track.clientWidth - 2;
+            prevBtn.disabled = track.scrollLeft <= 2;
+            nextBtn.disabled = track.scrollLeft >= maxScroll;
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                track.scrollBy({ left: -getStep(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+            });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                track.scrollBy({ left: getStep(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+            });
+        }
+
+        // 键盘左右键导航
+        track.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                track.scrollBy({ left: -getStep(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                track.scrollBy({ left: getStep(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+            }
+        });
+
+        track.addEventListener('scroll', updateNavState, { passive: true });
+        window.addEventListener('resize', updateNavState);
+        updateNavState();
+
+        // 自动滚动：5 秒一次，悬停暂停
+        if (prefersReducedMotion) return;
+        var autoTimer = null;
+        var isHovered = false;
+
+        function startAuto() {
+            stopAuto();
+            autoTimer = setInterval(function () {
+                if (isHovered) return;
+                var maxScroll = track.scrollWidth - track.clientWidth - 2;
+                if (track.scrollLeft >= maxScroll) {
+                    track.scrollTo({ left: 0, behavior: 'smooth' });
+                } else {
+                    track.scrollBy({ left: getStep(), behavior: 'smooth' });
+                }
+            }, 5000);
+        }
+        function stopAuto() {
+            if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+        }
+
+        var carousel = document.getElementById('picks-carousel');
+        if (carousel) {
+            carousel.addEventListener('mouseenter', function () { isHovered = true; });
+            carousel.addEventListener('mouseleave', function () { isHovered = false; });
+            carousel.addEventListener('focusin', function () { isHovered = true; });
+            carousel.addEventListener('focusout', function () { isHovered = false; });
+        }
+
+        // 仅在视口内时启动自动播放
+        if ('IntersectionObserver' in window) {
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    if (e.isIntersecting) startAuto();
+                    else stopAuto();
+                });
+            }, { threshold: 0.3 });
+            io.observe(carousel);
+        } else {
+            startAuto();
+        }
+
+        // 标签页隐藏时暂停
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) stopAuto();
+            else startAuto();
+        });
+    }
+
+    /* ==================== SubTask 21.4: 多维度排序条 ==================== */
+    function initSortBar() {
+        var sortBar = document.getElementById('sort-bar');
+        var gameGrid = document.getElementById('game-grid');
+        if (!sortBar || !gameGrid) return;
+
+        var pills = sortBar.querySelectorAll('.sort-pill');
+        if (!pills.length) return;
+
+        // 缓存原始卡片顺序（用于"重置")
+        var cards = Array.prototype.slice.call(gameGrid.querySelectorAll('.game-card'));
+
+        function getValue(card, sortKey) {
+            var raw = card.getAttribute('data-sort-' + sortKey) || '';
+            if (sortKey === 'newest') {
+                // 时间字符串：字典序与时间序一致（ISO 格式）
+                return raw || '';
+            }
+            var num = parseFloat(raw);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function applySort(sortKey) {
+            // 复制当前可见卡片（未被标签筛选隐藏）以便排序
+            var visibleCards = cards.slice();
+            // 排序：除 newest 外均为降序，newest 升序（最近优先）
+            visibleCards.sort(function (a, b) {
+                var va = getValue(a, sortKey);
+                var vb = getValue(b, sortKey);
+                if (sortKey === 'newest') {
+                    // 时间越新越靠前（字符串比较）
+                    return vb > va ? 1 : (vb < va ? -1 : 0);
+                }
+                // 数值降序
+                return vb - va;
+            });
+            // 重新插入到 grid 中（保持 featured 修饰符：第一张卡为 featured）
+            var frag = document.createDocumentFragment();
+            visibleCards.forEach(function (card, idx) {
+                // 重新计算 featured 标记（每隔 7 张第一张为 featured）
+                if (idx % 7 === 0) {
+                    card.classList.add('featured');
+                } else {
+                    card.classList.remove('featured');
+                }
+                frag.appendChild(card);
+            });
+            gameGrid.appendChild(frag);
+        }
+
+        pills.forEach(function (pill) {
+            pill.addEventListener('click', function () {
+                var sortKey = pill.getAttribute('data-sort') || 'heat';
+                pills.forEach(function (p) {
+                    p.classList.remove('is-active');
+                    p.setAttribute('aria-pressed', 'false');
+                });
+                pill.classList.add('is-active');
+                pill.setAttribute('aria-pressed', 'true');
+                applySort(sortKey);
+            });
+        });
+    }
+
+    /* ==================== 启动所有模块 ==================== */
+    function init() {
+        initStarfield();
+        initCountUp();
+        initRevealAnimations();
+        initTagFiltering();
+        initTagsModal();
+        initPicksCarousel();
+        initSortBar();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();
 </script>
 {% endblock %}

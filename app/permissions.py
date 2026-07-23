@@ -101,6 +101,16 @@ def is_developer(user_id=None):
     return has_permission(user_id, 'developer')
 
 
+def is_reviewer(user_id=None):
+    """判断当前/指定用户是否为评鉴员。"""
+    if user_id is None:
+        user = current_user()
+        if not user:
+            return False
+        user_id = user['id']
+    return has_permission(user_id, 'reviewer')
+
+
 def require_level(min_level):
     """
     装饰器：校验当前用户权限级别 >= min_level。

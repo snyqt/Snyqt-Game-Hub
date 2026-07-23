@@ -4,396 +4,1011 @@
 
 {% block head %}
 <style>
-/* ==================== 公开小黑屋页面 ==================== */
-.blacklist-hero {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: calc(var(--header-h) + 30px) 24px 24px;
-    text-align: center;
+/* =============================================
+   赛博小黑屋 — Cyberpunk Blacklist
+   品牌色：深空蓝 + 函数绿 + 积分金
+   赛博色：紫红 #ff0080 / 青蓝 #00ffff / 霓虹紫 #8b5cf6
+   ============================================= */
+:root {
+    --cyber-red: #ff0080;        /* 紫红 */
+    --cyber-cyan: #00ffff;       /* 青蓝 */
+    --cyber-purple: #8b5cf6;     /* 霓虹紫 */
+    --type-post: #06b6d4;        /* 帖子类型色 */
+    --type-game: #8b5cf6;        /* 游戏类型色 */
+    --type-user: #ff3860;        /* 用户类型色 */
+    --prison-bar: rgba(58, 58, 94, 0.35);
+    --bg-deep: #060814;
 }
 
-.blacklist-hero-icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 16px;
-    color: #ff6b5a;
-    filter: drop-shadow(0 0 16px rgba(255, 107, 90, 0.4));
-}
-
-.blacklist-hero h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    margin: 0 0 8px;
-    letter-spacing: 0.02em;
-    background: linear-gradient(135deg, #ff6b5a 0%, #ffae42 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.blacklist-hero p {
-    color: var(--muted, rgba(255,255,255,0.6));
-    font-size: .92rem;
-    margin: 0;
-    line-height: 1.6;
-}
-
-/* --- 筛选栏 --- */
-.blacklist-toolbar {
-    max-width: 1280px;
-    margin: 0 auto 20px;
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.blacklist-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.bl-filter-chip {
-    padding: 6px 16px;
-    border-radius: 999px;
-    font-size: .84rem;
-    font-weight: 600;
-    background: var(--card, #1a1a2e);
-    border: 1px solid var(--border, rgba(255,255,255,0.08));
-    color: var(--muted, rgba(255,255,255,0.7));
-    text-decoration: none;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.bl-filter-chip:hover {
-    color: var(--text, #fff);
-    border-color: rgba(255,255,255,0.2);
-}
-
-.bl-filter-chip.active {
-    background: linear-gradient(135deg, rgba(255,107,90,0.2), rgba(255,174,66,0.15));
-    border-color: rgba(255,107,90,0.5);
-    color: #ff8a7a;
-}
-
-.bl-count {
-    font-size: .82rem;
-    color: var(--muted, rgba(255,255,255,0.5));
-}
-
-.bl-count strong {
-    color: #ff8a7a;
-    font-weight: 700;
-}
-
-/* --- 处罚卡片列表 --- */
-.blacklist-grid {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 24px 40px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 16px;
-}
-
-.bl-card {
-    background: var(--card, #1a1a2e);
-    border: 1px solid var(--border, rgba(255,255,255,0.06));
-    border-radius: 14px;
-    padding: 18px 20px;
-    transition: all 0.25s ease;
+/* ============== SubTask 12.7：修复 position:fixed bug ==============
+   关键修复：使用 position: relative + min-height: 100vh，
+   让页脚正确显示在页面底部，而非顶部。 */
+.blacklist-page {
     position: relative;
-    overflow: hidden;
+    min-height: 100vh;
+    z-index: 0;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
-.bl-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, #ff6b5a, #ffae42);
-    opacity: 0.7;
-}
-
-.bl-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255,107,90,0.3);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,107,90,0.1);
-}
-
-.bl-card-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.bl-type-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: .74rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-}
-
-.bl-type-badge.post {
-    background: rgba(100,210,255,0.15);
-    color: #64d2ff;
-    border: 1px solid rgba(100,210,255,0.25);
-}
-
-.bl-type-badge.game {
-    background: rgba(0,230,118,0.15);
-    color: #00e676;
-    border: 1px solid rgba(0,230,118,0.25);
-}
-
-.bl-action-tag {
-    margin-left: auto;
-    font-size: .72rem;
-    color: rgba(255,107,90,0.85);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.bl-card-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text, #fff);
-    margin: 0 0 8px;
-    line-height: 1.4;
-    word-break: break-word;
-}
-
-.bl-card-reason {
-    background: rgba(255,69,58,0.06);
-    border-left: 2px solid rgba(255,69,58,0.4);
-    border-radius: 4px;
-    padding: 8px 12px;
-    font-size: .84rem;
-    color: var(--text, rgba(255,255,255,0.85));
-    line-height: 1.5;
-    margin: 0 0 12px;
-    word-break: break-word;
-}
-
-.bl-card-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: .76rem;
-    color: var(--muted, rgba(255,255,255,0.5));
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.bl-card-admin {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.bl-card-admin strong {
-    color: var(--text, rgba(255,255,255,0.85));
-    font-weight: 600;
-}
-
-/* --- 空状态 --- */
-.bl-empty {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 60px 20px;
-    background: var(--card, #1a1a2e);
-    border: 1px dashed var(--border, rgba(255,255,255,0.08));
-    border-radius: 14px;
-}
-
-.bl-empty svg {
-    width: 48px;
-    height: 48px;
-    color: var(--muted, rgba(255,255,255,0.3));
-    margin-bottom: 12px;
-}
-
-.bl-empty h3 {
-    font-size: 1.05rem;
-    color: var(--text, rgba(255,255,255,0.85));
-    margin: 0 0 6px;
-}
-
-.bl-empty p {
-    font-size: .84rem;
-    color: var(--muted, rgba(255,255,255,0.5));
-    margin: 0;
-}
-
-/* --- 分页 --- */
-.bl-pagination {
-    max-width: 1280px;
-    margin: 0 auto 40px;
-    padding: 0 24px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.bl-page-btn {
-    min-width: 36px;
-    height: 36px;
-    padding: 0 12px;
-    border-radius: 8px;
-    background: var(--card, #1a1a2e);
-    border: 1px solid var(--border, rgba(255,255,255,0.08));
-    color: var(--muted, rgba(255,255,255,0.7));
-    font-size: .84rem;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.bl-page-btn:hover:not(.disabled) {
-    color: var(--text, #fff);
-    border-color: rgba(255,255,255,0.2);
-}
-
-.bl-page-btn.active {
-    background: linear-gradient(135deg, #ff6b5a, #ffae42);
-    color: #07122A;
-    border-color: transparent;
-}
-
-.bl-page-btn.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+/* ---- Three.js 星空画布：固定在内容层后方 ---- */
+#starfield-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
 }
 
-/* --- 响应式 --- */
-@media (max-width: 640px) {
-    .blacklist-grid {
-        grid-template-columns: 1fr;
-    }
+/* ============== SubTask 12.2：CRT 扫描线（全局覆盖层） ==============
+   水平扫描线缓慢下移。 */
+.blacklist-page::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0) 0px,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.18) 3px,
+        rgba(0, 0, 0, 0) 4px
+    );
+    background-size: 100% 4px;
+    animation: crt-scanmove 8s linear infinite;
+    opacity: 0.55;
+}
+@keyframes crt-scanmove {
+    0%   { background-position: 0 0; }
+    100% { background-position: 0 100vh; }
+}
 
-    .blacklist-hero h1 {
-        font-size: 1.5rem;
+/* CRT 顶部慢扫描光带 */
+.blacklist-page::after {
+    content: '';
+    position: fixed;
+    left: 0; right: 0;
+    top: 0;
+    height: 120px;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 255, 255, 0.04) 0%,
+        rgba(0, 255, 255, 0) 100%
+    );
+    animation: crt-sweep 6s ease-in-out infinite;
+}
+@keyframes crt-sweep {
+    0%   { transform: translateY(-120px); opacity: 0; }
+    10%  { opacity: 0.8; }
+    90%  { opacity: 0.8; }
+    100% { transform: translateY(100vh); opacity: 0; }
+}
+
+/* ---- 内容层 ---- */
+.bl-content {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-7) var(--space-5) var(--space-9);
+}
+
+/* ============== 标题区 ============== */
+.blacklist-header {
+    text-align: center;
+    margin-bottom: var(--space-7);
+    opacity: 0;
+    animation: blFadeUp 1.2s ease-out 0.2s forwards;
+}
+.blacklist-header h1 {
+    font-family: var(--font-display), 'Courier New', monospace;
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    margin: 0 0 var(--space-2);
+    color: var(--cyber-red);
+    text-shadow:
+        0 0 10px var(--cyber-red),
+        0 0 30px rgba(255, 0, 128, 0.5),
+        0 0 60px rgba(255, 0, 128, 0.25);
+}
+/* 故障文字：双伪元素 RGB 通道分裂 */
+.glitch-text {
+    position: relative;
+    display: inline-block;
+}
+.glitch-text::before,
+.glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+}
+.glitch-text::before {
+    color: var(--cyber-cyan);
+    text-shadow: -2px 0 var(--cyber-cyan);
+    clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+    animation: glitch-top 3s infinite linear alternate;
+    opacity: 0.7;
+}
+.glitch-text::after {
+    color: var(--cyber-purple);
+    text-shadow: 2px 0 var(--cyber-purple);
+    clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+    animation: glitch-bottom 2.4s infinite linear alternate;
+    opacity: 0.7;
+}
+@keyframes glitch-top {
+    0%   { transform: translate(0, 0); }
+    20%  { transform: translate(-2px, -1px); }
+    40%  { transform: translate(2px, 1px); }
+    60%  { transform: translate(-1px, 0); }
+    80%  { transform: translate(1px, -1px); }
+    100% { transform: translate(0, 0); }
+}
+@keyframes glitch-bottom {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(2px, 1px); }
+    50%  { transform: translate(-2px, -1px); }
+    75%  { transform: translate(1px, 1px); }
+    100% { transform: translate(0, 0); }
+}
+.blacklist-header p {
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: var(--cyber-cyan);
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.35);
+    margin: 0;
+}
+.blacklist-header .bl-count {
+    color: var(--fg-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    margin-top: var(--space-2);
+    font-family: var(--font-mono), monospace;
+}
+
+/* ============== 筛选栏 ============== */
+.filter-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-7);
+    opacity: 0;
+    animation: blFadeUp 1.2s ease-out 0.5s forwards;
+}
+.filter-btn {
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: rgba(10, 12, 28, 0.75);
+    border: 1px solid rgba(255, 0, 128, 0.2);
+    color: rgba(232, 236, 245, 0.55);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.filter-btn:hover {
+    color: var(--cyber-cyan);
+    border-color: rgba(0, 255, 255, 0.5);
+    background: rgba(0, 255, 255, 0.06);
+    box-shadow: 0 0 14px rgba(0, 255, 255, 0.15);
+}
+.filter-btn.active {
+    color: var(--cyber-red);
+    border-color: var(--cyber-red);
+    background: rgba(255, 0, 128, 0.12);
+    box-shadow: 0 0 20px rgba(255, 0, 128, 0.25), inset 0 0 20px rgba(255, 0, 128, 0.06);
+}
+.filter-btn[data-filter="post"].active { color: var(--type-post); border-color: var(--type-post); box-shadow: 0 0 20px rgba(6, 182, 212, 0.25); }
+.filter-btn[data-filter="game"].active { color: var(--type-game); border-color: var(--type-game); box-shadow: 0 0 20px rgba(139, 92, 246, 0.25); }
+.filter-btn[data-filter="user"].active { color: var(--type-user); border-color: var(--type-user); box-shadow: 0 0 20px rgba(255, 56, 96, 0.25); }
+
+/* ============== 记录网格 ============== */
+.records-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-6);
+    max-width: 1280px;
+    margin: 0 auto;
+}
+@media (max-width: 640px) {
+    .records-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-5);
     }
+}
+
+/* ============== 处罚卡片 ============== */
+.blacklist-card {
+    position: relative;
+    background: rgba(14, 16, 32, 0.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--border-color);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    opacity: 0;
+    transform: translateY(30px);
+    animation: blFadeUp 0.9s ease-out forwards;
+}
+
+/* ============== SubTask 12.2：铁窗格栅（卡片背景） ==============
+   竖向铁栏杆重复渐变。 */
+.blacklist-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+        90deg,
+        rgba(58, 58, 94, 0) 0px,
+        rgba(58, 58, 94, 0) 14px,
+        rgba(58, 58, 94, 0.18) 15px,
+        rgba(58, 58, 94, 0) 16px
+    );
+    opacity: 0.6;
+}
+/* 卡片顶部柔光 */
+.blacklist-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255, 0, 128, 0.06) 0%, transparent 60%);
+}
+
+/* 三色左边框：SubTask 12.5 */
+.blacklist-card.type-post { border-left-color: var(--type-post); }
+.blacklist-card.type-game { border-left-color: var(--type-game); }
+.blacklist-card.type-user { border-left-color: var(--type-user); }
+
+/* 悬停：RGB 故障 + 抖动 */
+.blacklist-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+        0 0 28px rgba(255, 0, 128, 0.12),
+        0 12px 32px rgba(0, 0, 0, 0.4);
+}
+.blacklist-card.type-post:hover { box-shadow: 0 0 28px rgba(6, 182, 212, 0.18), 0 12px 32px rgba(0, 0, 0, 0.4); border-left-color: var(--type-post); }
+.blacklist-card.type-game:hover { box-shadow: 0 0 28px rgba(139, 92, 246, 0.18), 0 12px 32px rgba(0, 0, 0, 0.4); border-left-color: var(--type-game); }
+.blacklist-card.type-user:hover { box-shadow: 0 0 28px rgba(255, 56, 96, 0.18), 0 12px 32px rgba(0, 0, 0, 0.4); border-left-color: var(--type-user); }
+
+/* ============== SubTask 12.4：悬停故障动画（RGB 通道分裂 + 抖动） ============== */
+.blacklist-card:hover .locked-avatar {
+    animation: glitch-shake 0.4s steps(2) infinite;
+}
+@keyframes glitch-shake {
+    0%   { transform: translate(0, 0); filter: drop-shadow(2px 0 var(--cyber-red)) drop-shadow(-2px 0 var(--cyber-cyan)); }
+    25%  { transform: translate(-2px, 1px); filter: drop-shadow(-2px 0 var(--cyber-red)) drop-shadow(2px 0 var(--cyber-cyan)); }
+    50%  { transform: translate(2px, -1px); filter: drop-shadow(2px 0 var(--cyber-cyan)) drop-shadow(-2px 0 var(--cyber-purple)); }
+    75%  { transform: translate(-1px, 2px); filter: drop-shadow(-1px 0 var(--cyber-purple)) drop-shadow(1px 0 var(--cyber-cyan)); }
+    100% { transform: translate(0, 0); filter: drop-shadow(2px 0 var(--cyber-red)) drop-shadow(-2px 0 var(--cyber-cyan)); }
+}
+
+/* 卡片内容层（在 ::before/::after 之上） */
+.blacklist-card > *:not(.locked-seal) {
+    position: relative;
+    z-index: 1;
+}
+
+/* ============== SubTask 12.3：LOCKED 封条 ============== */
+.locked-seal {
+    position: absolute;
+    top: 14px;
+    right: -10px;
+    z-index: 3;
+    transform: rotate(-15deg);
+    padding: 5px 22px;
+    background: rgba(255, 0, 128, 0.12);
+    color: var(--cyber-red);
+    border: 2px solid var(--cyber-red);
+    border-radius: 2px;
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    box-shadow:
+        0 0 14px rgba(255, 0, 128, 0.4),
+        inset 0 0 12px rgba(255, 0, 128, 0.1);
+    text-shadow: 0 0 6px rgba(255, 0, 128, 0.6);
+    pointer-events: none;
+}
+.locked-seal::before,
+.locked-seal::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 0, 128, 0.4);
+}
+.locked-seal::before { top: -3px; left: 8px; width: 30%; height: 1px; }
+.locked-seal::after  { bottom: -3px; right: 8px; width: 30%; height: 1px; }
+
+/* ============== 类型徽章 ============== */
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+}
+.blacklist-card.type-post .type-badge {
+    color: var(--type-post);
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.4);
+}
+.blacklist-card.type-game .type-badge {
+    color: var(--type-game);
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+}
+.blacklist-card.type-user .type-badge {
+    color: var(--type-user);
+    background: rgba(255, 56, 96, 0.1);
+    border: 1px solid rgba(255, 56, 96, 0.4);
+}
+
+/* ============== SubTask 12.3：头像 + 数据锁定环 ============== */
+.avatar-container {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto var(--space-3);
+    border-radius: 50%;
+}
+.locked-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 0, 128, 0.5);
+    filter: grayscale(70%) brightness(0.7) contrast(1.1);
+    transition: filter 0.35s ease;
+    background: var(--bg-elevated);
+}
+.avatar-container.no-avatar .locked-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--cyber-red);
+    text-shadow: 0 0 12px rgba(255, 0, 128, 0.5);
+}
+.blacklist-card:hover .locked-avatar {
+    filter: grayscale(0%) brightness(1) contrast(1);
+}
+/* 数据锁定环：虚线圆环旋转 */
+.lock-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 0, 128, 0.5);
+    pointer-events: none;
+    animation: lock-ring-spin 12s linear infinite;
+}
+.lock-ring::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 255, 255, 0.15);
+    animation: lock-ring-spin 18s linear infinite reverse;
+}
+@keyframes lock-ring-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* ============== 卡片文本 ============== */
+.record-username {
+    text-align: center;
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--cyber-cyan);
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.25);
+    margin: 0 0 var(--space-1);
+    word-break: break-all;
+}
+.record-title {
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--fg-secondary);
+    margin: 0 0 var(--space-1);
+    word-break: break-word;
+}
+.record-id {
+    text-align: center;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.66rem;
+    color: var(--fg-muted);
+    letter-spacing: 0.06em;
+    margin: 0 0 var(--space-3);
+}
+.record-reason {
+    font-size: 0.84rem;
+    color: rgba(232, 236, 245, 0.65);
+    line-height: 1.65;
+    text-align: center;
+    margin: 0 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(255, 0, 128, 0.04);
+    border-left: 2px solid rgba(255, 0, 128, 0.3);
+    border-radius: 2px;
+    word-break: break-word;
+    font-style: italic;
+}
+.record-reason::before { content: '「'; color: rgba(255, 0, 128, 0.6); font-style: normal; }
+.record-reason::after  { content: '」'; color: rgba(255, 0, 128, 0.6); font-style: normal; }
+
+/* ============== SubTask 12.6：刑期可视化 ============== */
+.duration-display {
+    margin: var(--space-3) 0;
+    text-align: center;
+    font-family: var(--font-mono), 'Courier New', monospace;
+}
+
+/* 永久封禁：红色脉冲 */
+.permanent-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    color: var(--cyber-red);
+    background: rgba(255, 0, 128, 0.08);
+    border: 1px solid rgba(255, 0, 128, 0.4);
+    border-radius: 2px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 10px rgba(255, 0, 128, 0.4);
+    animation: permanent-pulse 2s ease-in-out infinite;
+}
+@keyframes permanent-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 128, 0.4); }
+    50%      { box-shadow: 0 0 14px 2px rgba(255, 0, 128, 0.6); }
+}
+
+/* 限时封禁：青色倒计时 + 进度条 */
+.countdown-timer {
+    position: relative;
+    padding: 8px 12px;
+    color: var(--cyber-cyan);
+    background: rgba(0, 255, 255, 0.06);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 2px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    overflow: hidden;
+}
+.countdown-timer .countdown-label {
+    display: block;
+    font-size: 0.62rem;
+    color: rgba(0, 255, 255, 0.55);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+.countdown-timer .countdown-value {
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+.countdown-timer .countdown-value .num {
+    font-size: 1.15rem;
+    color: #fff;
+    margin: 0 2px;
+}
+.progress-bar {
+    position: absolute;
+    left: 0; bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--cyber-cyan), var(--cyber-purple));
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+    transition: width 1s ease;
+}
+
+/* 已解封：灰色 */
+.released-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    color: #6b7a99;
+    background: rgba(107, 122, 153, 0.08);
+    border: 1px solid rgba(107, 122, 153, 0.3);
+    border-radius: 2px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-shadow: none;
+}
+.blacklist-card.is-released {
+    opacity: 0.55;
+    filter: grayscale(50%);
+}
+.blacklist-card.is-released:hover {
+    opacity: 0.75;
+}
+
+/* ============== 卡片底部 ============== */
+.record-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+    flex-wrap: wrap;
+}
+.record-meta .meta-admin {
+    color: rgba(255, 200, 87, 0.7);
+}
+.record-date {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ============== 空状态 ============== */
+.bl-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-9) var(--space-4);
+    opacity: 0;
+    animation: blFadeUp 1.5s ease-out 0.6s forwards;
+}
+.bl-empty-state .empty-halo {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto var(--space-4);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.1) 0%, transparent 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 255, 255, 0.15);
+}
+.bl-empty-state .empty-halo svg {
+    width: 32px;
+    height: 32px;
+    color: rgba(0, 255, 255, 0.5);
+}
+.bl-empty-state h3 {
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.08em;
+    margin: 0 0 var(--space-2);
+}
+.bl-empty-state p {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.25);
+    margin: 0;
+}
+
+/* ============== 分页 ============== */
+.bl-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: var(--space-8);
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: blFadeUp 1.5s ease-out 0.7s forwards;
+}
+.bl-page {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 2px;
+    font-family: var(--font-mono), 'Courier New', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: rgba(10, 12, 28, 0.75);
+    border: 1px solid rgba(58, 58, 94, 0.4);
+    color: rgba(255, 255, 255, 0.45);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+}
+.bl-page:hover {
+    color: var(--cyber-cyan);
+    border-color: rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.12);
+    text-decoration: none;
+}
+.bl-page.active {
+    background: rgba(255, 0, 128, 0.15);
+    border-color: var(--cyber-red);
+    color: var(--cyber-red);
+    box-shadow: 0 0 16px rgba(255, 0, 128, 0.18);
+}
+.bl-page.disabled {
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+/* ============== 动画 ============== */
+@keyframes blFadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 卡片错峰入场 */
+.blacklist-card:nth-child(1) { animation-delay: 0.05s; }
+.blacklist-card:nth-child(2) { animation-delay: 0.12s; }
+.blacklist-card:nth-child(3) { animation-delay: 0.19s; }
+.blacklist-card:nth-child(4) { animation-delay: 0.26s; }
+.blacklist-card:nth-child(5) { animation-delay: 0.33s; }
+.blacklist-card:nth-child(6) { animation-delay: 0.40s; }
+.blacklist-card:nth-child(n+7) { animation-delay: 0.5s; }
+
+/* 尊重 reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .blacklist-page::before,
+    .blacklist-page::after,
+    .lock-ring,
+    .lock-ring::before,
+    .permanent-badge,
+    .glitch-text::before,
+    .glitch-text::after,
+    .blacklist-card,
+    .blacklist-header,
+    .filter-bar,
+    .bl-empty-state,
+    .bl-pagination {
+        animation: none !important;
+    }
+    .blacklist-card { opacity: 1; transform: none; }
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+    .bl-content { padding: var(--space-5) var(--space-3) var(--space-7); }
+    .filter-btn { padding: 6px 14px; font-size: 0.72rem; }
+    .locked-seal { font-size: 0.62rem; padding: 4px 16px; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="page">
-    {# ======== 顶部标题区 ======== #}
-    <div class="blacklist-hero">
-        <svg class="blacklist-hero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L2 22h20L12 2z"/>
-            <path d="M12 9v5M12 18h.01"/>
-        </svg>
-        <h1>小黑屋</h1>
-        <p>维护社区秩序，公示违规处罚记录<br>每位用户都可在此查看被处罚的游戏与帖子</p>
-    </div>
+<div class="blacklist-page" id="blacklist-page">
+    <canvas id="starfield-canvas"></canvas>
 
-    {# ======== 筛选栏 ======== #}
-    <div class="blacklist-toolbar">
-        <div class="blacklist-filters">
-            <a href="{{ url_for('community.blacklist_public') }}" class="bl-filter-chip {{ 'active' if not target_type else '' }}">全部</a>
-            <a href="{{ url_for('community.blacklist_public', type='post') }}" class="bl-filter-chip {{ 'active' if target_type == 'post' else '' }}">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                帖子
-            </a>
-            <a href="{{ url_for('community.blacklist_public', type='game') }}" class="bl-filter-chip {{ 'active' if target_type == 'game' else '' }}">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px;"><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01M2 12c0-2.8 0-4.2.9-5.1S5.2 6 8 6h8c2.8 0 4.2 0 5.1.9S22 9.2 22 12s0 4.2-.9 5.1-2.3.9-5.1.9H8c-2.8 0-4.2 0-5.1-.9S2 14.8 2 12z"/></svg>
-                游戏
-            </a>
-        </div>
-        <div class="bl-count">共 <strong>{{ total }}</strong> 条处罚记录</div>
-    </div>
-
-    {# ======== 处罚卡片列表 ======== #}
-    <div class="blacklist-grid">
-        {% if penalties and penalties|length > 0 %}
-            {% for p in penalties %}
-            <article class="bl-card">
-                <div class="bl-card-head">
-                    <span class="bl-type-badge {{ p.target_type }}">
-                        {% if p.target_type == 'post' %}帖子{% elif p.target_type == 'game' %}游戏{% else %}{{ p.target_type }}{% endif %}
-                    </span>
-                    <span class="bl-action-tag">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                        {{ p.action|default('ban') }}
-                    </span>
-                </div>
-                <h3 class="bl-card-title">{{ p.target_title|default('未命名目标') }}</h3>
-                <div class="bl-card-reason">{{ p.reason|default('违反社区规范') }}</div>
-                <div class="bl-card-meta">
-                    <span class="bl-card-admin">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        处理人：<strong>{{ p.admin_name|default('管理员') }}</strong>
-                    </span>
-                    <span>{{ p.created_at|default('') }}</span>
-                </div>
-            </article>
-            {% endfor %}
-        {% else %}
-            <div class="bl-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block;">
-                    <path d="M9 12l2 2 4-4"/>
-                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
-                </svg>
-                <h3>暂无处罚记录</h3>
-                <p>社区秩序良好，暂无任何违规处罚</p>
-            </div>
-        {% endif %}
-    </div>
-
-    {# ======== 分页 ======== #}
-    {% if total_pages > 1 %}
-    <nav class="bl-pagination">
-        {% if page > 1 %}
-            <a class="bl-page-btn" href="{{ url_for('community.blacklist_public', type=target_type, page=page-1) }}">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </a>
-        {% else %}
-            <span class="bl-page-btn disabled">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </span>
-        {% endif %}
-
-        {% for p_num in range(1, total_pages + 1) %}
-            {% if p_num == page %}
-                <span class="bl-page-btn active">{{ p_num }}</span>
-            {% elif p_num == 1 or p_num == total_pages or (p_num >= page - 2 and p_num <= page + 2) %}
-                <a class="bl-page-btn" href="{{ url_for('community.blacklist_public', type=target_type, page=p_num) }}">{{ p_num }}</a>
-            {% elif p_num == page - 3 or p_num == page + 3 %}
-                <span class="bl-page-btn">…</span>
+    <div class="bl-content">
+        {# ======== 标题区 ======== #}
+        <div class="blacklist-header">
+            <h1 class="glitch-text" data-text="小黑屋">小黑屋</h1>
+            <p>&#9654; 违规处罚记录公示 // PUBLIC BLACKLIST</p>
+            {% if total is defined %}
+            <div class="bl-count">[ TOTAL_RECORDS: {{ total }} ]</div>
             {% endif %}
-        {% endfor %}
+        </div>
 
-        {% if page < total_pages %}
-            <a class="bl-page-btn" href="{{ url_for('community.blacklist_public', type=target_type, page=page+1) }}">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </a>
-        {% else %}
-            <span class="bl-page-btn disabled">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </span>
+        {# ======== 筛选按钮（客户端过滤） ======== #}
+        <div class="filter-bar" role="tablist" aria-label="按类型筛选">
+            <button class="filter-btn active" data-filter="all" type="button" role="tab">[ALL] 全部</button>
+            <button class="filter-btn" data-filter="post" type="button" role="tab">[POST] 帖子</button>
+            <button class="filter-btn" data-filter="game" type="button" role="tab">[GAME] 游戏</button>
+            <button class="filter-btn" data-filter="user" type="button" role="tab">[USER] 用户</button>
+        </div>
+
+        {# ======== 记录网格 ======== #}
+        <div class="records-grid" id="records-grid">
+            {% if penalties and penalties|length > 0 %}
+                {% for r in penalties %}
+                <article class="blacklist-card type-{{ r.target_type }}"
+                         data-type="{{ r.target_type }}"
+                         data-expires="{{ r.expires_at.isoformat() if r.expires_at else '' }}"
+                         data-duration="{{ r.duration_days if r.duration_days is not none else '' }}">
+                    {# LOCKED 封条 #}
+                    <div class="locked-seal">LOCKED</div>
+
+                    {# 类型徽章 #}
+                    <span class="badge type-badge">
+                        {% if r.target_type == 'post' %}POST
+                        {% elif r.target_type == 'game' %}GAME
+                        {% elif r.target_type == 'user' %}USER
+                        {% else %}{{ r.target_type|upper }}{% endif %}
+                    </span>
+
+                    {# 头像 + 数据锁定环 #}
+                    <div class="avatar-container {{ 'no-avatar' if not r.avatar }}">
+                        <div class="lock-ring"></div>
+                        {% if r.avatar %}
+                        <img class="locked-avatar" src="{{ r.avatar }}" alt="{{ r.username|default('违规用户') }}的头像" loading="lazy">
+                        {% else %}
+                        <div class="locked-avatar">{{ (r.username|default('U'))[:1]|upper }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# 用户名 / 标题 / ID #}
+                    {% if r.username %}
+                    <div class="record-username">{{ r.username }}</div>
+                    {% endif %}
+                    {% if r.target_title %}
+                    <div class="record-title">{{ r.target_title }}</div>
+                    {% endif %}
+                    <div class="record-id">TARGET_ID: {{ r.target_id }}</div>
+
+                    {# 处罚理由 #}
+                    <div class="record-reason">{{ r.reason|default('违反社区规范') }}</div>
+
+                    {# 刑期可视化：SubTask 12.6
+                       永久封禁（duration_days=None）→ 服务端渲染红色脉冲徽章；
+                       限时封禁 → 服务端渲染青色倒计时骨架，由 JS 计算剩余天数、
+                                  进度条宽度，并在到期时替换为灰色 RELEASED 徽章。 #}
+                    <div class="duration-display">
+                        {% if r.duration_days is none %}
+                            <span class="permanent-badge">&#9876; PERMANENT &#8734;</span>
+                        {% else %}
+                            <div class="countdown-timer">
+                                <span class="countdown-label">&#9201; COUNTDOWN</span>
+                                <span class="countdown-value">
+                                    <span class="num" data-countdown-days>—</span>天剩余
+                                </span>
+                                <div class="progress-bar" data-progress style="width: 0%"></div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# 卡片底部信息 #}
+                    <div class="record-meta">
+                        <span class="meta-admin">&#9654; {{ r.admin_name|default('SYSTEM') }}</span>
+                        <span class="record-date">{{ r.created_at }}</span>
+                    </div>
+                </article>
+                {% endfor %}
+            {% else %}
+                <div class="bl-empty-state">
+                    <div class="empty-halo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                        </svg>
+                    </div>
+                    <h3>NO RECORDS FOUND</h3>
+                    <p>社区秩序良好，暂无违规记录</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {# ======== 分页 ======== #}
+        {% if total_pages is defined and total_pages > 1 %}
+        <nav class="bl-pagination" aria-label="分页">
+            {% if page > 1 %}
+                <a class="bl-page" href="{{ url_for('community.blacklist_public', type=target_type, page=page-1) }}" aria-label="上一页">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+            {% else %}
+                <span class="bl-page disabled" aria-disabled="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </span>
+            {% endif %}
+
+            {% for p_num in range(1, total_pages + 1) %}
+                {% if p_num == page %}
+                    <span class="bl-page active" aria-current="page">{{ p_num }}</span>
+                {% elif p_num == 1 or p_num == total_pages or (p_num >= page - 2 and p_num <= page + 2) %}
+                    <a class="bl-page" href="{{ url_for('community.blacklist_public', type=target_type, page=p_num) }}">{{ p_num }}</a>
+                {% elif p_num == page - 3 or p_num == page + 3 %}
+                    <span class="bl-page" style="background:none;border:none;color:rgba(255,255,255,0.15);">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+                <a class="bl-page" href="{{ url_for('community.blacklist_public', type=target_type, page=page+1) }}" aria-label="下一页">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </a>
+            {% else %}
+                <span class="bl-page disabled" aria-disabled="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </span>
+            {% endif %}
+        </nav>
         {% endif %}
-    </nav>
-    {% endif %}
-</section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/three.min.js') }}"></script>
+<script>
+(function () {
+    'use strict';
+
+    /* =====================================================
+       SubTask 12.1：Three.js 星空背景
+       球形分布 ~600 粒子，三色：紫红 / 青蓝 / 霓虹紫
+       ===================================================== */
+    var canvas = document.getElementById('starfield-canvas');
+    if (canvas && window.THREE) {
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 30;
+
+        var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+        /* ---- 主星空：球形分布 ~600 粒子 ---- */
+        var starsCount = 600;
+        var starsGeo = new THREE.BufferGeometry();
+        var positions = new Float32Array(starsCount * 3);
+        var colors = new Float32Array(starsCount * 3);
+
+        // 三色 RGB
+        var palette = [
+            [1.0, 0.0, 0.5],   // 紫红 #ff0080
+            [0.0, 1.0, 1.0],   // 青蓝 #00ffff
+            [0.55, 0.36, 0.96] // 霓虹紫 #8b5cf6
+        ];
+
+        for (var i = 0; i < starsCount; i++) {
+            // 球面均匀分布
+            var theta = Math.random() * Math.PI * 2;
+            var phi = Math.acos(2 * Math.random() - 1);
+            var r = 25 + Math.random() * 45;
+            positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = r * Math.cos(phi);
+
+            // 三色随机分配（带轻微亮度抖动）
+            var c = palette[Math.floor(Math.random() * palette.length)];
+            var jitter = 0.7 + Math.random() * 0.3;
+            colors[i * 3]     = c[0] * jitter;
+            colors[i * 3 + 1] = c[1] * jitter;
+            colors[i * 3 + 2] = c[2] * jitter;
+        }
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        starsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        var starsMat = new THREE.PointsMaterial({
+            size: 0.18,
+            vertexColors: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.9
+        });
+        var stars = new THREE.Points(starsGeo, starsMat);
+        scene.add(stars);
+
+        /* ---- 远景小星点（增加深度） ---- */
+        var bgCount = 300;
+        var bgGeo = new THREE.BufferGeometry();
+        var bgPos = new Float32Array(bgCount * 3);
+        var bgCol = new Float32Array(bgCount * 3);
+        for (var j = 0; j < bgCount; j++) {
+            bgPos[j * 3]     = (Math.random() - 0.5) * 120;
+            bgPos[j * 3 + 1] = (Math.random() - 0.5) * 80;
+            bgPos[j * 3 + 2] = -40 - Math.random() * 50;
+            var bc = palette[Math.floor(Math.random() * palette.length)];
+            bgCol[j * 3]     = bc[0] * 0.4;
+            bgCol[j * 3 + 1] = bc[1] * 0.4;
+            bgCol[j * 3 + 2] = bc[2] * 0.4;
+        }
+        bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
+        bgGeo.setAttribute('color', new THREE.BufferAttribute(bgCol, 3));
+        var bgStars = new THREE.Points(bgGeo, new THREE.PointsMaterial({
+            size: 0.08,
+            vertexColors: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.45
+        }));
+        scene.add(bgStars);
+
+        /* ---- 缓慢旋转 ---- */
+        function animate() {
+            requestAnimationFrame(animate);
+            stars.rotation.y += 0.00018;
+            stars.rotation.x += 0.00006;
+            bgStars.rotation.y -= 0.00009;
+            bgStars.rotation.x -= 0.00004;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', function () {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    }
+
+    /* =====================================================
+       SubTask 12.5：客户端类型筛选
+       ===================================================== */
+    var filterBtns = document.querySelectorAll('.filter-btn');
+    var cards = document.querySelectorAll('.blacklist-card');
+
+    filterBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var filter = btn.getAttribute('data-filter');
+            filterBtns.forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            cards.forEach(function (card) {
+                var type = card.getAttribute('data-type');
+                if (filter === 'all' || type === filter) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    /* =====================================================
+       SubTask 12.6：倒计时计算 + 进度条
+       ===================================================== */
+    function updateCountdowns() {
+        var now = Date.now();
+        cards.forEach(function (card) {
+            var expires = card.getAttribute('data-expires');
+            var duration = card.getAttribute('data-duration');
+            if (!expires || !duration) return;
+
+            // 兼容 "2026-07-20 12:34:56" 与 ISO 格式
+            var expDate = new Date(expires.replace(' ', 'T'));
+            if (isNaN(expDate.getTime())) return;
+
+            var remainingMs = expDate.getTime() - now;
+            var totalMs = parseFloat(duration) * 24 * 60 * 60 * 1000;
+            var elapsedMs = totalMs - remainingMs;
+
+            var daysEl = card.querySelector('[data-countdown-days]');
+            var progressEl = card.querySelector('[data-progress]');
+
+            if (remainingMs <= 0) {
+                // 已到期 → 替换为 RELEASED 灰色徽章
+                var display = card.querySelector('.duration-display');
+                if (display && !display.querySelector('.released-badge')) {
+                    display.innerHTML = '<span class="released-badge">&#128274; RELEASED</span>';
+                    card.classList.add('is-released');
+                }
+            } else {
+                var remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+                if (daysEl) daysEl.textContent = remainingDays;
+                if (progressEl && totalMs > 0) {
+                    var pct = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100));
+                    progressEl.style.width = pct.toFixed(1) + '%';
+                }
+            }
+        });
+    }
+    updateCountdowns();
+    setInterval(updateCountdowns, 60000); // 每分钟刷新一次
+})();
+</script>
 {% endblock %}

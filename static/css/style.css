@@ -72,6 +72,11 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     transition: background-color .35s ease, color .35s ease;
+    /* Flex 布局：让 footer 能被推到页面最底部，sidebar 能拉伸到全高 */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding-top: var(--header-h, 110px);
 }
 
 /* 深空蓝背景上的径向光晕 + 噪点 */
@@ -327,6 +332,7 @@ button { font-family: inherit; cursor: pointer; }
     display: grid; place-items: center;
     background: linear-gradient(135deg, var(--primary), var(--gold));
     color: #07122A; font-weight: 800;
+    font-size: 1.4rem;
 }
 
 .user-dropdown {

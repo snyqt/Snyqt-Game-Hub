@@ -1,0 +1,864 @@
+/* ====================================================================
+   SNYQT Game Hub — Design System (theme.css)
+   品牌身份：函数棋 (Function Chess)
+   主色系：深空蓝 / 函数绿 / 积分金
+   字体：Unbounded (display) · Manrope (body) · JetBrains Mono (mono)
+   参考：wakudemo.cn 独立游戏平台视觉语言
+   --------------------------------------------------------------------
+   - 主题切换：<html data-theme="dark|light">
+   - 所有颜色变量统一在 [data-theme] 选择器下定义
+   - 组件类只引用变量，不直接硬编码颜色
+   ==================================================================== */
+
+/* ====================================================================
+   SubTask 5.2 — @font-face 字体声明
+   ==================================================================== */
+
+/* --- Unbounded (Display 字体，用于标题 / Logo / 数字) --- */
+@font-face {
+    font-family: 'Unbounded';
+    src: url('../vendor/fonts/unbounded-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Unbounded';
+    src: url('../vendor/fonts/unbounded-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Unbounded';
+    src: url('../vendor/fonts/unbounded-900.woff2') format('woff2');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* --- Manrope (Body 字体，用于正文 / UI 文案) --- */
+@font-face {
+    font-family: 'Manrope';
+    src: url('../vendor/fonts/manrope-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Manrope';
+    src: url('../vendor/fonts/manrope-500.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Manrope';
+    src: url('../vendor/fonts/manrope-600.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Manrope';
+    src: url('../vendor/fonts/manrope-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* --- JetBrains Mono (Mono 字体，用于代码 / 积分数字) --- */
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('../vendor/fonts/jetbrains-mono-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('../vendor/fonts/jetbrains-mono-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ====================================================================
+   SubTask 5.1 — 主题变量 (CSS Custom Properties)
+   ==================================================================== */
+
+/* --- :root 默认 = 深色主题（即使未设置 data-theme 也能正常显示） --- */
+:root,
+[data-theme="dark"] {
+    /* 背景 Background */
+    --bg-base: #0a0e1a;              /* 深空蓝主背景 */
+    --bg-elevated: #131829;         /* 抬升层（导航 / 侧边栏） */
+    --bg-card: rgba(20, 25, 45, 0.6);/* 玻璃态卡片底 */
+    --bg-overlay: rgba(0, 0, 0, 0.6);/* 模态遮罩 */
+
+    /* 前景 Foreground */
+    --fg-primary: #e8ecf5;          /* 主文本 */
+    --fg-secondary: #a0a8bd;        /* 次要文本 */
+    --fg-muted: #6b7387;            /* 弱化文本 */
+
+    /* 强调色 Accent */
+    --accent-primary: #00ff9d;      /* 函数绿 - 主操作 */
+    --accent-secondary: #ffc857;    /* 积分金 - 强调/奖励 */
+    --accent-danger: #ff3860;       /* 危险红 */
+    --accent-purple: #8b5cf6;       /* 游戏类型指示 */
+    --accent-cyan: #06b6d4;         /* 帖子类型指示 */
+
+    /* 边框 Border */
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.04);
+
+    /* 阴影 Shadow (elevation 1-5) */
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.2);
+    --shadow-4: 0 16px 48px rgba(0, 0, 0, 0.3);
+    --shadow-5: 0 0 24px rgba(0, 255, 157, 0.3);  /* 函数绿光晕 */
+
+    /* 圆角 Radius */
+    --radius-sm: 6px;     /* badges / tags */
+    --radius-md: 12px;    /* cards / inputs */
+    --radius-lg: 20px;    /* modals / hero */
+    --radius-pill: 999px; /* buttons / chips */
+
+    /* 间距 Spacing (8pt grid) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+    --space-8: 40px;
+    --space-9: 48px;
+    --space-10: 64px;
+    --space-11: 80px;
+
+    /* 字体族 Font Family */
+    --font-display: 'Unbounded', 'Manrope', system-ui, -apple-system, sans-serif;
+    --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    /* 玻璃态 Glassmorphism */
+    --glass-bg: rgba(0, 255, 157, 0.05);
+    --glass-border: rgba(0, 255, 157, 0.15);
+
+    /* 过渡 Transition */
+    --transition-fast: 120ms ease;
+    --transition-base: 200ms ease;
+    --transition-slow: 350ms ease;
+
+    /* 选中态 / 滚动条 */
+    --selection-bg: var(--accent-primary);
+    --selection-fg: #0a0e1a;
+    --scrollbar-track: rgba(255, 255, 255, 0.02);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+    --scrollbar-thumb-hover: var(--accent-primary);
+}
+
+/* --- Light Theme（浅色主题） --- */
+[data-theme="light"] {
+    --bg-base: #f7f8fc;
+    --bg-elevated: #ffffff;
+    --bg-card: rgba(255, 255, 255, 0.7);
+    --bg-overlay: rgba(0, 0, 0, 0.4);
+
+    --fg-primary: #1a1f36;
+    --fg-secondary: #4a5168;
+    --fg-muted: #8a92a8;
+
+    --accent-primary: #00cc7a;      /* 浅色背景下加深，确保对比度 */
+    --accent-secondary: #d4a017;
+    --accent-danger: #dc2626;
+    --accent-purple: #7c3aed;
+    --accent-cyan: #0891b2;
+
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-subtle: rgba(0, 0, 0, 0.04);
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-4: 0 16px 48px rgba(0, 0, 0, 0.18);
+    --shadow-5: 0 0 24px rgba(0, 204, 122, 0.25);
+
+    --glass-bg: rgba(0, 204, 122, 0.04);
+    --glass-border: rgba(0, 204, 122, 0.18);
+
+    --selection-bg: var(--accent-primary);
+    --selection-fg: #ffffff;
+
+    --scrollbar-track: rgba(0, 0, 0, 0.02);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+    --scrollbar-thumb-hover: var(--accent-primary);
+}
+
+/* ====================================================================
+   全局重置 & 基础排版
+   ==================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.55;
+    background-color: var(--bg-base);
+    color: var(--fg-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* 主题切换：在颜色属性上加平滑过渡 */
+    transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0 0 var(--space-3);
+    line-height: 1.2;
+    font-family: var(--font-display);
+    color: var(--fg-primary);
+    transition: color var(--transition-base);
+}
+
+h1 { font-size: 3rem; font-weight: 900; letter-spacing: -0.02em; }
+h2 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.75rem; font-weight: 700; }
+h4 { font-size: 1.375rem; font-weight: 700; }
+h5 { font-size: 1.125rem; font-weight: 600; }
+h6 { font-size: 1rem; font-weight: 600; }
+
+p { margin: 0 0 var(--space-3); }
+
+a {
+    color: var(--accent-primary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; display: block; }
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+}
+
+input, select, textarea {
+    font-family: inherit;
+    color: inherit;
+}
+
+code, pre, kbd, samp {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+}
+
+pre {
+    background: var(--bg-elevated);
+    color: var(--fg-primary);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+code {
+    background: var(--glass-bg);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+}
+
+/* ====================================================================
+   选中态 / 滚动条
+   ==================================================================== */
+
+::selection {
+    background: var(--selection-bg);
+    color: var(--selection-fg);
+}
+
+::-moz-selection {
+    background: var(--selection-bg);
+    color: var(--selection-fg);
+}
+
+/* Webkit 滚动条 */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-pill);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    background-clip: padding-box;
+}
+/* Firefox 滚动条 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* ====================================================================
+   SubTask 5.3 — 按钮系统
+   ==================================================================== */
+
+.btn {
+    /* 布局 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    /* 外观 */
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    background: transparent;
+    /* 排版 */
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    color: var(--fg-primary);
+    /* 交互 */
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    transition: transform var(--transition-base), box-shadow var(--transition-base),
+                background var(--transition-base), border-color var(--transition-base),
+                color var(--transition-base);
+}
+.btn:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+.btn-sm { padding: var(--space-2) var(--space-3); font-size: 0.8rem; }
+.btn-lg { padding: var(--space-4) var(--space-6); font-size: 1.05rem; }
+.btn-block { width: 100%; }
+
+/* Primary：函数绿主操作 */
+.btn-primary {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.25);
+}
+[data-theme="light"] .btn-primary { color: #ffffff; }
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-5), 0 8px 20px rgba(0, 255, 157, 0.35);
+    filter: brightness(1.08);
+}
+
+/* Secondary：积分金次操作 */
+.btn-secondary {
+    background: var(--accent-secondary);
+    color: #1a1300;
+    box-shadow: 0 4px 14px rgba(255, 200, 87, 0.25);
+}
+[data-theme="light"] .btn-secondary { color: #ffffff; }
+.btn-secondary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 200, 87, 0.4);
+    filter: brightness(1.05);
+}
+
+/* Danger：危险操作 */
+.btn-danger {
+    background: var(--accent-danger);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(255, 56, 96, 0.25);
+}
+.btn-danger:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 56, 96, 0.4);
+    filter: brightness(1.05);
+}
+
+/* Ghost：幽灵按钮（透明 + 边框） */
+.btn-ghost {
+    background: transparent;
+    color: var(--fg-primary);
+    border-color: var(--border-color);
+}
+.btn-ghost:hover:not(:disabled) {
+    background: var(--glass-bg);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-2px);
+}
+
+/* ====================================================================
+   SubTask 5.3 — 卡片系统（玻璃态 + 切角）
+   ==================================================================== */
+
+.card {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-2);
+    transition: transform var(--transition-base), box-shadow var(--transition-base),
+                border-color var(--transition-base), background var(--transition-base);
+}
+
+/* 玻璃态卡片 */
+.card-glass {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+[data-theme="light"] .card-glass {
+    box-shadow: var(--shadow-3), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* 切角装饰：使用 clip-path 在右上角切一刀 */
+.card-glass::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, transparent 50%, var(--accent-primary) 50%);
+    opacity: 0.5;
+    pointer-events: none;
+    border-top-right-radius: var(--radius-md);
+}
+
+/* 卡片 hover 反馈 */
+.card-hover {
+    cursor: pointer;
+}
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-4);
+    border-color: var(--accent-primary);
+}
+
+/* ====================================================================
+   SubTask 5.3 — 徽章系统
+   ==================================================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+.badge-success {
+    background: rgba(0, 255, 157, 0.15);
+    color: var(--accent-primary);
+    border-color: rgba(0, 255, 157, 0.35);
+}
+[data-theme="light"] .badge-success {
+    background: rgba(0, 204, 122, 0.12);
+    border-color: rgba(0, 204, 122, 0.4);
+}
+.badge-warning {
+    background: rgba(255, 200, 87, 0.15);
+    color: var(--accent-secondary);
+    border-color: rgba(255, 200, 87, 0.35);
+}
+.badge-danger {
+    background: rgba(255, 56, 96, 0.15);
+    color: var(--accent-danger);
+    border-color: rgba(255, 56, 96, 0.35);
+}
+.badge-info {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    border-color: rgba(6, 182, 212, 0.35);
+}
+.badge-purple {
+    background: rgba(139, 92, 246, 0.15);
+    color: var(--accent-purple);
+    border-color: rgba(139, 92, 246, 0.35);
+}
+.badge-muted {
+    background: var(--glass-bg);
+    color: var(--fg-muted);
+    border-color: var(--border-color);
+}
+
+/* ====================================================================
+   SubTask 5.3 — 标签 / Chip 系统
+   ==================================================================== */
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+.tag-chip:hover {
+    background: rgba(0, 255, 157, 0.12);
+    border-color: var(--accent-primary);
+}
+
+/* 已认证标签（带勾选图标） */
+.tag-chip-verified {
+    background: linear-gradient(135deg, rgba(0, 255, 157, 0.15), rgba(255, 200, 87, 0.1));
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 12px rgba(0, 255, 157, 0.15);
+}
+.tag-chip-verified::before {
+    content: "✓";
+    font-weight: 700;
+    color: var(--accent-primary);
+    font-size: 0.7rem;
+}
+[data-theme="light"] .tag-chip-verified {
+    box-shadow: 0 0 12px rgba(0, 204, 122, 0.2);
+}
+
+/* ====================================================================
+   SubTask 5.3 — 输入框系统
+   ==================================================================== */
+
+.input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+.input::placeholder {
+    color: var(--fg-muted);
+}
+.input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+    background: var(--bg-base);
+}
+[data-theme="light"] .input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+}
+.input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+textarea.input {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* 输入框组合（带前缀/后缀） */
+.input-group {
+    display: flex;
+    align-items: stretch;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    overflow: hidden;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.input-group:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+}
+.input-group .input {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.input-group .input:focus {
+    box-shadow: none;
+}
+.input-group .input-prefix,
+.input-group .input-suffix {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--space-3);
+    color: var(--fg-muted);
+    background: var(--glass-bg);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+/* ====================================================================
+   SubTask 5.3 — 模态框
+   ==================================================================== */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+.modal-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-4);
+    width: min(560px, 92vw);
+    max-height: 90vh;
+    overflow: auto;
+    padding: var(--space-6);
+    transform: translateY(12px) scale(0.98);
+    transition: transform var(--transition-base);
+}
+.modal-backdrop.is-open .modal-content {
+    transform: translateY(0) scale(1);
+}
+
+/* ====================================================================
+   SubTask 5.3 — 骨架屏（加载占位）
+   ==================================================================== */
+
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    color: transparent !important;
+}
+.skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.06) 50%,
+        transparent 100%
+    );
+    animation: skeleton-shimmer 1.6s infinite;
+}
+[data-theme="light"] .skeleton::after {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 0, 0, 0.06) 50%,
+        transparent 100%
+    );
+}
+.skeleton-shimmer {
+    /* 显式调用 shimmer 动画的别名类（同时支持 .skeleton 与 .skeleton-shimmer） */
+    animation: skeleton-shimmer 1.6s infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* ====================================================================
+   SubTask 5.4 — 动效系统
+   ==================================================================== */
+
+/* IntersectionObserver 触发的入场动画 */
+.reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 600ms ease, transform 600ms ease;
+    will-change: opacity, transform;
+}
+.reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 交错入场（80ms 步长，通过 --streak 自定义属性或 .reveal-N 类使用） */
+.reveal-1 { transition-delay: 80ms; }
+.reveal-2 { transition-delay: 160ms; }
+.reveal-3 { transition-delay: 240ms; }
+.reveal-4 { transition-delay: 320ms; }
+.reveal-5 { transition-delay: 400ms; }
+.reveal-6 { transition-delay: 480ms; }
+.reveal-7 { transition-delay: 560ms; }
+.reveal-8 { transition-delay: 640ms; }
+
+/* 通过 inline style 设置 --reveal-delay 可自定义步进 */
+.reveal[style*="--reveal-delay"] {
+    transition-delay: var(--reveal-delay);
+}
+
+/* CountUp：JS 检测 [data-count] 后启动数字滚动 */
+[data-count] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+}
+
+/* 玻璃态微光：缓慢的渐变流动 */
+@keyframes glass-shimmer {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+.card-glass.is-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        120deg,
+        transparent 30%,
+        rgba(0, 255, 157, 0.08) 50%,
+        transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: glass-shimmer 3s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* hover 抬升（元素通用） */
+.lift-on-hover {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+.lift-on-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-3);
+}
+
+/* ====================================================================
+   发光效果（函数绿光晕）
+   ==================================================================== */
+
+.glow-text {
+    color: var(--accent-primary);
+    text-shadow: 0 0 8px rgba(0, 255, 157, 0.4), 0 0 16px rgba(0, 255, 157, 0.2);
+}
+[data-theme="light"] .glow-text {
+    text-shadow: 0 0 6px rgba(0, 204, 122, 0.3);
+}
+
+.glow-border {
+    border: 1px solid var(--accent-primary);
+    box-shadow: 0 0 0 1px rgba(0, 255, 157, 0.2), var(--shadow-5);
+}
+[data-theme="light"] .glow-border {
+    box-shadow: 0 0 0 1px rgba(0, 204, 122, 0.2), var(--shadow-5);
+}
+
+/* ====================================================================
+   Reduced Motion：尊重用户的动效偏好
+   ==================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .reveal {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .card-glass.is-shimmer::after,
+    .skeleton::after {
+        animation: none !important;
+    }
+
+    .btn:hover:not(:disabled),
+    .card-hover:hover,
+    .lift-on-hover:hover {
+        transform: none !important;
+    }
+}
+
+/* ====================================================================
+   工具类（最小集，供模板直接使用）
+   ==================================================================== */
+
+.font-display { font-family: var(--font-display); }
+.font-body    { font-family: var(--font-body); }
+.font-mono    { font-family: var(--font-mono); }
+
+.text-primary   { color: var(--fg-primary); }
+.text-secondary { color: var(--fg-secondary); }
+.text-muted     { color: var(--fg-muted); }
+.text-accent    { color: var(--accent-primary); }
+.text-gold      { color: var(--accent-secondary); }
+.text-danger    { color: var(--accent-danger); }
+
+.bg-base     { background-color: var(--bg-base); }
+.bg-elevated { background-color: var(--bg-elevated); }
+.bg-card     { background-color: var(--bg-card); }
+
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }

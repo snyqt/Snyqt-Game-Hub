@@ -32,6 +32,8 @@ VERIFY_CALLBACK = os.getenv('VERIFY_CALLBACK', 'https://your-domain.example.com/
 
 
 # ==================== Cloudflare Turnstile ====================
+# 是否启用 Turnstile 人机验证（总开关，false 时完全跳过中间件注册）
+TURNSTILE_ENABLED = os.getenv('TURNSTILE_ENABLED', 'true').lower() == 'true'
 TURNSTILE_SITEKEY = os.getenv('TURNSTILE_SITEKEY', 'your_turnstile_sitekey')
 TURNSTILE_SECRET = os.getenv('TURNSTILE_SECRET', 'your_turnstile_secret')
 # 验证有效期（小时）
@@ -57,3 +59,9 @@ DEVELOPER_REVIEW = os.getenv('DEVELOPER_REVIEW', 'manual')
 # ==================== Flask 安全 ====================
 # 生产环境务必通过环境变量注入随机字符串
 SECRET_KEY = os.getenv('SECRET_KEY', 'please-change-this-to-a-random-secret')
+
+
+# ==================== 易支付配置 ====================
+EPAY_PID = int(os.environ.get('EPAY_PID', 'YOUR_MERCHANT_ID'))
+EPAY_KEY = os.environ.get('EPAY_KEY', 'YOUR_MERCHANT_KEY')
+EPAY_API = os.environ.get('EPAY_API', 'https://your-epay-api/')

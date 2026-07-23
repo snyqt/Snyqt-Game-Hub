@@ -1,0 +1,1073 @@
+{% extends "base.html" %}
+
+{% block title %}试玩库排行榜{% endblock %}
+
+{% block head %}
+<style>
+/* ==================== 试玩库排行榜页面专属样式 ==================== */
+.rankings-page {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+/* ---------- 面包屑 ---------- */
+.rankings-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-4);
+}
+.rankings-breadcrumb a {
+    color: var(--fg-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.rankings-breadcrumb a:hover { color: var(--accent-primary); text-decoration: none; }
+.rankings-breadcrumb .sep { opacity: 0.5; }
+.rankings-breadcrumb .current { color: var(--fg-primary); font-weight: 500; }
+
+/* ---------- 页面标题 ---------- */
+.rankings-header {
+    margin-bottom: var(--space-6);
+}
+.rankings-title-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+.rankings-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--fg-primary);
+    margin: 0;
+    line-height: 1.1;
+}
+.rankings-title .accent { color: var(--accent-primary); }
+.rankings-subtitle {
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+.btn-back-store {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    color: var(--fg-primary);
+    border: 1px solid var(--border-color);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.btn-back-store:hover {
+    text-decoration: none;
+    background: var(--glass-bg);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+.btn-back-store svg { width: 16px; height: 16px; }
+
+/* ---------- 两栏布局 ---------- */
+.rankings-layout {
+    display: grid;
+    grid-template-columns: 25% 1fr;
+    gap: var(--space-6);
+    align-items: start;
+}
+
+/* ==================== 左侧榜单导航 ==================== */
+.rankings-nav {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--space-4));
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: var(--shadow-2);
+}
+.rankings-nav-title {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin: 0 0 var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+}
+.rank-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.rank-nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    color: var(--fg-secondary);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    position: relative;
+}
+.rank-nav-item:hover {
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+.rank-nav-item.active {
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border-left-color: var(--accent-primary);
+    font-weight: 600;
+}
+.rank-nav-item .nav-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.rank-nav-item.active .nav-icon {
+    background: var(--accent-primary);
+    color: var(--bg-base);
+}
+.rank-nav-item .nav-text {
+    flex: 1;
+    min-width: 0;
+}
+.rank-nav-item .nav-name {
+    font-size: 0.92rem;
+    line-height: 1.3;
+}
+.rank-nav-item .nav-desc {
+    font-size: 0.72rem;
+    color: var(--fg-muted);
+    margin-top: 2px;
+}
+.rank-nav-item.active .nav-desc {
+    color: var(--fg-secondary);
+}
+.rank-nav-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: var(--space-2) 0;
+}
+
+/* ==================== 主内容区 ==================== */
+.rankings-main {
+    min-width: 0;
+}
+
+/* ---------- 数据概览卡片 ---------- */
+.overview-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+.overview-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5) var(--space-4);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: var(--shadow-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+    position: relative;
+    overflow: hidden;
+}
+.overview-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent-primary);
+    opacity: 0.7;
+}
+.overview-card:nth-child(2)::before { background: var(--accent-secondary); }
+.overview-card:nth-child(3)::before { background: var(--accent-cyan); }
+.overview-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-3);
+}
+.overview-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 255, 157, 0.1);
+    color: var(--accent-primary);
+}
+.overview-card:nth-child(2) .overview-icon {
+    background: rgba(255, 200, 87, 0.12);
+    color: var(--accent-secondary);
+}
+.overview-card:nth-child(3) .overview-icon {
+    background: rgba(6, 182, 212, 0.12);
+    color: var(--accent-cyan);
+}
+.overview-icon svg { width: 24px; height: 24px; }
+.overview-body { min-width: 0; flex: 1; }
+.overview-value {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+    font-weight: 900;
+    color: var(--fg-primary);
+    line-height: 1.1;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+.overview-label {
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    margin: 2px 0 0;
+}
+
+/* ---------- Top 30 列表区 ---------- */
+.top-list-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: var(--shadow-2);
+}
+.top-list-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+}
+.top-list-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+}
+.top-list-title .accent { color: var(--accent-primary); }
+.top-list-meta {
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    margin-top: 4px;
+}
+.top-list-meta svg {
+    width: 13px;
+    height: 13px;
+    vertical-align: -2px;
+    margin-right: 4px;
+}
+
+/* ---------- 游戏条目 ---------- */
+.top-game-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.top-game-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    transition: transform var(--transition-base), background var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+    position: relative;
+}
+.top-game-item:hover {
+    transform: translateY(-2px);
+    background: var(--glass-bg);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-3);
+}
+.top-game-item.is-top3 {
+    background: linear-gradient(135deg, var(--glass-bg) 0%, transparent 100%);
+    border-color: var(--border-color);
+}
+.top-game-item.is-top3:hover {
+    background: linear-gradient(135deg, var(--glass-bg) 0%, var(--bg-elevated) 100%);
+}
+
+/* 排名 */
+.top-rank {
+    width: 60px;
+    flex-shrink: 0;
+    text-align: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.6rem;
+    color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.top-rank .rank-medal {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 900;
+}
+.top-rank .rank-num {
+    font-size: 1.4rem;
+}
+.top-game-item.is-top3 .top-rank { font-size: 2rem; }
+.top-game-item.rank-1 .rank-medal {
+    background: linear-gradient(135deg, #ffd700, #ffa500);
+    color: #2a1a00;
+    box-shadow: 0 0 16px rgba(255, 200, 87, 0.4);
+}
+.top-game-item.rank-2 .rank-medal {
+    background: linear-gradient(135deg, #e0e0e0, #a0a0a0);
+    color: #1a1a1a;
+    box-shadow: 0 0 12px rgba(200, 200, 200, 0.3);
+}
+.top-game-item.rank-3 .rank-medal {
+    background: linear-gradient(135deg, #cd7f32, #8b4513);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(205, 127, 50, 0.4);
+}
+
+/* 封面 */
+.top-cover {
+    width: 80px;
+    height: 60px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+.top-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.top-cover-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-muted);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    background: var(--bg-elevated);
+}
+.top-cover-fallback svg { width: 28px; height: 28px; }
+
+/* 游戏信息 */
+.top-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.top-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--fg-primary);
+    margin: 0;
+    line-height: 1.3;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--transition-fast);
+}
+.top-title:hover {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+.top-tags {
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.top-tags .tag-sep { opacity: 0.5; }
+.top-tags .tag-label { color: var(--fg-muted); }
+.top-tags .tag-name { color: var(--accent-cyan); }
+.top-desc {
+    font-size: 0.8rem;
+    color: var(--fg-secondary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 统计信息 */
+.top-stats {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    text-align: right;
+}
+.top-stat-clicks {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+}
+.top-stat-clicks svg { width: 14px; height: 14px; }
+.top-stat-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+.badge-free {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 255, 157, 0.12);
+    color: var(--accent-primary);
+    border: 1px solid var(--glass-border);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.badge-free svg { width: 12px; height: 12px; }
+.badge-growth {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+.badge-growth.negative { color: var(--accent-danger); }
+.badge-growth.neutral { color: var(--fg-muted); }
+.top-stat-comments {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--fg-secondary);
+    font-variant-numeric: tabular-nums;
+}
+.top-stat-comments svg { width: 14px; height: 14px; }
+
+/* ---------- 分页 ---------- */
+.rankings-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+}
+.pagination-info {
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+}
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+.page-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    color: var(--fg-secondary);
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.page-btn:hover:not(:disabled):not(.active) {
+    background: var(--glass-bg);
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+.page-btn.active {
+    background: var(--accent-primary);
+    color: var(--bg-base);
+    border-color: var(--accent-primary);
+    cursor: default;
+}
+[data-theme="light"] .page-btn.active { color: #ffffff; }
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.page-btn svg { width: 14px; height: 14px; }
+
+/* ---------- 更新时间 ---------- */
+.update-time {
+    margin-top: var(--space-4);
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.update-time svg { width: 13px; height: 13px; }
+
+/* ---------- 空状态 ---------- */
+.rankings-empty {
+    text-align: center;
+    padding: var(--space-8) var(--space-4);
+    color: var(--fg-muted);
+}
+.rankings-empty svg {
+    width: 56px;
+    height: 56px;
+    margin-bottom: var(--space-3);
+    opacity: 0.4;
+}
+.rankings-empty p { margin: 0; font-size: 0.95rem; }
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 1024px) {
+    .overview-section { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .rankings-layout {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+    }
+    /* 移动端：导航变横向滚动 */
+    .rankings-nav {
+        position: static;
+        padding: var(--space-3);
+    }
+    .rankings-nav-title {
+        margin: 0 0 var(--space-3);
+        padding-bottom: var(--space-2);
+    }
+    .rank-nav-list {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: var(--space-2);
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+    }
+    .rank-nav-list::-webkit-scrollbar { height: 4px; }
+    .rank-nav-list::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
+    .rank-nav-item {
+        flex-shrink: 0;
+        flex-direction: row;
+        align-items: center;
+        padding: var(--space-2) var(--space-3);
+        border-left: none;
+        border-bottom: 3px solid transparent;
+    }
+    .rank-nav-item.active {
+        border-left: none;
+        border-bottom-color: var(--accent-primary);
+    }
+    .rank-nav-item .nav-desc { display: none; }
+    .rank-nav-divider { display: none; }
+
+    .overview-section {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+    .overview-card { padding: var(--space-4); }
+
+    .top-list-section { padding: var(--space-4); }
+    .top-game-item {
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        padding: var(--space-3);
+    }
+    .top-rank { width: 44px; font-size: 1.2rem; }
+    .top-game-item.is-top3 .top-rank { font-size: 1.4rem; }
+    .top-cover { width: 64px; height: 48px; }
+    .top-info { width: calc(100% - 110px); }
+    .top-stats {
+        width: 100%;
+        justify-content: space-between;
+        padding-top: var(--space-2);
+        border-top: 1px solid var(--border-subtle);
+    }
+    .top-stat-clicks { font-size: 0.95rem; }
+    .rankings-pagination { flex-direction: column; align-items: center; }
+}
+
+/* ---------- 尊重 reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .overview-card,
+    .top-game-item,
+    .rank-nav-item,
+    .page-btn,
+    .btn-back-store {
+        transition: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rankings-page">
+
+    {# ==================== 面包屑 ==================== #}
+    <nav class="rankings-breadcrumb" aria-label="面包屑导航">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep">/</span>
+        <a href="{{ url_for('games.store') }}">试玩库</a>
+        <span class="sep">/</span>
+        <span class="current">排行榜</span>
+    </nav>
+
+    {# ==================== 页面标题 ==================== #}
+    <header class="rankings-header">
+        <div class="rankings-title-row">
+            <div>
+                <h1 class="rankings-title">试玩库<span class="accent">排行榜</span></h1>
+                <p class="rankings-subtitle">实时更新，发现最受欢迎的游戏</p>
+            </div>
+            <a class="btn-back-store" href="{{ url_for('games.store') }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                返回试玩库
+            </a>
+        </div>
+    </header>
+
+    {# ==================== 两栏布局 ==================== #}
+    <div class="rankings-layout">
+
+        {# ---------- 左侧榜单导航 ---------- #}
+        <aside class="rankings-nav" aria-label="榜单导航">
+            <h2 class="rankings-nav-title">榜单导航</h2>
+            <ul class="rank-nav-list">
+                {# 榜单概览：跳转页面顶部（非排行榜类型） #}
+                <li>
+                    <a class="rank-nav-item" href="#top" data-key="overview">
+                        <span class="nav-icon">概</span>
+                        <span class="nav-text">
+                            <span class="nav-name">榜单概览</span>
+                            <span class="nav-desc">数据总览</span>
+                        </span>
+                    </a>
+                </li>
+                <li class="rank-nav-divider" aria-hidden="true"></li>
+                {% for rt in rank_types %}
+                <li>
+                    <a class="rank-nav-item {{ 'active' if current_rank == rt.key else '' }}"
+                       href="{{ url_for('games.store_rankings', type=rt.key) }}"
+                       data-key="{{ rt.key }}">
+                        <span class="nav-icon">{{ loop.index }}</span>
+                        <span class="nav-text">
+                            <span class="nav-name">{{ rt.name }}</span>
+                            <span class="nav-desc">{{ rt.desc }}</span>
+                        </span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </aside>
+
+        {# ---------- 主内容区 ---------- #}
+        <main class="rankings-main" id="top">
+
+            {# ==================== 数据概览 ==================== #}
+            <section class="overview-section" aria-label="数据概览">
+                <div class="overview-card">
+                    <span class="overview-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 3v18M18 3v18M3 6h18M3 18h18"/>
+                        </svg>
+                    </span>
+                    <div class="overview-body">
+                        <p class="overview-value">{{ overview.total_games|default(0) }}</p>
+                        <p class="overview-label">游戏总数</p>
+                    </div>
+                </div>
+                <div class="overview-card">
+                    <span class="overview-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                    </span>
+                    <div class="overview-body">
+                        <p class="overview-value count-up" data-target="{{ overview.total_downloads|default(0) }}">0</p>
+                        <p class="overview-label">下载总数</p>
+                    </div>
+                </div>
+                <div class="overview-card">
+                    <span class="overview-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </span>
+                    <div class="overview-body">
+                        <p class="overview-value count-up" data-target="{{ overview.total_clicks|default(0) }}">0</p>
+                        <p class="overview-label">点击总数</p>
+                    </div>
+                </div>
+            </section>
+
+            {# ==================== Top 30 列表 ==================== #}
+            <section class="top-list-section" aria-label="Top 30 列表">
+                <div class="top-list-header">
+                    <div>
+                        {# 当前榜单名称（使用 namespace 避免 Jinja2 for 循环作用域问题） #}
+                        {% set ns = namespace(name='热门游戏榜') %}
+                        {% for rt in rank_types %}
+                            {% if rt.key == current_rank %}{% set ns.name = rt.name %}{% endif %}
+                        {% endfor %}
+                        <h2 class="top-list-title">{{ ns.name }} · <span class="accent">Top 30</span></h2>
+                        <div class="top-list-meta">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            数据更新于 {{ now.strftime('%Y-%m-%d %H:%M') }}
+                        </div>
+                    </div>
+                </div>
+
+                {% if top_games %}
+                <ol class="top-game-list" id="top-game-list">
+                    {% for g in top_games %}
+                    {% set rank_num = loop.index %}
+                    {% set first_tag = g.tags.split(',')[0].strip() if g.tags else '未分类' %}
+                    {% set second_tag = g.tags.split(',')[1].strip() if g.tags and ',' in g.tags else '' %}
+                    <li class="top-game-item {{ 'is-top3' if rank_num <= 3 else '' }} rank-{{ rank_num }} game-row"
+                        data-index="{{ rank_num - 1 }}"
+                        {{ 'style="display:none;"' if rank_num > 10 else '' }}>
+                        {# 排名 #}
+                        <div class="top-rank">
+                            {% if rank_num <= 3 %}
+                                <span class="rank-medal" aria-label="第 {{ rank_num }} 名">
+                                    {% if rank_num == 1 %}1{% elif rank_num == 2 %}2{% else %}3{% endif %}
+                                </span>
+                            {% else %}
+                                <span class="rank-num">{{ rank_num }}</span>
+                            {% endif %}
+                        </div>
+
+                        {# 封面 #}
+                        <div class="top-cover">
+                            {% if g.cover_image %}
+                                <img src="{{ url_for('games.serve_upload', path=g.cover_image) }}"
+                                     alt="{{ g.title }}的封面" loading="lazy">
+                            {% else %}
+                                <span class="top-cover-fallback" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                                        <path d="M21 15l-5-5L5 21"/>
+                                    </svg>
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        {# 游戏信息 #}
+                        <div class="top-info">
+                            <a class="top-title" href="{{ url_for('games.game_detail', gid=g.id) }}"
+                               title="{{ g.title }}">{{ g.title }}</a>
+                            <div class="top-tags">
+                                <span class="tag-label">标签</span>
+                                <span class="tag-sep">&gt;</span>
+                                <span class="tag-name">{{ first_tag }}</span>
+                                {% if second_tag %}
+                                    <span class="tag-sep">·</span>
+                                    <span class="tag-name">{{ second_tag }}</span>
+                                {% endif %}
+                            </div>
+                            <p class="top-desc">{{ g.description|default('暂无描述') }}</p>
+                        </div>
+
+                        {# 统计信息 #}
+                        <div class="top-stats">
+                            <span class="top-stat-clicks" title="下载量">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                                {{ g.download_count|default(0) }}
+                            </span>
+                            <div class="top-stat-badges">
+                                {% if g.access_mode == 'public' and (g.price|default(0)) == 0 %}
+                                <span class="badge-free">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 6L9 17l-5-5"/>
+                                    </svg>
+                                    免费开玩
+                                </span>
+                                {% endif %}
+                                <span class="badge-growth neutral" title="增长率（占位）">+0%</span>
+                            </div>
+                            <span class="top-stat-comments" title="评论数">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                {{ g.review_count|default(0) }}
+                            </span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+
+                {# ---------- 分页 ---------- #}
+                <div class="rankings-pagination" id="rankings-pagination">
+                    <span class="pagination-info" id="pagination-info">1-{{ 10 if (top_games|length) > 10 else (top_games|length) }} / {{ top_games|length }} 条</span>
+                    <div class="pagination-controls" id="pagination-controls">
+                        <button type="button" class="page-btn" id="prev-page" disabled aria-label="上一页">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                        </button>
+                        <span id="page-numbers"></span>
+                        <button type="button" class="page-btn" id="next-page" aria-label="下一页">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="rankings-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.3-4.3"/>
+                    </svg>
+                    <p>暂无上榜游戏</p>
+                </div>
+                {% endif %}
+
+                {# ---------- 更新时间 ---------- #}
+                <p class="update-time">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    数据每小时更新一次，最后更新于 {{ now.strftime('%Y-%m-%d %H:%M') }}
+                </p>
+            </section>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ==================== CountUp 数字滚动动画 ==================== */
+    function countUp(el, target, duration) {
+        if (prefersReducedMotion) {
+            el.textContent = target.toLocaleString('zh-CN');
+            return;
+        }
+        target = Number(target) || 0;
+        duration = duration || 1400;
+        var start = 0;
+        var startTime = null;
+        function step(ts) {
+            if (!startTime) startTime = ts;
+            var progress = Math.min((ts - startTime) / duration, 1);
+            // easeOutCubic
+            var eased = 1 - Math.pow(1 - progress, 3);
+            var current = Math.floor(eased * target);
+            el.textContent = current.toLocaleString('zh-CN');
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                el.textContent = target.toLocaleString('zh-CN');
+            }
+        }
+        requestAnimationFrame(step);
+    }
+
+    /* 使用 IntersectionObserver 触发 CountUp */
+    if ('IntersectionObserver' in window) {
+        var cuEls = document.querySelectorAll('.count-up');
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    var el = entry.target;
+                    var target = parseInt(el.getAttribute('data-target') || '0', 10);
+                    countUp(el, target, 1400);
+                    io.unobserve(el);
+                }
+            });
+        }, { threshold: 0.4 });
+        cuEls.forEach(function (el) { io.observe(el); });
+    } else {
+        // 降级：直接显示
+        document.querySelectorAll('.count-up').forEach(function (el) {
+            el.textContent = (parseInt(el.getAttribute('data-target') || '0', 10)).toLocaleString('zh-CN');
+        });
+    }
+
+    /* ==================== 客户端分页 ==================== */
+    (function initPagination() {
+        var rows = document.querySelectorAll('.game-row');
+        if (rows.length === 0) return;
+
+        var pageSize = 10;
+        var totalPages = Math.ceil(rows.length / pageSize);
+        var currentPage = 1;
+        var prevBtn = document.getElementById('prev-page');
+        var nextBtn = document.getElementById('next-page');
+        var infoEl = document.getElementById('pagination-info');
+        var numbersEl = document.getElementById('page-numbers');
+
+        function render() {
+            var startIdx = (currentPage - 1) * pageSize;
+            var endIdx = Math.min(currentPage * pageSize, rows.length);
+
+            rows.forEach(function (row, idx) {
+                row.style.display = (idx >= startIdx && idx < endIdx) ? '' : 'none';
+            });
+
+            // 信息
+            var startShow = startIdx + 1;
+            var endShow = endIdx;
+            infoEl.textContent = startShow + '-' + endShow + ' / ' + rows.length + ' 条';
+
+            // 按钮状态
+            prevBtn.disabled = (currentPage <= 1);
+            nextBtn.disabled = (currentPage >= totalPages);
+
+            // 页码按钮
+            numbersEl.innerHTML = '';
+            for (var i = 1; i <= totalPages; i++) {
+                (function (pageNum) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'page-btn' + (pageNum === currentPage ? ' active' : '');
+                    btn.textContent = String(pageNum);
+                    btn.setAttribute('aria-label', '第 ' + pageNum + ' 页');
+                    if (pageNum === currentPage) {
+                        btn.setAttribute('aria-current', 'page');
+                        btn.disabled = true;
+                    }
+                    btn.addEventListener('click', function () {
+                        if (pageNum !== currentPage) {
+                            currentPage = pageNum;
+                            render();
+                            scrollToTop();
+                        }
+                    });
+                    numbersEl.appendChild(btn);
+                })(i);
+            }
+        }
+
+        function scrollToTop() {
+            var listEl = document.getElementById('top-list-section') || document.getElementById('top-game-list');
+            if (listEl && !prefersReducedMotion) {
+                listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (listEl) {
+                listEl.scrollIntoView({ block: 'start' });
+            }
+        }
+
+        prevBtn.addEventListener('click', function () {
+            if (currentPage > 1) {
+                currentPage--;
+                render();
+                scrollToTop();
+            }
+        });
+        nextBtn.addEventListener('click', function () {
+            if (currentPage < totalPages) {
+                currentPage++;
+                render();
+                scrollToTop();
+            }
+        });
+
+        render();
+    })();
+
+    /* ==================== 移动端导航横向滚动到当前项 ==================== */
+    (function scrollActiveIntoView() {
+        if (window.innerWidth > 768) return;
+        var activeNav = document.querySelector('.rank-nav-item.active');
+        if (activeNav && activeNav.parentElement) {
+            try {
+                activeNav.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+            } catch (_) { /* ignore */ }
+        }
+    })();
+})();
+</script>
+{% endblock %}

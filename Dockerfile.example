@@ -58,6 +58,8 @@ ENV LOGIN_CALLBACK=https://your-domain.example.com/callback
 ENV VERIFY_CALLBACK=https://your-domain.example.com/verify-callback
 
 # Cloudflare Turnstile
+# 是否启用 Turnstile 人机验证（总开关，false 时完全跳过）
+ENV TURNSTILE_ENABLED=true
 ENV TURNSTILE_SITEKEY=your_turnstile_sitekey
 ENV TURNSTILE_SECRET=your_turnstile_secret
 ENV TURNSTILE_VERIFY_DURATION_HOURS=2

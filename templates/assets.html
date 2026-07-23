@@ -1,0 +1,984 @@
+{% extends "base.html" %}
+
+{% block title %}游戏素材库{% endblock %}
+
+{% block head %}
+<style>
+/* ====================================================================
+   SNYQT Game Hub — 游戏素材库页（assets.html）专属样式
+   依赖 theme.css 的变量与组件类
+   品牌色：深空蓝 / 函数绿 / 积分金 / 函数紫
+   视觉语言：wakudemo.cn 风格 — 玻璃拟态 + 切角 + 函数绿光晕
+   ==================================================================== */
+
+.as-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: var(--space-2) 0 var(--space-8);
+}
+
+/* ==================== 1. 面包屑 ==================== */
+.as-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+}
+.as-breadcrumb a {
+    color: var(--fg-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+.as-breadcrumb a:hover { color: var(--accent-primary); }
+.as-breadcrumb .sep { color: var(--fg-muted); }
+.as-breadcrumb .current { color: var(--fg-primary); font-weight: 600; }
+
+/* ==================== 2. 页面头部 ==================== */
+.as-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-7);
+}
+.as-page-header .as-title-block { min-width: 0; flex: 1; }
+.as-page-header .page-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(2.2rem, 4.5vw, 3rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--space-2);
+    background: linear-gradient(135deg, var(--fg-primary) 0%, var(--accent-primary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+}
+.as-page-header .page-sub {
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+/* ==================== 3. 顶部精选区 ==================== */
+.as-featured-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
+}
+@media (max-width: 980px) {
+    .as-featured-grid { grid-template-columns: 1fr 1fr; }
+    .as-featured-card.as-weekly { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+    .as-featured-grid { grid-template-columns: 1fr; }
+    .as-featured-card.as-weekly { grid-column: auto; }
+}
+
+.as-featured-card {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--space-6);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-3);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+    cursor: pointer;
+    isolation: isolate;
+}
+.as-featured-card.as-weekly { min-height: 340px; }
+.as-featured-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.95;
+    transition: opacity var(--transition-base);
+}
+.as-featured-card.as-weekly::before {
+    background: linear-gradient(135deg, rgba(0, 255, 157, 0.18) 0%, rgba(10, 14, 26, 0.95) 70%),
+                radial-gradient(circle at 20% 20%, rgba(0, 255, 157, 0.25), transparent 60%);
+}
+.as-featured-card.as-hot::before {
+    background: linear-gradient(135deg, rgba(255, 200, 87, 0.18) 0%, rgba(10, 14, 26, 0.95) 70%),
+                radial-gradient(circle at 20% 20%, rgba(255, 200, 87, 0.25), transparent 60%);
+}
+.as-featured-card.as-new::before {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.20) 0%, rgba(10, 14, 26, 0.95) 70%),
+                radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.28), transparent 60%);
+}
+[data-theme="light"] .as-featured-card.as-weekly::before {
+    background: linear-gradient(135deg, rgba(0, 204, 122, 0.20) 0%, rgba(247, 248, 252, 0.95) 70%),
+                radial-gradient(circle at 20% 20%, rgba(0, 204, 122, 0.28), transparent 60%);
+}
+[data-theme="light"] .as-featured-card.as-hot::before {
+    background: linear-gradient(135deg, rgba(212, 160, 23, 0.20) 0%, rgba(247, 248, 252, 0.95) 70%),
+                radial-gradient(circle at 20% 20%, rgba(212, 160, 23, 0.30), transparent 60%);
+}
+[data-theme="light"] .as-featured-card.as-new::before {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.20) 0%, rgba(247, 248, 252, 0.95) 70%),
+                radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.28), transparent 60%);
+}
+.as-featured-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-5), 0 16px 40px rgba(0, 0, 0, 0.35);
+    border-color: var(--accent-primary);
+}
+.as-featured-card.as-hot:hover { border-color: var(--accent-secondary); }
+.as-featured-card.as-new:hover { border-color: var(--accent-purple); }
+
+.as-featured-type {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 4px var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+    width: fit-content;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.as-featured-card.as-hot .as-featured-type {
+    color: var(--accent-secondary);
+    border-color: rgba(255, 200, 87, 0.35);
+}
+.as-featured-card.as-new .as-featured-type {
+    color: var(--accent-purple);
+    border-color: rgba(139, 92, 246, 0.35);
+}
+
+.as-featured-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.4rem;
+    line-height: 1.25;
+    margin: 0 0 var(--space-2);
+    color: var(--fg-primary);
+}
+.as-featured-card.as-weekly .as-featured-title { font-size: 1.8rem; }
+
+.as-featured-author {
+    color: var(--fg-secondary);
+    font-size: 0.85rem;
+    margin: 0 0 var(--space-3);
+}
+.as-featured-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+.as-featured-tags .as-mini-tag {
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    color: var(--fg-secondary);
+    font-size: 0.72rem;
+}
+.as-featured-btn {
+    align-self: flex-start;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    cursor: pointer;
+    transition: transform var(--transition-base), box-shadow var(--transition-base), filter var(--transition-base);
+}
+[data-theme="light"] .as-featured-btn { color: #ffffff; }
+.as-featured-btn:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 255, 157, 0.35);
+    filter: brightness(1.08);
+}
+.as-featured-card.as-hot .as-featured-btn {
+    background: var(--accent-secondary);
+    color: #1a1300;
+}
+[data-theme="light"] .as-featured-card.as-hot .as-featured-btn { color: #ffffff; }
+.as-featured-card.as-hot .as-featured-btn:hover { box-shadow: 0 8px 20px rgba(255, 200, 87, 0.4); }
+.as-featured-card.as-new .as-featured-btn {
+    background: var(--accent-purple);
+    color: #ffffff;
+}
+.as-featured-card.as-new .as-featured-btn:hover { box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4); }
+
+/* ==================== 4. 搜索 + 排序 ==================== */
+.as-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+.as-search-box {
+    position: relative;
+    flex: 1;
+    max-width: 480px;
+    min-width: 240px;
+}
+.as-search-box .as-search-icon {
+    position: absolute;
+    left: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--fg-muted);
+    pointer-events: none;
+}
+.as-search-input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4) var(--space-3) 44px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+.as-search-input::placeholder { color: var(--fg-muted); }
+.as-search-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15);
+    background: var(--bg-base);
+}
+[data-theme="light"] .as-search-input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 204, 122, 0.15);
+}
+
+.as-sort-tabs {
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-1);
+    border-radius: var(--radius-pill);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.as-sort-btn {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    color: var(--fg-secondary);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.85rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--transition-base), background var(--transition-base);
+}
+.as-sort-btn:hover { color: var(--fg-primary); background: var(--glass-bg); }
+.as-sort-btn.is-active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+}
+[data-theme="light"] .as-sort-btn.is-active { color: #ffffff; }
+
+/* ==================== 5. 标签筛选云 ==================== */
+.as-tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-6);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.as-tag-btn {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    color: var(--fg-secondary);
+    border: 1px solid var(--border-color);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background var(--transition-base), color var(--transition-base), border-color var(--transition-base), transform var(--transition-fast);
+}
+.as-tag-btn:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+.as-tag-btn.is-active {
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    border-color: var(--accent-primary);
+}
+[data-theme="light"] .as-tag-btn.is-active { color: #ffffff; }
+.as-tag-btn.as-all { font-weight: 700; }
+
+/* ==================== 6. 素材网格 ==================== */
+.as-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
+}
+@media (max-width: 1200px) {
+    .as-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+    .as-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+}
+@media (max-width: 480px) {
+    .as-grid { grid-template-columns: 1fr; }
+}
+
+.as-card {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-2);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+    cursor: pointer;
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+}
+.as-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-4), 0 0 0 1px var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.as-cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--bg-elevated);
+}
+.as-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+.as-card:hover .as-cover img { transform: scale(1.06); }
+
+/* 占位渐变 + 标题首字 */
+.as-cover-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 3.5rem;
+    color: rgba(255, 255, 255, 0.85);
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%);
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    user-select: none;
+}
+[data-theme="light"] .as-cover-fallback { color: rgba(255, 255, 255, 0.95); }
+.as-card[data-cat="scene"] .as-cover-fallback { background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%); }
+.as-card[data-cat="ui"] .as-cover-fallback { background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-primary) 100%); }
+.as-card[data-cat="audio"] .as-cover-fallback { background: linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-danger) 100%); }
+.as-card[data-cat="effect"] .as-cover-fallback { background: linear-gradient(135deg, var(--accent-danger) 0%, var(--accent-purple) 100%); }
+.as-card[data-cat="tool"] .as-cover-fallback { background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-secondary) 100%); }
+
+/* 分类徽章 */
+.as-cat-badge {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 0.70rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 2;
+    background: rgba(0, 255, 157, 0.18);
+    color: var(--accent-primary);
+    border: 1px solid rgba(0, 255, 157, 0.35);
+}
+[data-theme="light"] .as-cat-badge {
+    background: rgba(0, 204, 122, 0.18);
+    border-color: rgba(0, 204, 122, 0.4);
+}
+.as-card[data-cat="scene"] .as-cat-badge { background: rgba(139, 92, 246, 0.18); color: var(--accent-purple); border-color: rgba(139, 92, 246, 0.35); }
+.as-card[data-cat="ui"] .as-cat-badge { background: rgba(6, 182, 212, 0.18); color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.35); }
+.as-card[data-cat="audio"] .as-cat-badge { background: rgba(255, 200, 87, 0.18); color: var(--accent-secondary); border-color: rgba(255, 200, 87, 0.35); }
+.as-card[data-cat="effect"] .as-cat-badge { background: rgba(255, 56, 96, 0.18); color: var(--accent-danger); border-color: rgba(255, 56, 96, 0.35); }
+.as-card[data-cat="tool"] .as-cat-badge { background: rgba(6, 182, 212, 0.18); color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.35); }
+
+/* 卡片正文 */
+.as-card-body {
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    flex: 1;
+}
+.as-card-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.02rem;
+    line-height: 1.3;
+    color: var(--fg-primary);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 2.6em;
+}
+.as-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    font-size: 0.78rem;
+    color: var(--fg-secondary);
+}
+.as-card-meta .as-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.as-card-meta .as-meta-item svg {
+    width: 14px;
+    height: 14px;
+    color: var(--fg-muted);
+}
+.as-card-meta .as-author {
+    color: var(--accent-primary);
+    font-weight: 500;
+}
+.as-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+}
+.as-card-tags .as-chip {
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg);
+    color: var(--fg-secondary);
+    border: 1px solid var(--border-subtle);
+    font-size: 0.72rem;
+}
+
+/* 空状态 */
+.as-empty {
+    grid-column: 1 / -1;
+    padding: var(--space-9) var(--space-5);
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--fg-muted);
+}
+.as-empty svg {
+    width: 56px;
+    height: 56px;
+    color: var(--fg-muted);
+    margin: 0 auto var(--space-4);
+    opacity: 0.5;
+}
+.as-empty .as-empty-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--fg-secondary);
+    margin: 0 0 var(--space-2);
+}
+
+/* ==================== 7. 提交素材 CTA ==================== */
+.as-cta {
+    margin-top: var(--space-8);
+    padding: var(--space-7) var(--space-6);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(0, 255, 157, 0.10) 0%, rgba(139, 92, 246, 0.10) 100%);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+[data-theme="light"] .as-cta {
+    background: linear-gradient(135deg, rgba(0, 204, 122, 0.10) 0%, rgba(124, 58, 237, 0.10) 100%);
+}
+.as-cta::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(0, 255, 157, 0.10), transparent 60%);
+    pointer-events: none;
+}
+[data-theme="light"] .as-cta::before {
+    background: radial-gradient(circle at 50% 0%, rgba(0, 204, 122, 0.12), transparent 60%);
+}
+.as-cta-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--fg-primary);
+    margin: 0 0 var(--space-2);
+    position: relative;
+}
+.as-cta-sub {
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+    margin: 0 0 var(--space-5);
+    position: relative;
+}
+.as-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-pill);
+    background: var(--accent-primary);
+    color: #0a0e1a;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 255, 157, 0.30);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), filter var(--transition-base);
+    position: relative;
+}
+[data-theme="light"] .as-cta-btn { color: #ffffff; }
+.as-cta-btn:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-5), 0 8px 20px rgba(0, 255, 157, 0.4);
+    filter: brightness(1.08);
+}
+.as-cta-btn svg { width: 18px; height: 18px; }
+
+/* ==================== Reduced Motion ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .as-card, .as-featured-card, .as-sort-btn, .as-tag-btn, .as-cta-btn, .as-featured-btn {
+        transition: none !important;
+    }
+    .as-card:hover, .as-featured-card:hover, .as-cta-btn:hover, .as-featured-btn:hover {
+        transform: none !important;
+    }
+    .as-card:hover .as-cover img { transform: none !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="as-page">
+
+    {# ==================== 1. 面包屑 ==================== #}
+    <nav class="as-breadcrumb" aria-label="面包屑">
+        <a href="{{ url_for('games.index') }}">首页</a>
+        <span class="sep" aria-hidden="true">/</span>
+        <span class="current">游戏素材库</span>
+    </nav>
+
+    {# ==================== 2. 页面头部 ==================== #}
+    <header class="as-page-header">
+        <div class="as-title-block">
+            <h1 class="page-title">游戏素材库</h1>
+            <p class="page-sub">海量游戏开发素材，加速你的创作</p>
+        </div>
+    </header>
+
+    {# ==================== 3. 顶部精选区 ==================== #}
+    <section class="as-featured-grid" aria-label="精选素材">
+        {% for asset in featured_assets %}
+        {% set ft = asset.feature_type %}
+        <article class="as-featured-card {% if ft == 'weekly_pick' %}as-weekly{% elif ft == 'hot_select' %}as-hot{% elif ft == 'new_arrival' %}as-new{% endif %}"
+                 data-asset-id="{{ asset.id }}"
+                 tabindex="0"
+                 role="button"
+                 aria-label="查看素材 {{ asset.title }}">
+            {% set type_label = {'weekly_pick': '本周主打', 'hot_select': '热门精选', 'new_arrival': '新品推荐'}[ft] %}
+            <span class="as-featured-type">{{ type_label }}</span>
+            <h2 class="as-featured-title">{{ asset.title }}</h2>
+            <p class="as-featured-author">by {{ asset.author }} · {{ asset.image_count }} 张图片</p>
+            <div class="as-featured-tags">
+                {% for tag in asset.tags[:4] %}
+                <span class="as-mini-tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            <button class="as-featured-btn" type="button" data-asset-id="{{ asset.id }}">
+                查看详情
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+        </article>
+        {% endfor %}
+    </section>
+
+    {# ==================== 4. 搜索 + 排序 ==================== #}
+    <div class="as-toolbar">
+        <div class="as-search-box">
+            <svg class="as-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="11" cy="11" r="7"/>
+                <path d="M21 21l-4.3-4.3"/>
+            </svg>
+            <input type="search" id="as-search-input" class="as-search-input" placeholder="搜索素材..." aria-label="搜索素材">
+        </div>
+        <div class="as-sort-tabs" role="tablist" aria-label="排序方式">
+            <button class="as-sort-btn is-active" data-sort="popular" role="tab" aria-selected="true">受欢迎的</button>
+            <button class="as-sort-btn" data-sort="name" role="tab" aria-selected="false">名称排序</button>
+            <button class="as-sort-btn" data-sort="oldest" role="tab" aria-selected="false">最早更新</button>
+        </div>
+    </div>
+
+    {# ==================== 5. 标签筛选云 ==================== #}
+    <div class="as-tag-cloud" role="group" aria-label="标签筛选">
+        <button class="as-tag-btn as-all is-active" data-tag="" type="button">全部标签</button>
+        {% for tag in all_tags %}
+        <button class="as-tag-btn" data-tag="{{ tag }}" type="button">{{ tag }}</button>
+        {% endfor %}
+    </div>
+
+    {# ==================== 6. 素材网格 ==================== #}
+    <section class="as-grid" id="as-grid" aria-label="素材列表">
+        {# 由 JS 动态渲染筛选后的素材 #}
+    </section>
+
+    {# ==================== 7. 提交素材 CTA ==================== #}
+    <section class="as-cta" aria-label="提交素材">
+        <h2 class="as-cta-title">想要分享你的素材？</h2>
+        <p class="as-cta-sub">上传你的创作，让更多开发者受益</p>
+        <a class="as-cta-btn" href="{{ url_for('games.submit_asset') }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            提交素材
+        </a>
+    </section>
+
+    {# Toast 容器 #}
+    <div class="toast-container" id="as-toast-container" aria-live="polite" aria-atomic="true"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    /* ==================== 数据准备 ==================== */
+    // 后端渲染的素材数据，序列化给前端供筛选/排序使用
+    var ALL_ASSETS = {{ all_assets | tojson }};
+    var FEATURED_IDS = {{ featured_assets | map(attribute='id') | list | tojson }};
+
+    // 分类徽章中文映射
+    var CAT_LABEL = {
+        'character': '角色',
+        'scene': '场景',
+        'ui': 'UI',
+        'audio': '音效',
+        'effect': '特效',
+        'tool': '工具'
+    };
+
+    /* ==================== 状态 ==================== */
+    var state = {
+        query: '',
+        tags: [],         // 选中的标签数组
+        sort: 'popular'   // popular / name / oldest
+    };
+
+    /* ==================== DOM 引用 ==================== */
+    var grid = document.getElementById('as-grid');
+    var searchInput = document.getElementById('as-search-input');
+    var sortBtns = document.querySelectorAll('.as-sort-btn');
+    var tagBtns = document.querySelectorAll('.as-tag-btn');
+    var toastContainer = document.getElementById('as-toast-container');
+
+    /* ==================== 工具函数 ==================== */
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function showToast(message) {
+        if (!toastContainer) return;
+        var toast = document.createElement('div');
+        toast.className = 'toast show info';
+        toast.setAttribute('role', 'status');
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+        setTimeout(function () {
+            toast.classList.remove('show');
+            setTimeout(function () {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 250);
+        }, 3000);
+    }
+
+    /* ==================== 筛选 + 排序 ==================== */
+    function filterAndSort() {
+        var list = ALL_ASSETS.slice();
+
+        // 关键字过滤（标题 + 作者 + 标签）
+        var q = state.query.trim().toLowerCase();
+        if (q) {
+            list = list.filter(function (a) {
+                var inTitle = (a.title || '').toLowerCase().indexOf(q) !== -1;
+                var inAuthor = (a.author || '').toLowerCase().indexOf(q) !== -1;
+                var inTags = (a.tags || []).some(function (t) {
+                    return (t || '').toLowerCase().indexOf(q) !== -1;
+                });
+                return inTitle || inAuthor || inTags;
+            });
+        }
+
+        // 标签过滤（OR 关系：素材包含任一选中标签即保留）
+        if (state.tags.length > 0) {
+            list = list.filter(function (a) {
+                var at = a.tags || [];
+                return state.tags.some(function (st) { return at.indexOf(st) !== -1; });
+            });
+        }
+
+        // 排序
+        if (state.sort === 'name') {
+            list.sort(function (a, b) {
+                return (a.title || '').localeCompare(b.title || '', 'zh-CN');
+            });
+        } else if (state.sort === 'oldest') {
+            list.sort(function (a, b) {
+                var da = a.updated_at || '';
+                var db = b.updated_at || '';
+                if (da < db) return -1;
+                if (da > db) return 1;
+                return 0;
+            });
+        } else {
+            // popular：图片数多 → 少，并列时按更新时间倒序
+            list.sort(function (a, b) {
+                var diff = (b.image_count || 0) - (a.image_count || 0);
+                if (diff !== 0) return diff;
+                var da = a.updated_at || '';
+                var db = b.updated_at || '';
+                if (da < db) return 1;
+                if (da > db) return -1;
+                return 0;
+            });
+        }
+
+        return list;
+    }
+
+    /* ==================== 渲染卡片 ==================== */
+    function renderCard(asset) {
+        var card = document.createElement('article');
+        card.className = 'as-card';
+        card.setAttribute('data-cat', escapeHtml(asset.category || ''));
+        card.setAttribute('data-asset-id', asset.id);
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', '查看素材 ' + (asset.title || '') + ' 详情');
+
+        var cat = CAT_LABEL[asset.category] || asset.category || '';
+        var firstLetter = (asset.title || '?').trim().charAt(0).toUpperCase() || '?';
+        var coverHtml = '';
+        if (asset.cover_image) {
+            coverHtml = '<img src="' + escapeHtml(asset.cover_image) + '" alt="' + escapeHtml(asset.title) + ' 封面" loading="lazy">';
+        } else {
+            coverHtml = '<div class="as-cover-fallback">' + escapeHtml(firstLetter) + '</div>';
+        }
+
+        var tagsHtml = (asset.tags || []).slice(0, 3).map(function (t) {
+            return '<span class="as-chip">' + escapeHtml(t) + '</span>';
+        }).join('');
+
+        card.innerHTML =
+            '<div class="as-cover">' +
+                '<span class="as-cat-badge">' + escapeHtml(cat) + '</span>' +
+                coverHtml +
+            '</div>' +
+            '<div class="as-card-body">' +
+                '<h3 class="as-card-title">' + escapeHtml(asset.title || '') + '</h3>' +
+                '<div class="as-card-meta">' +
+                    '<span class="as-meta-item" title="图片数量">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' +
+                        (asset.image_count || 0) + ' 张图片' +
+                    '</span>' +
+                    '<span class="as-meta-item as-author">by ' + escapeHtml(asset.author || '') + '</span>' +
+                '</div>' +
+                '<div class="as-card-meta">' +
+                    '<span class="as-meta-item" title="更新时间">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' +
+                        '更新于 ' + escapeHtml(asset.updated_at || '') +
+                    '</span>' +
+                '</div>' +
+                (tagsHtml ? '<div class="as-card-tags">' + tagsHtml + '</div>' : '') +
+            '</div>';
+
+        // 点击详情：跳转到素材详情页
+        var onClick = function (e) {
+            // 阻止子按钮触发外层卡片跳转
+            if (e.target.closest('.as-featured-btn')) return;
+            window.location.href = '/asset/' + asset.id;
+        };
+        card.addEventListener('click', onClick);
+        card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick(e);
+            }
+        });
+        return card;
+    }
+
+    function renderGrid() {
+        var list = filterAndSort();
+        // 清空
+        while (grid.firstChild) grid.removeChild(grid.firstChild);
+
+        if (list.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'as-empty';
+            empty.innerHTML =
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/><path d="M8 11h6"/>' +
+                '</svg>' +
+                '<div class="as-empty-title">没有符合条件的素材</div>' +
+                '<div>试试调整搜索关键字或清除标签筛选</div>';
+            grid.appendChild(empty);
+            return;
+        }
+
+        // 文档片段批量插入
+        var frag = document.createDocumentFragment();
+        list.forEach(function (a) { frag.appendChild(renderCard(a)); });
+        grid.appendChild(frag);
+    }
+
+    /* ==================== 事件绑定 ==================== */
+    // 搜索输入（防抖）
+    var debounceTimer = null;
+    searchInput.addEventListener('input', function () {
+        state.query = searchInput.value || '';
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(renderGrid, 180);
+    });
+
+    // 排序 Tab
+    sortBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            sortBtns.forEach(function (b) {
+                b.classList.remove('is-active');
+                b.setAttribute('aria-selected', 'false');
+            });
+            btn.classList.add('is-active');
+            btn.setAttribute('aria-selected', 'true');
+            state.sort = btn.getAttribute('data-sort') || 'popular';
+            renderGrid();
+        });
+    });
+
+    // 标签筛选（OR 关系，多选）
+    tagBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var tag = btn.getAttribute('data-tag') || '';
+            if (!tag) {
+                // 点击"全部标签"：清空所有选中
+                state.tags = [];
+                tagBtns.forEach(function (b) { b.classList.remove('is-active'); });
+                btn.classList.add('is-active');
+            } else {
+                // 切换选中状态
+                var idx = state.tags.indexOf(tag);
+                if (idx === -1) {
+                    state.tags.push(tag);
+                    btn.classList.add('is-active');
+                } else {
+                    state.tags.splice(idx, 1);
+                    btn.classList.remove('is-active');
+                }
+                // 同步"全部标签"按钮的选中状态
+                var allBtn = document.querySelector('.as-tag-btn.as-all');
+                if (allBtn) {
+                    if (state.tags.length === 0) {
+                        allBtn.classList.add('is-active');
+                    } else {
+                        allBtn.classList.remove('is-active');
+                    }
+                }
+            }
+            renderGrid();
+        });
+    });
+
+    // 精选区"查看详情"按钮 → 跳转到详情页
+    document.querySelectorAll('.as-featured-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var id = btn.getAttribute('data-asset-id');
+            if (id) window.location.href = '/asset/' + id;
+        });
+    });
+
+    // 精选卡片整体点击 → 跳转到详情页
+    document.querySelectorAll('.as-featured-card').forEach(function (card) {
+        card.addEventListener('click', function () {
+            var id = card.getAttribute('data-asset-id');
+            if (id) window.location.href = '/asset/' + id;
+        });
+        card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                var id = card.getAttribute('data-asset-id');
+                if (id) window.location.href = '/asset/' + id;
+            }
+        });
+    });
+
+    /* ==================== 初次渲染 ==================== */
+    renderGrid();
+})();
+</script>
+{% endblock %}

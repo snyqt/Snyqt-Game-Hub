@@ -13,27 +13,57 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 <style>
-.editor-page { padding: calc(var(--header-h) + 30px) 0 64px; }
-.editor-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.CodeMirror { height: calc(100vh - 280px); border-radius:8px; font-size:14px; }
+.editor-page { padding: calc(var(--header-h) + 20px) 0 0; height: calc(100vh - var(--header-h) - 20px); }
+.editor-page .container { max-width: 100%; padding: 0 16px; height: 100%; display: flex; flex-direction: column; }
+.editor-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-shrink: 0; }
+.editor-workspace { flex: 1; min-height: 0; display: flex; gap: 12px; }
+.editor-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; border: 1px solid var(--border, rgba(255,255,255,0.08)); background: var(--card, #1a1a2e); }
+.editor-pane.hidden { display: none; }
+.editor-pane.full { flex: 1; }
+.CodeMirror { height: 100%; font-size: 13px; border-radius: 0; }
+.preview-iframe { width: 100%; height: 100%; border: none; background: #fff; }
+.preview-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: .9rem; flex-direction: column; gap: 8px; }
 .editor-info { color: var(--muted); font-size: .85rem; }
+.preview-toggle { position: relative; }
+.preview-toggle.active { background: rgba(0,230,118,0.15); color: #00e676; border-color: rgba(0,230,118,0.4); }
+@media (max-width: 768px) {
+    .editor-workspace { flex-direction: column; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="editor-page">
-    <div class="container" style="max-width:1200px;">
+    <div class="container">
         <div class="editor-toolbar">
             <h2 class="font-display" style="font-size:1.2rem;">HTML 在线编辑器</h2>
             <div class="flex gap-12 items-center">
                 <span class="editor-info">编辑完成后点击上传</span>
+                <button type="button" class="btn btn-ghost btn-sm preview-toggle" id="btn-preview" title="切换预览">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    预览
+                </button>
                 <button type="button" class="btn btn-primary" id="submit-html">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     上传代码
                 </button>
             </div>
         </div>
-        <textarea id="html-code-editor"></textarea>
+
+        <div class="editor-workspace" id="editor-workspace">
+            {# 编辑面板 #}
+            <div class="editor-pane" id="editor-pane">
+                <textarea id="html-code-editor"></textarea>
+            </div>
+            {# 预览面板（默认隐藏） #}
+            <div class="editor-pane hidden" id="preview-pane">
+                <div class="preview-empty" id="preview-empty">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>点击"预览"按钮查看效果</span>
+                </div>
+                <iframe class="preview-iframe" id="preview-iframe" style="display:none;" sandbox="allow-scripts allow-same-origin" title="游戏预览"></iframe>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}
@@ -70,6 +100,54 @@ document.addEventListener('DOMContentLoaded', () => {
     <\/script>
 </body>
 </html>`);
+
+    // 预览切换
+    const previewPane = document.getElementById('preview-pane');
+    const previewIframe = document.getElementById('preview-iframe');
+    const previewEmpty = document.getElementById('preview-empty');
+    const editorPane = document.getElementById('editor-pane');
+    const btnPreview = document.getElementById('btn-preview');
+    let previewOpen = false;
+
+    function openPreview() {
+        const content = editor.getValue();
+        previewIframe.srcdoc = content;
+        previewIframe.style.display = 'block';
+        previewEmpty.style.display = 'none';
+        previewPane.classList.remove('hidden');
+        editorPane.classList.remove('full');
+        btnPreview.classList.add('active');
+        btnPreview.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> 关闭预览';
+        previewOpen = true;
+        // 刷新 CodeMirror 尺寸
+        setTimeout(() => editor.refresh(), 50);
+    }
+
+    function closePreview() {
+        previewPane.classList.add('hidden');
+        editorPane.classList.add('full');
+        btnPreview.classList.remove('active');
+        btnPreview.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> 预览';
+        previewOpen = false;
+        setTimeout(() => editor.refresh(), 50);
+    }
+
+    btnPreview.addEventListener('click', () => {
+        if (previewOpen) {
+            closePreview();
+        } else {
+            openPreview();
+        }
+    });
+
+    // 快捷键 Ctrl+Shift+P 切换预览
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+            e.preventDefault();
+            if (previewOpen) closePreview();
+            else openPreview();
+        }
+    });
 
     // 上传按钮：发送内容到父窗口
     document.getElementById('submit-html').addEventListener('click', () => {
